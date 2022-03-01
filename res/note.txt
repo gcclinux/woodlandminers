@@ -1,0 +1,47 @@
+NOTES:
+Assets.java 	= Contain sprite source, tile draw size
+MenuState.java 	= Contain the fact the in each tick() start game automatic, no menu
+Tile.java 		= Contain the Tile size to display
+Creature.java	= Contain player size
+world.java		= Manually added Items to the world
+inventory.java 	= Manually added Items to the inventory
+GameState.java	= Contain world map.
+Player.java		= Get player position
+World.java		= Set SpawnX, SpawnY player position
+
+INSPIRED BY - https://www.youtube.com/watch?v=dEKs-3GhVKQ&list=PLah6faXAgguMnTBs3JnEJY0shAc18XYQZ
+
+1 - New Beginner 2D Game Programming - 1 - Introduction & Launcher
+2 - Window - New Beginner 2D Game Programming
+3 - Canvas - New Beginner 2D Game Programming
+4 - Threads & Game Loop - New Beginner 2D Game Programming
+5 - Buffers and Drawing - New Beginner 2D Game Programming
+6 - Rectangles! - New Beginner 2D Game Programming
+7 - Images! - New Beginner 2D Game Programming
+8 - Sprite Sheet - New Beginner 2D Game Programming
+9 - Assets! - New Beginner 2D Game Programming
+10 - Game Loop Timer - New Beginner 2D Game Programming
+11 - States - New Beginner 2D Game Programming
+12 - Entity System - New Beginner 2D Game Programming
+13 - Player - New Beginner 2D Game Programming
+14 - Keyboard Input - New Beginner 2D Game Programming
+15 - Creature Sizing - New Beginner 2D Game Programming
+16 - Tiles! - New Beginner 2D Game Programming
+17 - Starting Worlds - New Beginner 2D Game Programming
+18 - Loading Worlds - New Beginner 2D Game Programming
+19 - Camera - New Beginner 2D Game Programming
+20 - Rendering Efficiency - New Beginner 2D Game Programming
+21 - Handler - New Beginner 2D Game Programming
+22 - Collision Detection! New Beginner 2D game programming 
+23 - Perfect Collision - New Beginner 2D Game 
+24 - Camera Limits - New Beginner 2D Game 
+25 - Animations! - New Beginner 2D Game Programming
+26 - Entity manager - New Beginner 2D Game Programming  
+27 - Entity Collisions - New Beginner 2D Game Programming
+28 - Render Order - New Beginner 2D Game Programming
+29 - Mouse Input & Switching States - New Beginner 2D Game 
+30 - Simple UI - New Beginner 2D Game Programming
+31 - Melee Combat - New Beginner 2D Game Programming 
+32 - Item Drops - New Beginner 2D Game Programming 
+33 - Inventory Beginnings - New Beginner 2D Game Programming 
+34 - Fonts and Inventory Screen - 34 - New Beginner 2D Game

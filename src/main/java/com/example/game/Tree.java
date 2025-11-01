@@ -7,6 +7,8 @@ public class Tree {
     private float x, y;
     private Texture texture;
     private int health = 100;
+    private boolean showHealthBar = false;
+    private float healthBarTimer = 0;
 
     public Tree(float x, float y) {
         this.x = x;
@@ -56,7 +58,39 @@ public class Tree {
 
     public boolean attack() {
         health -= 10;
+        showHealthBar = true;
+        healthBarTimer = 3.0f; // show for 3 seconds
         return health <= 0;
+    }
+    
+    public void update(float deltaTime) {
+        if (showHealthBar) {
+            healthBarTimer -= deltaTime;
+            if (healthBarTimer <= 0) {
+                showHealthBar = false;
+            }
+        }
+    }
+    
+    public boolean shouldShowHealthBar() {
+        return showHealthBar;
+    }
+    
+    public float getHealthPercentage() {
+        return health / 100.0f;
+    }
+    
+    public boolean isInAttackRange(float playerX, float playerY) {
+        // Tree attack range: 64px up/down, 64px left/right from center
+        float treeCenterX = x + 32;
+        float treeCenterY = y + 32;
+        float playerCenterX = playerX + 32;
+        float playerCenterY = playerY + 32;
+        
+        float dx = Math.abs(treeCenterX - playerCenterX);
+        float dy = Math.abs(treeCenterY - playerCenterY);
+        
+        return dx <= 64 && dy <= 64;
     }
     
     public int getHealth() {

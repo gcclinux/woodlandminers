@@ -182,18 +182,15 @@ public class Player {
     private void attackNearbyTrees() {
         boolean attackedSomething = false;
         
-        // Attack trees within range (128px)
+        // Attack trees within range (individual collision)
         if (trees != null) {
             Tree targetTree = null;
             String targetKey = null;
             
             for (Map.Entry<String, Tree> entry : trees.entrySet()) {
                 Tree tree = entry.getValue();
-                float dx = tree.getX() - x;
-                float dy = tree.getY() - y;
-                float distance = (float)Math.sqrt(dx * dx + dy * dy);
                 
-                if (distance < 128) {
+                if (tree.isInAttackRange(x, y)) {
                     targetTree = tree;
                     targetKey = entry.getKey();
                     break;
@@ -215,18 +212,15 @@ public class Player {
             }
         }
         
-        // Attack apple trees within range (128px)
+        // Attack apple trees within range (individual collision)
         if (appleTrees != null && !attackedSomething) {
             AppleTree targetAppleTree = null;
             String targetKey = null;
             
             for (Map.Entry<String, AppleTree> entry : appleTrees.entrySet()) {
                 AppleTree appleTree = entry.getValue();
-                float dx = appleTree.getX() - x;
-                float dy = appleTree.getY() - y;
-                float distance = (float)Math.sqrt(dx * dx + dy * dy);
                 
-                if (distance < 128) {
+                if (appleTree.isInAttackRange(x, y)) {
                     targetAppleTree = appleTree;
                     targetKey = entry.getKey();
                     break;

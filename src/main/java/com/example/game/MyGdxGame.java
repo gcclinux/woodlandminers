@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import java.util.HashMap;
@@ -15,6 +16,7 @@ import java.util.Random;
 
 public class MyGdxGame extends ApplicationAdapter {
     SpriteBatch batch;
+    ShapeRenderer shapeRenderer;
     Texture grassTexture;
     Player player;
     OrthographicCamera camera;
@@ -38,6 +40,7 @@ public class MyGdxGame extends ApplicationAdapter {
         camera.update();
         
         batch = new SpriteBatch();
+        shapeRenderer = new ShapeRenderer();
         trees = new HashMap<>();
         appleTrees = new HashMap<>();
         clearedPositions = new HashMap<>();
@@ -66,6 +69,15 @@ public class MyGdxGame extends ApplicationAdapter {
 
         // update player and camera
         player.update(deltaTime);
+        
+        // update trees
+        for (Tree tree : trees.values()) {
+            tree.update(deltaTime);
+        }
+        for (AppleTree appleTree : appleTrees.values()) {
+            appleTree.update(deltaTime);
+        }
+        
         camera.update();
 
         Gdx.gl.glClearColor(0.1f, 0.12f, 0.16f, 1);
@@ -83,6 +95,9 @@ public class MyGdxGame extends ApplicationAdapter {
         drawAppleTrees();
         batch.draw(player.getTexture(), player.getX(), player.getY());
         batch.end();
+        
+        // draw health bars
+        drawHealthBars();
     }
     
     private void drawInfiniteGrass() {
@@ -152,9 +167,55 @@ public class MyGdxGame extends ApplicationAdapter {
         viewport.update(width, height);
     }
 
+    private void drawHealthBars() {
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        
+        // Draw tree health bars
+        for (Tree tree : trees.values()) {
+            if (tree.shouldShowHealthBar()) {
+                float barWidth = 32; // half of tree width
+                float barHeight = 4;
+                float barX = tree.getX() + 16; // center above tree
+                float barY = tree.getY() + 70; // above tree
+                
+                // Green background
+                shapeRenderer.setColor(0, 1, 0, 1);
+                shapeRenderer.rect(barX, barY, barWidth, barHeight);
+                
+                // Red overlay based on damage
+                float damagePercent = 1.0f - tree.getHealthPercentage();
+                shapeRenderer.setColor(1, 0, 0, 1);
+                shapeRenderer.rect(barX, barY, barWidth * damagePercent, barHeight);
+            }
+        }
+        
+        // Draw apple tree health bars
+        for (AppleTree appleTree : appleTrees.values()) {
+            if (appleTree.shouldShowHealthBar()) {
+                float barWidth = 64; // half of apple tree width
+                float barHeight = 6;
+                float barX = appleTree.getX() + 32; // center above tree
+                float barY = appleTree.getY() + 134; // above tree
+                
+                // Green background
+                shapeRenderer.setColor(0, 1, 0, 1);
+                shapeRenderer.rect(barX, barY, barWidth, barHeight);
+                
+                // Red overlay based on damage
+                float damagePercent = 1.0f - appleTree.getHealthPercentage();
+                shapeRenderer.setColor(1, 0, 0, 1);
+                shapeRenderer.rect(barX, barY, barWidth * damagePercent, barHeight);
+            }
+        }
+        
+        shapeRenderer.end();
+    }
+
     @Override
     public void dispose() {
         batch.dispose();
+        shapeRenderer.dispose();
         player.dispose();
         grassTexture.dispose();
         for (Tree tree : trees.values()) {

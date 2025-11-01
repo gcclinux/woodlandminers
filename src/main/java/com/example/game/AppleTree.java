@@ -7,6 +7,8 @@ public class AppleTree {
     private float x, y;
     private Texture texture;
     private int health = 100;
+    private boolean showHealthBar = false;
+    private float healthBarTimer = 0;
 
     public AppleTree(float x, float y) {
         this.x = x;
@@ -66,7 +68,39 @@ public class AppleTree {
 
     public boolean attack() {
         health -= 10;
+        showHealthBar = true;
+        healthBarTimer = 3.0f; // show for 3 seconds
         return health <= 0;
+    }
+    
+    public void update(float deltaTime) {
+        if (showHealthBar) {
+            healthBarTimer -= deltaTime;
+            if (healthBarTimer <= 0) {
+                showHealthBar = false;
+            }
+        }
+    }
+    
+    public boolean shouldShowHealthBar() {
+        return showHealthBar;
+    }
+    
+    public float getHealthPercentage() {
+        return health / 100.0f;
+    }
+    
+    public boolean isInAttackRange(float playerX, float playerY) {
+        // AppleTree attack range: 128px up/down, 64px left/right from center
+        float treeCenterX = x + 64;
+        float treeCenterY = y + 64;
+        float playerCenterX = playerX + 32;
+        float playerCenterY = playerY + 32;
+        
+        float dx = Math.abs(treeCenterX - playerCenterX);
+        float dy = Math.abs(treeCenterY - playerCenterY);
+        
+        return dx <= 64 && dy <= 128;
     }
     
     public int getHealth() {

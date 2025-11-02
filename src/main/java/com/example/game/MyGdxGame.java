@@ -8,7 +8,7 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,14 +27,14 @@ public class MyGdxGame extends ApplicationAdapter {
     Random random;
     
     // Camera dimensions for infinite world
-    static final int CAMERA_WIDTH = 800;
-    static final int CAMERA_HEIGHT = 600;
+    static final int CAMERA_WIDTH = 1280;
+    static final int CAMERA_HEIGHT = 1024;
 
     @Override
     public void create() {
-        // setup camera with fixed viewport size
+        // setup camera with screen viewport to match window size
         camera = new OrthographicCamera();
-        viewport = new FitViewport(CAMERA_WIDTH, CAMERA_HEIGHT, camera);
+        viewport = new ScreenViewport(camera);
         viewport.apply();
         camera.position.set(0, 0, 0);
         camera.update();
@@ -105,11 +105,15 @@ public class MyGdxGame extends ApplicationAdapter {
         float camX = camera.position.x;
         float camY = camera.position.y;
         
+        // Use actual viewport dimensions for grass rendering
+        float viewWidth = viewport.getWorldWidth();
+        float viewHeight = viewport.getWorldHeight();
+        
         // Draw grass tiles covering camera view + buffer
-        int startX = (int)((camX - CAMERA_WIDTH) / 64) * 64;
-        int startY = (int)((camY - CAMERA_HEIGHT) / 64) * 64;
-        int endX = (int)((camX + CAMERA_WIDTH) / 64) * 64 + 64;
-        int endY = (int)((camY + CAMERA_HEIGHT) / 64) * 64 + 64;
+        int startX = (int)((camX - viewWidth) / 64) * 64;
+        int startY = (int)((camY - viewHeight) / 64) * 64;
+        int endX = (int)((camX + viewWidth) / 64) * 64 + 64;
+        int endY = (int)((camY + viewHeight) / 64) * 64 + 64;
         
         for (int x = startX; x <= endX; x += 64) {
             for (int y = startY; y <= endY; y += 64) {
@@ -139,11 +143,13 @@ public class MyGdxGame extends ApplicationAdapter {
     private void drawTrees() {
         float camX = camera.position.x;
         float camY = camera.position.y;
+        float viewWidth = viewport.getWorldWidth();
+        float viewHeight = viewport.getWorldHeight();
         
         for (Tree tree : trees.values()) {
             // only draw trees near camera
-            if (Math.abs(tree.getX() - camX) < CAMERA_WIDTH && 
-                Math.abs(tree.getY() - camY) < CAMERA_HEIGHT) {
+            if (Math.abs(tree.getX() - camX) < viewWidth && 
+                Math.abs(tree.getY() - camY) < viewHeight) {
                 batch.draw(tree.getTexture(), tree.getX(), tree.getY());
             }
         }
@@ -152,11 +158,13 @@ public class MyGdxGame extends ApplicationAdapter {
     private void drawAppleTrees() {
         float camX = camera.position.x;
         float camY = camera.position.y;
+        float viewWidth = viewport.getWorldWidth();
+        float viewHeight = viewport.getWorldHeight();
         
         for (AppleTree appleTree : appleTrees.values()) {
             // only draw apple trees near camera
-            if (Math.abs(appleTree.getX() - camX) < CAMERA_WIDTH && 
-                Math.abs(appleTree.getY() - camY) < CAMERA_HEIGHT) {
+            if (Math.abs(appleTree.getX() - camX) < viewWidth && 
+                Math.abs(appleTree.getY() - camY) < viewHeight) {
                 batch.draw(appleTree.getTexture(), appleTree.getX(), appleTree.getY());
             }
         }

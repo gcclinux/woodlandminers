@@ -1,4 +1,4 @@
-package com.example.game;
+package wagemaker.uk;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
@@ -93,7 +93,7 @@ public class MyGdxGame extends ApplicationAdapter {
         // draw trees
         drawTrees();
         drawAppleTrees();
-        batch.draw(player.getTexture(), player.getX(), player.getY());
+        batch.draw(player.getCurrentFrame(), player.getX(), player.getY());
         batch.end();
         
         // draw health bars

@@ -1,8 +1,8 @@
-package com.example.game.desktop;
+package wagemaker.uk.desktop;
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-import com.example.game.MyGdxGame;
+import wagemaker.uk.MyGdxGame;
 
 public class DesktopLauncher {
     public static void main(String[] args) {

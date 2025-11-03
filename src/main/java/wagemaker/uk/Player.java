@@ -1,26 +1,39 @@
-package com.example.game;
+package wagemaker.uk;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Animation;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import java.util.Map;
 
 public class Player {
     private float x, y;
     private float speed = 200;
     private float animTime = 0;
-    private Texture texture;
+    private Texture spriteSheet;
+    private Animation<TextureRegion> walkUpAnimation;
+    private Animation<TextureRegion> walkLeftAnimation;
+    private Animation<TextureRegion> walkDownAnimation;
+    private Animation<TextureRegion> walkRightAnimation;
+    private Animation<TextureRegion> currentAnimation;
+    private TextureRegion idleFrame;
     private OrthographicCamera camera;
     private Map<String, Tree> trees;
     private Map<String, AppleTree> appleTrees;
     private Map<String, Boolean> clearedPositions;
+    
+    // Direction tracking
+    private enum Direction { UP, DOWN, LEFT, RIGHT }
+    private Direction currentDirection = Direction.DOWN;
+    private boolean isMoving = false;
 
     public Player(float startX, float startY, OrthographicCamera camera) {
         this.x = startX;
         this.y = startY;
         this.camera = camera;
+        loadAnimations();
     }
     
     public void setTrees(Map<String, Tree> trees) {
@@ -36,7 +49,7 @@ public class Player {
     }
 
     public void update(float deltaTime) {
-        boolean isMoving = false;
+        isMoving = false;
         
         // handle input with collision detection
         float newX = x;
@@ -47,6 +60,8 @@ public class Player {
             if (!wouldCollide(newX, y)) {
                 x = newX;
                 isMoving = true;
+                currentDirection = Direction.LEFT;
+                currentAnimation = walkLeftAnimation;
             }
         }
         if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) { 
@@ -54,6 +69,8 @@ public class Player {
             if (!wouldCollide(newX, y)) {
                 x = newX;
                 isMoving = true;
+                currentDirection = Direction.RIGHT;
+                currentAnimation = walkRightAnimation;
             }
         }
         if (Gdx.input.isKeyPressed(Input.Keys.UP)) { 
@@ -61,6 +78,8 @@ public class Player {
             if (!wouldCollide(x, newY)) {
                 y = newY;
                 isMoving = true;
+                currentDirection = Direction.UP;
+                currentAnimation = walkUpAnimation;
             }
         }
         if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) { 
@@ -68,6 +87,8 @@ public class Player {
             if (!wouldCollide(x, newY)) {
                 y = newY;
                 isMoving = true;
+                currentDirection = Direction.DOWN;
+                currentAnimation = walkDownAnimation;
             }
         }
 
@@ -77,63 +98,102 @@ public class Player {
             attackNearbyTrees();
         }
 
-        // update animation
-        if (isMoving) animTime += deltaTime * 4;
+        // update animation time
+        if (isMoving) {
+            animTime += deltaTime;
+        } else {
+            // Reset to first frame when not moving (idle pose)
+            animTime = 0;
+        }
         
         // update camera to follow player
         updateCamera();
-
-        // update texture
-        updateTexture();
     }
 
-    private void updateTexture() {
-        if (texture != null) texture.dispose();
+    private void loadAnimations() {
+        // Load the sprite sheet
+        spriteSheet = new Texture("sprites/player/man_start.png");
         
-        Pixmap pixmap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
-        pixmap.setColor(0, 0, 0, 0);
-        pixmap.fill();
+        // Get sprite sheet dimensions
+        int spriteSheetHeight = spriteSheet.getHeight();
         
-        // head
-        pixmap.setColor(0.9f, 0.7f, 0.5f, 1);
-        pixmap.fillCircle(32, 12, 10);
+        // Create animation frames for each direction
+        TextureRegion[] walkUpFrames = new TextureRegion[9];
+        TextureRegion[] walkLeftFrames = new TextureRegion[9];
+        TextureRegion[] walkDownFrames = new TextureRegion[9];
+        TextureRegion[] walkRightFrames = new TextureRegion[9];
         
-        // hair (black)
-        pixmap.setColor(0.1f, 0.1f, 0.1f, 1);
-        pixmap.fillCircle(32, 12, 8);
+        // Your coordinates are bottom-left, LibGDX needs top-left
+        // Convert bottom-left Y to top-left Y: topY = spriteSheetHeight - bottomY - height
         
-        // animated arms (next to body)
-        pixmap.setColor(0.9f, 0.7f, 0.5f, 1);
-        boolean leftLong = (int)(animTime) % 2 == 0;
-        int leftArmLength = leftLong ? 16 : 10;
-        int rightArmLength = leftLong ? 10 : 16;
-        pixmap.fillRectangle(16, 25, 4, leftArmLength);
-        pixmap.fillRectangle(44, 25, 4, rightArmLength);
+        // Fixed mapping based on your feedback:
+        // RIGHT uses UP row, LEFT uses DOWN row, DOWN uses LEFT row, UP uses RIGHT row
+        // So the actual mapping is:
+        // Row 1 (Y=512-576): Walking RIGHT (not UP)
+        // Row 2 (Y=576-640): Walking UP (not LEFT)  
+        // Row 3 (Y=640-704): Walking LEFT (not DOWN)
+        // Row 4 (Y=704-768): Walking DOWN (not RIGHT)
         
-        // body
-        pixmap.setColor(0.2f, 0.4f, 0.8f, 1);
-        pixmap.fillRectangle(20, 22, 24, 20);
+        // UP frames: 1st row (Y=512 in LibGDX coordinates)
+        // Using coordinates: 0,512 | 64,512 | 128,512 | 192,512 | 256,512 | 320,512 | 384,512 | 448,512 | 512,512
+        int upTopY = 512;
+        int[] upXCoords = {0, 64, 128, 192, 256, 320, 384, 448, 512};
+        for (int i = 0; i < 9; i++) {
+            walkUpFrames[i] = new TextureRegion(spriteSheet, upXCoords[i], upTopY, 64, 64);
+        }
         
-        // animated legs
-        pixmap.setColor(0.4f, 0.2f, 0.1f, 1);
-        int leftLegLength = leftLong ? 14 : 18;
-        int rightLegLength = leftLong ? 18 : 14;
-        pixmap.fillRectangle(22, 42, 6, leftLegLength);
-        pixmap.fillRectangle(36, 42, 6, rightLegLength);
+        // LEFT frames: 2nd row (Y=576 in LibGDX coordinates)
+        // Using coordinates: 0,576 | 64,576 | 128,576 | 192,576 | 256,576 | 320,576 | 384,576 | 448,576 | 512,576
+        int leftTopY = 576;
+        int[] leftXCoords = {0, 64, 128, 192, 256, 320, 384, 448, 512};
+        for (int i = 0; i < 9; i++) {
+            walkLeftFrames[i] = new TextureRegion(spriteSheet, leftXCoords[i], leftTopY, 64, 64);
+        }
         
-        // animated feet
-        pixmap.setColor(0.1f, 0.1f, 0.1f, 1);
-        int leftFootY = leftLong ? 56 : 60;
-        int rightFootY = leftLong ? 60 : 56;
-        pixmap.fillRectangle(20, leftFootY, 8, 6);
-        pixmap.fillRectangle(36, rightFootY, 8, 6);
+        // DOWN frames: 3rd row (Y=640 in LibGDX coordinates)
+        // Using coordinates: 0,640 | 64,640 | 128,640 | 192,640 | 256,640 | 320,640 | 384,640 | 448,640 | 512,640
+        int downTopY = 640;
+        int[] downXCoords = {0, 64, 128, 192, 256, 320, 384, 448, 512};
+        for (int i = 0; i < 9; i++) {
+            walkDownFrames[i] = new TextureRegion(spriteSheet, downXCoords[i], downTopY, 64, 64);
+        }
         
-        texture = new Texture(pixmap);
-        pixmap.dispose();
+        // RIGHT frames: 4th row (Y=704 in LibGDX coordinates)
+        // Using coordinates: 0,704 | 64,704 | 128,704 | 192,704 | 256,704 | 320,704 | 384,704 | 448,704 | 512,704
+        int rightTopY = 704;
+        int[] rightXCoords = {0, 64, 128, 192, 256, 320, 384, 448, 512};
+        for (int i = 0; i < 9; i++) {
+            walkRightFrames[i] = new TextureRegion(spriteSheet, rightXCoords[i], rightTopY, 64, 64);
+        }
+        
+        // Create animations (0.1f = 100ms per frame, gives smooth 10 FPS animation)
+        walkUpAnimation = new Animation<>(0.1f, walkUpFrames);
+        walkLeftAnimation = new Animation<>(0.1f, walkLeftFrames);
+        walkDownAnimation = new Animation<>(0.1f, walkDownFrames);
+        walkRightAnimation = new Animation<>(0.1f, walkRightFrames);
+        
+        // Set all animations to loop
+        walkUpAnimation.setPlayMode(Animation.PlayMode.LOOP);
+        walkLeftAnimation.setPlayMode(Animation.PlayMode.LOOP);
+        walkDownAnimation.setPlayMode(Animation.PlayMode.LOOP);
+        walkRightAnimation.setPlayMode(Animation.PlayMode.LOOP);
+        
+        // Create idle frame: 1st image on 3rd row of red rectangle
+        // 0px from left, 640px from top (LibGDX coordinates)
+        // This corresponds to (0, 704) in bottom-left coordinates
+        idleFrame = new TextureRegion(spriteSheet, 0, 640, 64, 64);
+        
+        // Set default animation to LEFT (Row 3 - character facing camera/standing still)
+        currentAnimation = walkLeftAnimation;
     }
 
-    public Texture getTexture() {
-        return texture;
+    public TextureRegion getCurrentFrame() {
+        if (isMoving) {
+            return currentAnimation.getKeyFrame(animTime);
+        } else {
+            // Return idle frame when not moving
+            return idleFrame;
+        }
     }
 
     public float getX() {
@@ -248,6 +308,6 @@ public class Player {
     }
 
     public void dispose() {
-        if (texture != null) texture.dispose();
+        if (spriteSheet != null) spriteSheet.dispose();
     }
 }

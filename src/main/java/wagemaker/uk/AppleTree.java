@@ -1,33 +1,41 @@
-package com.example.game;
+package wagemaker.uk;
 
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 
-public class Tree {
+public class AppleTree {
     private float x, y;
     private Texture texture;
     private int health = 100;
     private boolean showHealthBar = false;
     private float healthBarTimer = 0;
 
-    public Tree(float x, float y) {
+    public AppleTree(float x, float y) {
         this.x = x;
         this.y = y;
         createTexture();
     }
 
     private void createTexture() {
-        Pixmap pixmap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
+        Pixmap pixmap = new Pixmap(128, 128, Pixmap.Format.RGBA8888);
         pixmap.setColor(0, 0, 0, 0);
         pixmap.fill();
         
         // leaves (green) - at bottom for libGDX
         pixmap.setColor(0.1f, 0.5f, 0.1f, 1);
-        pixmap.fillCircle(32, 19, 18);
+        pixmap.fillCircle(64, 38, 36);
         
         // trunk (brown) - at top for libGDX
         pixmap.setColor(0.4f, 0.2f, 0.1f, 1);
-        pixmap.fillRectangle(28, 34, 8, 30);
+        pixmap.fillRectangle(56, 68, 16, 60);
+        
+        // red apples scattered on leaves
+        pixmap.setColor(0.8f, 0.1f, 0.1f, 1);
+        pixmap.fillCircle(50, 30, 3);
+        pixmap.fillCircle(78, 25, 3);
+        pixmap.fillCircle(60, 45, 3);
+        pixmap.fillCircle(85, 40, 3);
+        pixmap.fillCircle(45, 50, 3);
         
         texture = new Texture(pixmap);
         pixmap.dispose();
@@ -45,12 +53,14 @@ public class Tree {
         return y;
     }
 
+
+
     public boolean collidesWith(float playerX, float playerY, float playerWidth, float playerHeight) {
-        // Collision box: 16px width centered (reduced by 8px each side), 48px height
-        float treeCollisionX = x + 24; // center the 16px collision box (16 + 8)
-        float treeCollisionWidth = 16; // reduced from 32px
-        float treeCollisionY = y + 16; // 16px down from center
-        float treeCollisionHeight = 48; // 32px up + 16px down
+        // Collision box: 48px width centered (reduced by 8px each side), 96px height
+        float treeCollisionX = x + 40; // center the 48px collision box (32 + 8)
+        float treeCollisionWidth = 48; // reduced from 64px
+        float treeCollisionY = y + 32; // 32px down from center
+        float treeCollisionHeight = 96; // 64px up + 32px down
         
         return playerX < treeCollisionX + treeCollisionWidth && playerX + playerWidth > treeCollisionX && 
                playerY < treeCollisionY + treeCollisionHeight && playerY + playerHeight > treeCollisionY;
@@ -81,16 +91,16 @@ public class Tree {
     }
     
     public boolean isInAttackRange(float playerX, float playerY) {
-        // Tree attack range: 64px up/down, 64px left/right from center
-        float treeCenterX = x + 32;
-        float treeCenterY = y + 32;
+        // AppleTree attack range: 128px up/down, 64px left/right from center
+        float treeCenterX = x + 64;
+        float treeCenterY = y + 64;
         float playerCenterX = playerX + 32;
         float playerCenterY = playerY + 32;
         
         float dx = Math.abs(treeCenterX - playerCenterX);
         float dy = Math.abs(treeCenterY - playerCenterY);
         
-        return dx <= 64 && dy <= 64;
+        return dx <= 64 && dy <= 128;
     }
     
     public int getHealth() {

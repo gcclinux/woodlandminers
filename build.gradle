@@ -7,7 +7,7 @@ repositories {
     mavenCentral()
 }
 
-def gdxVersion = '1.11.0'
+def gdxVersion = '1.12.1'
 
 dependencies {
     implementation "com.badlogicgames.gdx:gdx:$gdxVersion"
@@ -20,8 +20,22 @@ java {
     targetCompatibility = JavaVersion.VERSION_21
 }
 
+// Configure assets folder for LibGDX
+sourceSets {
+    main {
+        resources {
+            srcDirs = ['assets']
+        }
+    }
+}
+
 application {
-    mainClass = 'com.example.game.desktop.DesktopLauncher'
+    mainClass = 'wagemaker.uk.desktop.DesktopLauncher'
+}
+
+// Ensure assets are available during development
+run {
+    workingDir = project.rootDir
 }
 
 jar {

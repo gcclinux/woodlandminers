@@ -1,4 +1,4 @@
-package wagemaker.uk;
+package wagemaker.uk.player;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -6,6 +6,9 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import wagemaker.uk.trees.SmallTree;
+import wagemaker.uk.trees.AppleTree;
+import wagemaker.uk.trees.CoconutTree;
 import java.util.Map;
 
 public class Player {
@@ -20,8 +23,9 @@ public class Player {
     private Animation<TextureRegion> currentAnimation;
     private TextureRegion idleFrame;
     private OrthographicCamera camera;
-    private Map<String, Tree> trees;
+    private Map<String, SmallTree> trees;
     private Map<String, AppleTree> appleTrees;
+    private Map<String, CoconutTree> coconutTrees;
     private Map<String, Boolean> clearedPositions;
     
     // Direction tracking
@@ -36,12 +40,16 @@ public class Player {
         loadAnimations();
     }
     
-    public void setTrees(Map<String, Tree> trees) {
+    public void setTrees(Map<String, SmallTree> trees) {
         this.trees = trees;
     }
     
     public void setAppleTrees(Map<String, AppleTree> appleTrees) {
         this.appleTrees = appleTrees;
+    }
+    
+    public void setCoconutTrees(Map<String, CoconutTree> coconutTrees) {
+        this.coconutTrees = coconutTrees;
     }
     
     public void setClearedPositions(Map<String, Boolean> clearedPositions) {
@@ -215,7 +223,7 @@ public class Player {
     private boolean wouldCollide(float newX, float newY) {
         // Check collision with regular trees
         if (trees != null) {
-            for (Tree tree : trees.values()) {
+            for (SmallTree tree : trees.values()) {
                 if (tree.collidesWith(newX, newY, 64, 64)) {
                     return true;
                 }
@@ -226,6 +234,15 @@ public class Player {
         if (appleTrees != null) {
             for (AppleTree appleTree : appleTrees.values()) {
                 if (appleTree.collidesWith(newX, newY, 64, 64)) {
+                    return true;
+                }
+            }
+        }
+        
+        // Check collision with coconut trees
+        if (coconutTrees != null) {
+            for (CoconutTree coconutTree : coconutTrees.values()) {
+                if (coconutTree.collidesWith(newX, newY, 64, 64)) {
                     return true;
                 }
             }
@@ -244,11 +261,11 @@ public class Player {
         
         // Attack trees within range (individual collision)
         if (trees != null) {
-            Tree targetTree = null;
+            SmallTree targetTree = null;
             String targetKey = null;
             
-            for (Map.Entry<String, Tree> entry : trees.entrySet()) {
-                Tree tree = entry.getValue();
+            for (Map.Entry<String, SmallTree> entry : trees.entrySet()) {
+                SmallTree tree = entry.getValue();
                 
                 if (tree.isInAttackRange(x, y)) {
                     targetTree = tree;
@@ -298,6 +315,36 @@ public class Player {
                     appleTrees.remove(targetKey);
                     clearedPositions.put(targetKey, true);
                     System.out.println("Apple tree removed from world");
+                }
+            }
+        }
+        
+        // Attack coconut trees within range (individual collision)
+        if (coconutTrees != null && !attackedSomething) {
+            CoconutTree targetCoconutTree = null;
+            String targetKey = null;
+            
+            for (Map.Entry<String, CoconutTree> entry : coconutTrees.entrySet()) {
+                CoconutTree coconutTree = entry.getValue();
+                
+                if (coconutTree.isInAttackRange(x, y)) {
+                    targetCoconutTree = coconutTree;
+                    targetKey = entry.getKey();
+                    break;
+                }
+            }
+            
+            if (targetCoconutTree != null) {
+                System.out.println("Attacking coconut tree, health before: " + targetCoconutTree.getHealth());
+                boolean destroyed = targetCoconutTree.attack();
+                System.out.println("Coconut tree health after attack: " + targetCoconutTree.getHealth() + ", destroyed: " + destroyed);
+                attackedSomething = true;
+                
+                if (destroyed) {
+                    targetCoconutTree.dispose();
+                    coconutTrees.remove(targetKey);
+                    clearedPositions.put(targetKey, true);
+                    System.out.println("Coconut tree removed from world");
                 }
             }
         }

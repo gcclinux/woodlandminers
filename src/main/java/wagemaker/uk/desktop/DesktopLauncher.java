@@ -2,7 +2,7 @@ package wagemaker.uk.desktop;
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-import wagemaker.uk.MyGdxGame;
+import wagemaker.uk.gdx.MyGdxGame;
 
 public class DesktopLauncher {
     public static void main(String[] args) {

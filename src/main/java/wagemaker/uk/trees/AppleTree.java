@@ -1,4 +1,4 @@
-package wagemaker.uk;
+package wagemaker.uk.trees;
 
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
@@ -17,28 +17,17 @@ public class AppleTree {
     }
 
     private void createTexture() {
+        Texture spriteSheet = new Texture("sprites/assets.png");
         Pixmap pixmap = new Pixmap(128, 128, Pixmap.Format.RGBA8888);
-        pixmap.setColor(0, 0, 0, 0);
-        pixmap.fill();
+        spriteSheet.getTextureData().prepare();
+        Pixmap sheetPixmap = spriteSheet.getTextureData().consumePixmap();
         
-        // leaves (green) - at bottom for libGDX
-        pixmap.setColor(0.1f, 0.5f, 0.1f, 1);
-        pixmap.fillCircle(64, 38, 36);
-        
-        // trunk (brown) - at top for libGDX
-        pixmap.setColor(0.4f, 0.2f, 0.1f, 1);
-        pixmap.fillRectangle(56, 68, 16, 60);
-        
-        // red apples scattered on leaves
-        pixmap.setColor(0.8f, 0.1f, 0.1f, 1);
-        pixmap.fillCircle(50, 30, 3);
-        pixmap.fillCircle(78, 25, 3);
-        pixmap.fillCircle(60, 45, 3);
-        pixmap.fillCircle(85, 40, 3);
-        pixmap.fillCircle(45, 50, 3);
+        pixmap.drawPixmap(sheetPixmap, 0, 0, 128, 0, 128, 128);
         
         texture = new Texture(pixmap);
         pixmap.dispose();
+        sheetPixmap.dispose();
+        spriteSheet.dispose();
     }
 
     public Texture getTexture() {
@@ -56,11 +45,11 @@ public class AppleTree {
 
 
     public boolean collidesWith(float playerX, float playerY, float playerWidth, float playerHeight) {
-        // Collision box: 48px width centered (reduced by 8px each side), 96px height
-        float treeCollisionX = x + 40; // center the 48px collision box (32 + 8)
-        float treeCollisionWidth = 48; // reduced from 64px
-        float treeCollisionY = y + 32; // 32px down from center
-        float treeCollisionHeight = 96; // 64px up + 32px down
+        // Collision box: 32px width (16px left, 16px right)
+        float treeCollisionX = x + 48;
+        float treeCollisionWidth = 32;
+        float treeCollisionY = y + 28;
+        float treeCollisionHeight = 52;
         
         return playerX < treeCollisionX + treeCollisionWidth && playerX + playerWidth > treeCollisionX && 
                playerY < treeCollisionY + treeCollisionHeight && playerY + playerHeight > treeCollisionY;

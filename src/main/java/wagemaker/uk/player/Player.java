@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import wagemaker.uk.trees.SmallTree;
 import wagemaker.uk.trees.AppleTree;
+import wagemaker.uk.trees.BambooTree;
 import wagemaker.uk.trees.CoconutTree;
 import java.util.Map;
 
@@ -26,6 +27,7 @@ public class Player {
     private Map<String, SmallTree> trees;
     private Map<String, AppleTree> appleTrees;
     private Map<String, CoconutTree> coconutTrees;
+    private Map<String, BambooTree> bambooTrees;
     private Map<String, Boolean> clearedPositions;
     
     // Direction tracking
@@ -50,6 +52,10 @@ public class Player {
     
     public void setCoconutTrees(Map<String, CoconutTree> coconutTrees) {
         this.coconutTrees = coconutTrees;
+    }
+    
+    public void setBambooTrees(Map<String, BambooTree> bambooTrees) {
+        this.bambooTrees = bambooTrees;
     }
     
     public void setClearedPositions(Map<String, Boolean> clearedPositions) {
@@ -274,6 +280,15 @@ public class Player {
             }
         }
         
+        // Check collision with bamboo trees
+        if (bambooTrees != null) {
+            for (BambooTree bambooTree : bambooTrees.values()) {
+                if (bambooTree.collidesWith(newX, newY, 64, 64)) {
+                    return true;
+                }
+            }
+        }
+        
         return false;
     }
     
@@ -371,6 +386,36 @@ public class Player {
                     coconutTrees.remove(targetKey);
                     clearedPositions.put(targetKey, true);
                     System.out.println("Coconut tree removed from world");
+                }
+            }
+        }
+        
+        // Attack bamboo trees within range (individual collision)
+        if (bambooTrees != null && !attackedSomething) {
+            BambooTree targetBambooTree = null;
+            String targetKey = null;
+            
+            for (Map.Entry<String, BambooTree> entry : bambooTrees.entrySet()) {
+                BambooTree bambooTree = entry.getValue();
+                
+                if (bambooTree.isInAttackRange(x, y)) {
+                    targetBambooTree = bambooTree;
+                    targetKey = entry.getKey();
+                    break;
+                }
+            }
+            
+            if (targetBambooTree != null) {
+                System.out.println("Attacking bamboo tree, health before: " + targetBambooTree.getHealth());
+                boolean destroyed = targetBambooTree.attack();
+                System.out.println("Bamboo tree health after attack: " + targetBambooTree.getHealth() + ", destroyed: " + destroyed);
+                attackedSomething = true;
+                
+                if (destroyed) {
+                    targetBambooTree.dispose();
+                    bambooTrees.remove(targetKey);
+                    clearedPositions.put(targetKey, true);
+                    System.out.println("Bamboo tree removed from world");
                 }
             }
         }

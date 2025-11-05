@@ -61,13 +61,9 @@ public class MyGdxGame extends ApplicationAdapter {
         player.setCoconutTrees(coconutTrees);
         player.setClearedPositions(clearedPositions);
 
-        // create grass texture
-        Pixmap grassPixmap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
-        grassPixmap.setColor(0.2f, 0.6f, 0.1f, 1);
-        grassPixmap.fill();
-        grassTexture = new Texture(grassPixmap);
+        // create realistic grass texture
+        grassTexture = createRealisticGrassTexture();
         grassTexture.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat);
-        grassPixmap.dispose();
 
 
     }
@@ -299,6 +295,84 @@ public class MyGdxGame extends ApplicationAdapter {
         }
         
         shapeRenderer.end();
+    }
+
+    private Texture createRealisticGrassTexture() {
+        Pixmap grassPixmap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
+        Random grassRandom = new Random(12345); // Fixed seed for consistent grass pattern
+        
+        // Base grass colors (different shades of green)
+        float[] baseGreen = {0.15f, 0.5f, 0.08f, 1.0f}; // Dark green
+        float[] lightGreen = {0.25f, 0.65f, 0.15f, 1.0f}; // Light green
+        float[] mediumGreen = {0.2f, 0.55f, 0.12f, 1.0f}; // Medium green
+        float[] brownish = {0.3f, 0.4f, 0.1f, 1.0f}; // Brownish green (dirt patches)
+        
+        // Fill with base grass color
+        grassPixmap.setColor(baseGreen[0], baseGreen[1], baseGreen[2], baseGreen[3]);
+        grassPixmap.fill();
+        
+        // Add grass blade patterns and texture variations
+        for (int x = 0; x < 64; x++) {
+            for (int y = 0; y < 64; y++) {
+                float noise = grassRandom.nextFloat();
+                
+                // Create grass blade patterns (vertical lines with variations)
+                if (x % 3 == 0 && noise > 0.3f) {
+                    // Lighter grass blades
+                    grassPixmap.setColor(lightGreen[0], lightGreen[1], lightGreen[2], lightGreen[3]);
+                    grassPixmap.drawPixel(x, y);
+                    if (y > 0 && grassRandom.nextFloat() > 0.5f) {
+                        grassPixmap.drawPixel(x, y - 1); // Extend blade
+                    }
+                } else if (x % 4 == 1 && noise > 0.6f) {
+                    // Medium grass blades
+                    grassPixmap.setColor(mediumGreen[0], mediumGreen[1], mediumGreen[2], mediumGreen[3]);
+                    grassPixmap.drawPixel(x, y);
+                } else if (noise > 0.85f) {
+                    // Random dirt/brown patches for realism
+                    grassPixmap.setColor(brownish[0], brownish[1], brownish[2], brownish[3]);
+                    grassPixmap.drawPixel(x, y);
+                } else if (noise > 0.75f) {
+                    // Darker grass areas (shadows)
+                    grassPixmap.setColor(baseGreen[0] * 0.8f, baseGreen[1] * 0.8f, baseGreen[2] * 0.8f, baseGreen[3]);
+                    grassPixmap.drawPixel(x, y);
+                }
+            }
+        }
+        
+        // Add some scattered small details (seeds, small stones, etc.)
+        for (int i = 0; i < 8; i++) {
+            int x = grassRandom.nextInt(64);
+            int y = grassRandom.nextInt(64);
+            
+            if (grassRandom.nextFloat() > 0.5f) {
+                // Small brown spots (seeds/dirt)
+                grassPixmap.setColor(0.4f, 0.3f, 0.2f, 1.0f);
+                grassPixmap.drawPixel(x, y);
+            } else {
+                // Tiny light spots (small flowers/highlights)
+                grassPixmap.setColor(0.6f, 0.8f, 0.3f, 1.0f);
+                grassPixmap.drawPixel(x, y);
+            }
+        }
+        
+        // Add some diagonal grass patterns for more natural look
+        for (int i = 0; i < 64; i += 8) {
+            for (int j = 0; j < 64; j += 6) {
+                if (grassRandom.nextFloat() > 0.4f) {
+                    // Diagonal grass blade pattern
+                    grassPixmap.setColor(lightGreen[0], lightGreen[1], lightGreen[2], lightGreen[3]);
+                    if (i + 1 < 64 && j + 1 < 64) {
+                        grassPixmap.drawPixel(i, j);
+                        grassPixmap.drawPixel(i + 1, j + 1);
+                    }
+                }
+            }
+        }
+        
+        Texture texture = new Texture(grassPixmap);
+        grassPixmap.dispose();
+        return texture;
     }
 
     @Override

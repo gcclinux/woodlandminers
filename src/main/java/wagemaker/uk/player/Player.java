@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import wagemaker.uk.items.Apple;
 import wagemaker.uk.trees.SmallTree;
 import wagemaker.uk.trees.AppleTree;
 import wagemaker.uk.trees.BambooTree;
@@ -28,6 +29,7 @@ public class Player {
     private Map<String, AppleTree> appleTrees;
     private Map<String, CoconutTree> coconutTrees;
     private Map<String, BambooTree> bambooTrees;
+    private Map<String, Apple> apples;
     private Map<String, Boolean> clearedPositions;
     
     // Direction tracking
@@ -56,6 +58,10 @@ public class Player {
     
     public void setBambooTrees(Map<String, BambooTree> bambooTrees) {
         this.bambooTrees = bambooTrees;
+    }
+    
+    public void setApples(Map<String, Apple> apples) {
+        this.apples = apples;
     }
     
     public void setClearedPositions(Map<String, Boolean> clearedPositions) {
@@ -352,10 +358,12 @@ public class Player {
                 attackedSomething = true;
                 
                 if (destroyed) {
+                    // Spawn apple at tree position
+                    apples.put(targetKey, new Apple(targetAppleTree.getX(), targetAppleTree.getY()));
+                    System.out.println("Apple dropped at: " + targetAppleTree.getX() + ", " + targetAppleTree.getY());
                     targetAppleTree.dispose();
                     appleTrees.remove(targetKey);
                     clearedPositions.put(targetKey, true);
-                    System.out.println("Apple tree removed from world");
                 }
             }
         }

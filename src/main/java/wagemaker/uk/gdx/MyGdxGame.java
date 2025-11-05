@@ -16,6 +16,7 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 import wagemaker.uk.player.Player;
+import wagemaker.uk.items.Apple;
 import wagemaker.uk.trees.AppleTree;
 import wagemaker.uk.trees.BambooTree;
 import wagemaker.uk.trees.CoconutTree;
@@ -32,6 +33,7 @@ public class MyGdxGame extends ApplicationAdapter {
     Map<String, AppleTree> appleTrees;
     Map<String, CoconutTree> coconutTrees;
     Map<String, BambooTree> bambooTrees;
+    Map<String, Apple> apples;
     Map<String, Boolean> clearedPositions;
     Random random;
     
@@ -54,6 +56,7 @@ public class MyGdxGame extends ApplicationAdapter {
         appleTrees = new HashMap<>();
         coconutTrees = new HashMap<>();
         bambooTrees = new HashMap<>();
+        apples = new HashMap<>();
         clearedPositions = new HashMap<>();
         random = new Random();
 
@@ -63,6 +66,7 @@ public class MyGdxGame extends ApplicationAdapter {
         player.setAppleTrees(appleTrees);
         player.setCoconutTrees(coconutTrees);
         player.setBambooTrees(bambooTrees);
+        player.setApples(apples);
         player.setClearedPositions(clearedPositions);
 
         // create realistic grass texture
@@ -109,6 +113,7 @@ public class MyGdxGame extends ApplicationAdapter {
         drawTrees();
         drawCoconutTrees();
         drawBambooTrees();
+        drawApples();
         // draw player before apple trees so foliage appears in front
         batch.draw(player.getCurrentFrame(), player.getX(), player.getY());
         drawAppleTrees();
@@ -256,6 +261,21 @@ public class MyGdxGame extends ApplicationAdapter {
             if (Math.abs(bambooTree.getX() - camX) < viewWidth && 
                 Math.abs(bambooTree.getY() - camY) < viewHeight) {
                 batch.draw(bambooTree.getTexture(), bambooTree.getX(), bambooTree.getY());
+            }
+        }
+    }
+    
+    private void drawApples() {
+        float camX = camera.position.x;
+        float camY = camera.position.y;
+        float viewWidth = viewport.getWorldWidth();
+        float viewHeight = viewport.getWorldHeight();
+        
+        for (Apple apple : apples.values()) {
+            // only draw apples near camera
+            if (Math.abs(apple.getX() - camX) < viewWidth && 
+                Math.abs(apple.getY() - camY) < viewHeight) {
+                batch.draw(apple.getTexture(), apple.getX(), apple.getY(), 24, 24);
             }
         }
     }
@@ -443,6 +463,9 @@ public class MyGdxGame extends ApplicationAdapter {
         }
         for (BambooTree bambooTree : bambooTrees.values()) {
             bambooTree.dispose();
+        }
+        for (Apple apple : apples.values()) {
+            apple.dispose();
         }
     }
 }

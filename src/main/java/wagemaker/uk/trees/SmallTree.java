@@ -6,9 +6,8 @@ import com.badlogic.gdx.graphics.Texture;
 public class SmallTree {
     private float x, y;
     private Texture texture;
-    private int health = 100;
-    private boolean showHealthBar = false;
-    private float healthBarTimer = 0;
+    private float health = 100;
+    private float timeSinceLastAttack = 0;
 
     public SmallTree(float x, float y) {
         this.x = x;
@@ -55,26 +54,25 @@ public class SmallTree {
 
     public boolean attack() {
         health -= 10;
-        showHealthBar = true;
-        healthBarTimer = 3.0f; // show for 3 seconds
+        timeSinceLastAttack = 0;
         return health <= 0;
     }
     
     public void update(float deltaTime) {
-        if (showHealthBar) {
-            healthBarTimer -= deltaTime;
-            if (healthBarTimer <= 0) {
-                showHealthBar = false;
+        if (health < 100) {
+            timeSinceLastAttack += deltaTime;
+            if (timeSinceLastAttack >= 5.0f) {
+                health = Math.min(100, health + deltaTime);
             }
         }
     }
     
     public boolean shouldShowHealthBar() {
-        return showHealthBar;
+        return health < 100;
     }
     
     public float getHealthPercentage() {
-        return health / 100.0f;
+        return Math.min(1.0f, health / 100.0f);
     }
     
     public boolean isInAttackRange(float playerX, float playerY) {
@@ -90,7 +88,7 @@ public class SmallTree {
         return dx <= 64 && dy >= -96 && dy <= 96;
     }
     
-    public int getHealth() {
+    public float getHealth() {
         return health;
     }
 

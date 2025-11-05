@@ -19,6 +19,7 @@ import wagemaker.uk.player.Player;
 import wagemaker.uk.items.Apple;
 import wagemaker.uk.trees.AppleTree;
 import wagemaker.uk.trees.BambooTree;
+import wagemaker.uk.trees.BananaTree;
 import wagemaker.uk.trees.CoconutTree;
 import wagemaker.uk.trees.SmallTree;
 
@@ -33,6 +34,7 @@ public class MyGdxGame extends ApplicationAdapter {
     Map<String, AppleTree> appleTrees;
     Map<String, CoconutTree> coconutTrees;
     Map<String, BambooTree> bambooTrees;
+    Map<String, BananaTree> bananaTrees;
     Map<String, Apple> apples;
     Map<String, Boolean> clearedPositions;
     Random random;
@@ -56,6 +58,7 @@ public class MyGdxGame extends ApplicationAdapter {
         appleTrees = new HashMap<>();
         coconutTrees = new HashMap<>();
         bambooTrees = new HashMap<>();
+        bananaTrees = new HashMap<>();
         apples = new HashMap<>();
         clearedPositions = new HashMap<>();
         random = new Random();
@@ -66,6 +69,7 @@ public class MyGdxGame extends ApplicationAdapter {
         player.setAppleTrees(appleTrees);
         player.setCoconutTrees(coconutTrees);
         player.setBambooTrees(bambooTrees);
+        player.setBananaTrees(bananaTrees);
         player.setApples(apples);
         player.setClearedPositions(clearedPositions);
 
@@ -96,6 +100,9 @@ public class MyGdxGame extends ApplicationAdapter {
         for (BambooTree bambooTree : bambooTrees.values()) {
             bambooTree.update(deltaTime);
         }
+        for (BananaTree bananaTree : bananaTrees.values()) {
+            bananaTree.update(deltaTime);
+        }
         
         camera.update();
 
@@ -117,6 +124,7 @@ public class MyGdxGame extends ApplicationAdapter {
         // draw player before apple trees so foliage appears in front
         batch.draw(player.getCurrentFrame(), player.getX(), player.getY());
         drawAppleTrees();
+        drawBananaTrees();
         batch.end();
         
         // draw health bars
@@ -149,7 +157,7 @@ public class MyGdxGame extends ApplicationAdapter {
     
     private void generateTreeAt(int x, int y) {
         String key = x + "," + y;
-        if (!trees.containsKey(key) && !appleTrees.containsKey(key) && !coconutTrees.containsKey(key) && !bambooTrees.containsKey(key) && !clearedPositions.containsKey(key)) {
+        if (!trees.containsKey(key) && !appleTrees.containsKey(key) && !coconutTrees.containsKey(key) && !bambooTrees.containsKey(key) && !bananaTrees.containsKey(key) && !clearedPositions.containsKey(key)) {
             // 2% chance to generate a tree at this grass tile
             random.setSeed(x * 31L + y * 17L); // deterministic based on position
             if (random.nextFloat() < 0.02f) {
@@ -158,16 +166,18 @@ public class MyGdxGame extends ApplicationAdapter {
                     return;
                 }
                 
-                // 25% chance each for small tree, apple tree, coconut tree, bamboo tree
+                // 20% chance each for small tree, apple tree, coconut tree, bamboo tree, banana tree
                 float treeType = random.nextFloat();
-                if (treeType < 0.25f) {
+                if (treeType < 0.2f) {
                     trees.put(key, new SmallTree(x, y));
-                } else if (treeType < 0.5f) {
+                } else if (treeType < 0.4f) {
                     appleTrees.put(key, new AppleTree(x, y));
-                } else if (treeType < 0.75f) {
+                } else if (treeType < 0.6f) {
                     coconutTrees.put(key, new CoconutTree(x, y));
-                } else {
+                } else if (treeType < 0.8f) {
                     bambooTrees.put(key, new BambooTree(x, y));
+                } else {
+                    bananaTrees.put(key, new BananaTree(x, y));
                 }
             }
         }
@@ -196,6 +206,13 @@ public class MyGdxGame extends ApplicationAdapter {
             }
         }
         for (BambooTree tree : bambooTrees.values()) {
+            float dx = tree.getX() - x;
+            float dy = tree.getY() - y;
+            if (Math.sqrt(dx * dx + dy * dy) < minDistance) {
+                return true;
+            }
+        }
+        for (BananaTree tree : bananaTrees.values()) {
             float dx = tree.getX() - x;
             float dy = tree.getY() - y;
             if (Math.sqrt(dx * dx + dy * dy) < minDistance) {
@@ -261,6 +278,21 @@ public class MyGdxGame extends ApplicationAdapter {
             if (Math.abs(bambooTree.getX() - camX) < viewWidth && 
                 Math.abs(bambooTree.getY() - camY) < viewHeight) {
                 batch.draw(bambooTree.getTexture(), bambooTree.getX(), bambooTree.getY());
+            }
+        }
+    }
+    
+    private void drawBananaTrees() {
+        float camX = camera.position.x;
+        float camY = camera.position.y;
+        float viewWidth = viewport.getWorldWidth();
+        float viewHeight = viewport.getWorldHeight();
+        
+        for (BananaTree bananaTree : bananaTrees.values()) {
+            // only draw banana trees near camera
+            if (Math.abs(bananaTree.getX() - camX) < viewWidth && 
+                Math.abs(bananaTree.getY() - camY) < viewHeight) {
+                batch.draw(bananaTree.getTexture(), bananaTree.getX(), bananaTree.getY());
             }
         }
     }
@@ -365,6 +397,25 @@ public class MyGdxGame extends ApplicationAdapter {
             }
         }
         
+        // Draw banana tree health bars
+        for (BananaTree bananaTree : bananaTrees.values()) {
+            if (bananaTree.shouldShowHealthBar()) {
+                float barWidth = 64;
+                float barHeight = 6;
+                float barX = bananaTree.getX() + 32;
+                float barY = bananaTree.getY() + 134;
+                
+                // Green background
+                shapeRenderer.setColor(0, 1, 0, 1);
+                shapeRenderer.rect(barX, barY, barWidth, barHeight);
+                
+                // Red overlay based on damage
+                float damagePercent = 1.0f - bananaTree.getHealthPercentage();
+                shapeRenderer.setColor(1, 0, 0, 1);
+                shapeRenderer.rect(barX, barY, barWidth * damagePercent, barHeight);
+            }
+        }
+        
         shapeRenderer.end();
     }
 
@@ -463,6 +514,9 @@ public class MyGdxGame extends ApplicationAdapter {
         }
         for (BambooTree bambooTree : bambooTrees.values()) {
             bambooTree.dispose();
+        }
+        for (BananaTree bananaTree : bananaTrees.values()) {
+            bananaTree.dispose();
         }
         for (Apple apple : apples.values()) {
             apple.dispose();

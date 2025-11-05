@@ -10,6 +10,7 @@ import wagemaker.uk.items.Apple;
 import wagemaker.uk.trees.SmallTree;
 import wagemaker.uk.trees.AppleTree;
 import wagemaker.uk.trees.BambooTree;
+import wagemaker.uk.trees.BananaTree;
 import wagemaker.uk.trees.CoconutTree;
 import java.util.Map;
 
@@ -29,6 +30,7 @@ public class Player {
     private Map<String, AppleTree> appleTrees;
     private Map<String, CoconutTree> coconutTrees;
     private Map<String, BambooTree> bambooTrees;
+    private Map<String, BananaTree> bananaTrees;
     private Map<String, Apple> apples;
     private Map<String, Boolean> clearedPositions;
     
@@ -58,6 +60,10 @@ public class Player {
     
     public void setBambooTrees(Map<String, BambooTree> bambooTrees) {
         this.bambooTrees = bambooTrees;
+    }
+    
+    public void setBananaTrees(Map<String, BananaTree> bananaTrees) {
+        this.bananaTrees = bananaTrees;
     }
     
     public void setApples(Map<String, Apple> apples) {
@@ -295,6 +301,15 @@ public class Player {
             }
         }
         
+        // Check collision with banana trees
+        if (bananaTrees != null) {
+            for (BananaTree bananaTree : bananaTrees.values()) {
+                if (bananaTree.collidesWith(newX, newY, 64, 64)) {
+                    return true;
+                }
+            }
+        }
+        
         return false;
     }
     
@@ -424,6 +439,36 @@ public class Player {
                     bambooTrees.remove(targetKey);
                     clearedPositions.put(targetKey, true);
                     System.out.println("Bamboo tree removed from world");
+                }
+            }
+        }
+        
+        // Attack banana trees within range (individual collision)
+        if (bananaTrees != null && !attackedSomething) {
+            BananaTree targetBananaTree = null;
+            String targetKey = null;
+            
+            for (Map.Entry<String, BananaTree> entry : bananaTrees.entrySet()) {
+                BananaTree bananaTree = entry.getValue();
+                
+                if (bananaTree.isInAttackRange(x, y)) {
+                    targetBananaTree = bananaTree;
+                    targetKey = entry.getKey();
+                    break;
+                }
+            }
+            
+            if (targetBananaTree != null) {
+                System.out.println("Attacking banana tree, health before: " + targetBananaTree.getHealth());
+                boolean destroyed = targetBananaTree.attack();
+                System.out.println("Banana tree health after attack: " + targetBananaTree.getHealth() + ", destroyed: " + destroyed);
+                attackedSomething = true;
+                
+                if (destroyed) {
+                    targetBananaTree.dispose();
+                    bananaTrees.remove(targetKey);
+                    clearedPositions.put(targetKey, true);
+                    System.out.println("Banana tree removed from world");
                 }
             }
         }

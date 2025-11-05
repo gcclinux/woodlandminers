@@ -59,45 +59,71 @@ public class Player {
     public void update(float deltaTime) {
         isMoving = false;
         
+        // Track movement in both directions
+        boolean movingLeft = false;
+        boolean movingRight = false;
+        boolean movingUp = false;
+        boolean movingDown = false;
+        
         // handle input with collision detection
         float newX = x;
         float newY = y;
         
+        // Check horizontal movement
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) { 
-            newX = x - speed * deltaTime;
-            if (!wouldCollide(newX, y)) {
-                x = newX;
+            float testX = x - speed * deltaTime;
+            if (!wouldCollide(testX, y)) {
+                newX = testX;
+                movingLeft = true;
                 isMoving = true;
-                currentDirection = Direction.LEFT;
-                currentAnimation = walkLeftAnimation;
             }
         }
         if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) { 
-            newX = x + speed * deltaTime;
-            if (!wouldCollide(newX, y)) {
-                x = newX;
+            float testX = x + speed * deltaTime;
+            if (!wouldCollide(testX, y)) {
+                newX = testX;
+                movingRight = true;
                 isMoving = true;
-                currentDirection = Direction.RIGHT;
-                currentAnimation = walkRightAnimation;
             }
         }
+        
+        // Check vertical movement
         if (Gdx.input.isKeyPressed(Input.Keys.UP)) { 
-            newY = y + speed * deltaTime;
-            if (!wouldCollide(x, newY)) {
-                y = newY;
+            float testY = y + speed * deltaTime;
+            if (!wouldCollide(newX, testY)) { // Use newX in case of diagonal movement
+                newY = testY;
+                movingUp = true;
                 isMoving = true;
-                currentDirection = Direction.UP;
-                currentAnimation = walkUpAnimation;
             }
         }
         if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) { 
-            newY = y - speed * deltaTime;
-            if (!wouldCollide(x, newY)) {
-                y = newY;
+            float testY = y - speed * deltaTime;
+            if (!wouldCollide(newX, testY)) { // Use newX in case of diagonal movement
+                newY = testY;
+                movingDown = true;
                 isMoving = true;
-                currentDirection = Direction.DOWN;
-                currentAnimation = walkDownAnimation;
             }
+        }
+        
+        // Apply movement
+        x = newX;
+        y = newY;
+        
+        // Determine animation based on movement priority:
+        // For diagonal movement, prioritize horizontal direction (LEFT/RIGHT)
+        // Only use vertical animations (UP/DOWN) when moving purely vertically
+        if (movingLeft) {
+            currentDirection = Direction.LEFT;
+            currentAnimation = walkLeftAnimation;
+        } else if (movingRight) {
+            currentDirection = Direction.RIGHT;
+            currentAnimation = walkRightAnimation;
+        } else if (movingUp) {
+            currentDirection = Direction.UP;
+            currentAnimation = walkUpAnimation;
+        } else if (movingDown) {
+            currentDirection = Direction.DOWN;
+            currentAnimation = walkDownAnimation;
         }
 
         // handle attack

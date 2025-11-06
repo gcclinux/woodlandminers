@@ -153,10 +153,13 @@ public class MyGdxGame extends ApplicationAdapter {
         drawBananas();
         drawCactus();
         // draw player before apple trees so foliage appears in front
-        batch.draw(player.getCurrentFrame(), player.getX(), player.getY());
+        batch.draw(player.getCurrentFrame(), player.getX(), player.getY(), 100, 100);
         drawAppleTrees();
         drawBananaTrees();
         batch.end();
+        
+        // draw player name tag above player
+        gameMenu.renderPlayerNameTag(batch);
         
         // draw health bars
         drawHealthBars();

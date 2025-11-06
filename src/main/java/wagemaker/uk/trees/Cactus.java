@@ -54,15 +54,8 @@ public class Cactus {
         float cactusCollisionY = cactusCenterY - 40; // 40px down from center (lower collision box)
         float cactusCollisionHeight = 80; // 40px down + 40px up
         
-        boolean collision = playerX < cactusCollisionX + cactusCollisionWidth && playerX + playerWidth > cactusCollisionX && 
-                           playerY < cactusCollisionY + cactusCollisionHeight && playerY + playerHeight > cactusCollisionY;
-        
-        // Debug output
-        System.out.println("Collision check - Player: " + playerX + "," + playerY + " (" + playerWidth + "x" + playerHeight + ")");
-        System.out.println("Cactus collision box: " + cactusCollisionX + "," + cactusCollisionY + " (" + cactusCollisionWidth + "x" + cactusCollisionHeight + ")");
-        System.out.println("Collision result: " + collision);
-        
-        return collision;
+        return playerX < cactusCollisionX + cactusCollisionWidth && playerX + playerWidth > cactusCollisionX && 
+               playerY < cactusCollisionY + cactusCollisionHeight && playerY + playerHeight > cactusCollisionY;
     }
 
     public boolean attack() {

@@ -42,9 +42,10 @@ public class BananaTree {
     }
 
     public boolean collidesWith(float playerX, float playerY, float playerWidth, float playerHeight) {
-        // Collision box: reduced by 8px left and 16px right
-        float treeCollisionX = x + 56;
-        float treeCollisionWidth = 8;
+        // Adjusted collision box for narrower banana tree:
+        // Further away on the left, closer on the right
+        float treeCollisionX = x + 40; // Moved left from x + 56 to x + 40 (16px further left)
+        float treeCollisionWidth = 12; // Reduced from 20px to 12px (8px narrower on the right)
         float treeCollisionY = y + 28;
         float treeCollisionHeight = 52;
         

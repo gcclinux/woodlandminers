@@ -14,6 +14,7 @@ import wagemaker.uk.trees.BambooTree;
 import wagemaker.uk.trees.BananaTree;
 import wagemaker.uk.trees.CoconutTree;
 import wagemaker.uk.trees.Cactus;
+import wagemaker.uk.ui.GameMenu;
 import java.util.Map;
 
 public class Player {
@@ -40,6 +41,7 @@ public class Player {
     private Cactus cactus; // Single cactus reference
     private Object gameInstance; // Reference to MyGdxGame for cactus respawning
     private Map<String, Boolean> clearedPositions;
+    private GameMenu gameMenu;
     
     // Direction tracking
     private enum Direction { UP, DOWN, LEFT, RIGHT }
@@ -91,6 +93,10 @@ public class Player {
     
     public void setClearedPositions(Map<String, Boolean> clearedPositions) {
         this.clearedPositions = clearedPositions;
+    }
+    
+    public void setGameMenu(GameMenu gameMenu) {
+        this.gameMenu = gameMenu;
     }
 
     public void update(float deltaTime) {
@@ -628,6 +634,10 @@ public class Player {
     
     public float getHealth() {
         return health;
+    }
+    
+    public void setHealth(float health) {
+        this.health = Math.max(0, Math.min(100, health)); // Clamp between 0 and 100
     }
     
     public float getHealthPercentage() {

@@ -24,6 +24,7 @@ import wagemaker.uk.trees.BananaTree;
 import wagemaker.uk.trees.CoconutTree;
 import wagemaker.uk.trees.SmallTree;
 import wagemaker.uk.trees.Cactus;
+import wagemaker.uk.ui.GameMenu;
 
 public class MyGdxGame extends ApplicationAdapter {
     SpriteBatch batch;
@@ -42,6 +43,7 @@ public class MyGdxGame extends ApplicationAdapter {
     Cactus cactus; // Single cactus near spawn
     Map<String, Boolean> clearedPositions;
     Random random;
+    GameMenu gameMenu;
     
     // Camera dimensions for infinite world
     static final int CAMERA_WIDTH = 1280;
@@ -84,6 +86,13 @@ public class MyGdxGame extends ApplicationAdapter {
         player.setGameInstance(this);
         player.setClearedPositions(clearedPositions);
 
+        gameMenu = new GameMenu();
+        gameMenu.setPlayer(player); // Set player reference for saving
+        player.setGameMenu(gameMenu);
+        
+        // Load player position from save file if it exists
+        gameMenu.loadPlayerPosition();
+
         // create realistic grass texture
         grassTexture = createRealisticGrassTexture();
         grassTexture.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat);
@@ -95,8 +104,11 @@ public class MyGdxGame extends ApplicationAdapter {
     public void render() {
         float deltaTime = Gdx.graphics.getDeltaTime();
 
-        // update player and camera
-        player.update(deltaTime);
+        gameMenu.update();
+
+        if (!gameMenu.isOpen()) {
+            // update player and camera
+            player.update(deltaTime);
         
         // update trees
         for (SmallTree tree : trees.values()) {
@@ -118,6 +130,7 @@ public class MyGdxGame extends ApplicationAdapter {
         // update cactus
         if (cactus != null) {
             cactus.update(deltaTime);
+        }
         }
         
         camera.update();
@@ -147,6 +160,9 @@ public class MyGdxGame extends ApplicationAdapter {
         
         // draw health bars
         drawHealthBars();
+        
+        // draw menu on top
+        gameMenu.render(batch, shapeRenderer, camera.position.x, camera.position.y, viewport.getWorldWidth(), viewport.getWorldHeight());
     }
     
     private void drawInfiniteGrass() {
@@ -675,5 +691,6 @@ public class MyGdxGame extends ApplicationAdapter {
         if (cactus != null) {
             cactus.dispose();
         }
+        gameMenu.dispose();
     }
 }

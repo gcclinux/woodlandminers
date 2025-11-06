@@ -17,6 +17,7 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 
 import wagemaker.uk.player.Player;
 import wagemaker.uk.items.Apple;
+import wagemaker.uk.items.Banana;
 import wagemaker.uk.trees.AppleTree;
 import wagemaker.uk.trees.BambooTree;
 import wagemaker.uk.trees.BananaTree;
@@ -36,6 +37,7 @@ public class MyGdxGame extends ApplicationAdapter {
     Map<String, BambooTree> bambooTrees;
     Map<String, BananaTree> bananaTrees;
     Map<String, Apple> apples;
+    Map<String, Banana> bananas;
     Map<String, Boolean> clearedPositions;
     Random random;
     
@@ -60,6 +62,7 @@ public class MyGdxGame extends ApplicationAdapter {
         bambooTrees = new HashMap<>();
         bananaTrees = new HashMap<>();
         apples = new HashMap<>();
+        bananas = new HashMap<>();
         clearedPositions = new HashMap<>();
         random = new Random();
 
@@ -71,6 +74,7 @@ public class MyGdxGame extends ApplicationAdapter {
         player.setBambooTrees(bambooTrees);
         player.setBananaTrees(bananaTrees);
         player.setApples(apples);
+        player.setBananas(bananas);
         player.setClearedPositions(clearedPositions);
 
         // create realistic grass texture
@@ -121,6 +125,7 @@ public class MyGdxGame extends ApplicationAdapter {
         drawCoconutTrees();
         drawBambooTrees();
         drawApples();
+        drawBananas();
         // draw player before apple trees so foliage appears in front
         batch.draw(player.getCurrentFrame(), player.getX(), player.getY());
         drawAppleTrees();
@@ -163,6 +168,11 @@ public class MyGdxGame extends ApplicationAdapter {
             if (random.nextFloat() < 0.02f) {
                 // Check if any tree is within 256px distance
                 if (isTreeNearby(x, y, 256)) {
+                    return;
+                }
+                
+                // Don't spawn trees within player's visible area
+                if (isWithinPlayerView(x, y)) {
                     return;
                 }
                 
@@ -220,6 +230,28 @@ public class MyGdxGame extends ApplicationAdapter {
             }
         }
         return false;
+    }
+    
+    private boolean isWithinPlayerView(int x, int y) {
+        // Get player position and camera view dimensions
+        float playerX = player.getX();
+        float playerY = player.getY();
+        float viewWidth = viewport.getWorldWidth();
+        float viewHeight = viewport.getWorldHeight();
+        
+        // Calculate camera center (follows player)
+        float camCenterX = playerX + 32; // player center
+        float camCenterY = playerY + 32; // player center
+        
+        // Calculate view boundaries with some buffer to prevent trees appearing at screen edges
+        float buffer = 128; // Extra buffer beyond visible area
+        float leftBound = camCenterX - (viewWidth / 2) - buffer;
+        float rightBound = camCenterX + (viewWidth / 2) + buffer;
+        float bottomBound = camCenterY - (viewHeight / 2) - buffer;
+        float topBound = camCenterY + (viewHeight / 2) + buffer;
+        
+        // Check if tree position is within the buffered view area
+        return (x >= leftBound && x <= rightBound && y >= bottomBound && y <= topBound);
     }
     
     private void drawTrees() {
@@ -308,6 +340,21 @@ public class MyGdxGame extends ApplicationAdapter {
             if (Math.abs(apple.getX() - camX) < viewWidth && 
                 Math.abs(apple.getY() - camY) < viewHeight) {
                 batch.draw(apple.getTexture(), apple.getX(), apple.getY(), 24, 24);
+            }
+        }
+    }
+    
+    private void drawBananas() {
+        float camX = camera.position.x;
+        float camY = camera.position.y;
+        float viewWidth = viewport.getWorldWidth();
+        float viewHeight = viewport.getWorldHeight();
+        
+        for (Banana banana : bananas.values()) {
+            // only draw bananas near camera
+            if (Math.abs(banana.getX() - camX) < viewWidth && 
+                Math.abs(banana.getY() - camY) < viewHeight) {
+                batch.draw(banana.getTexture(), banana.getX(), banana.getY(), 32, 32);
             }
         }
     }
@@ -520,6 +567,9 @@ public class MyGdxGame extends ApplicationAdapter {
         }
         for (Apple apple : apples.values()) {
             apple.dispose();
+        }
+        for (Banana banana : bananas.values()) {
+            banana.dispose();
         }
     }
 }

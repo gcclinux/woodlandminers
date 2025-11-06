@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import wagemaker.uk.items.Apple;
+import wagemaker.uk.items.Banana;
 import wagemaker.uk.trees.SmallTree;
 import wagemaker.uk.trees.AppleTree;
 import wagemaker.uk.trees.BambooTree;
@@ -32,6 +33,7 @@ public class Player {
     private Map<String, BambooTree> bambooTrees;
     private Map<String, BananaTree> bananaTrees;
     private Map<String, Apple> apples;
+    private Map<String, Banana> bananas;
     private Map<String, Boolean> clearedPositions;
     
     // Direction tracking
@@ -68,6 +70,10 @@ public class Player {
     
     public void setApples(Map<String, Apple> apples) {
         this.apples = apples;
+    }
+    
+    public void setBananas(Map<String, Banana> bananas) {
+        this.bananas = bananas;
     }
     
     public void setClearedPositions(Map<String, Boolean> clearedPositions) {
@@ -146,7 +152,6 @@ public class Player {
 
         // handle attack
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-            System.out.println("Attack pressed at player position: " + x + ", " + y);
             attackNearbyTrees();
         }
 
@@ -337,9 +342,12 @@ public class Player {
             }
             
             if (targetTree != null) {
-                System.out.println("Attacking tree, health before: " + targetTree.getHealth());
+                float healthBefore = targetTree.getHealth();
                 boolean destroyed = targetTree.attack();
-                System.out.println("Tree health after attack: " + targetTree.getHealth() + ", destroyed: " + destroyed);
+                if (destroyed) {
+                    System.out.println("Attacking tree, health before: " + healthBefore);
+                    System.out.println("Tree health after attack: " + targetTree.getHealth() + ", destroyed: " + destroyed);
+                }
                 attackedSomething = true;
                 
                 if (destroyed) {
@@ -367,9 +375,12 @@ public class Player {
             }
             
             if (targetAppleTree != null) {
-                System.out.println("Attacking apple tree, health before: " + targetAppleTree.getHealth());
+                float healthBefore = targetAppleTree.getHealth();
                 boolean destroyed = targetAppleTree.attack();
-                System.out.println("Apple tree health after attack: " + targetAppleTree.getHealth() + ", destroyed: " + destroyed);
+                if (destroyed) {
+                    System.out.println("Attacking apple tree, health before: " + healthBefore);
+                    System.out.println("Apple tree health after attack: " + targetAppleTree.getHealth() + ", destroyed: " + destroyed);
+                }
                 attackedSomething = true;
                 
                 if (destroyed) {
@@ -399,9 +410,12 @@ public class Player {
             }
             
             if (targetCoconutTree != null) {
-                System.out.println("Attacking coconut tree, health before: " + targetCoconutTree.getHealth());
+                float healthBefore = targetCoconutTree.getHealth();
                 boolean destroyed = targetCoconutTree.attack();
-                System.out.println("Coconut tree health after attack: " + targetCoconutTree.getHealth() + ", destroyed: " + destroyed);
+                if (destroyed) {
+                    System.out.println("Attacking coconut tree, health before: " + healthBefore);
+                    System.out.println("Coconut tree health after attack: " + targetCoconutTree.getHealth() + ", destroyed: " + destroyed);
+                }
                 attackedSomething = true;
                 
                 if (destroyed) {
@@ -429,9 +443,12 @@ public class Player {
             }
             
             if (targetBambooTree != null) {
-                System.out.println("Attacking bamboo tree, health before: " + targetBambooTree.getHealth());
+                float healthBefore = targetBambooTree.getHealth();
                 boolean destroyed = targetBambooTree.attack();
-                System.out.println("Bamboo tree health after attack: " + targetBambooTree.getHealth() + ", destroyed: " + destroyed);
+                if (destroyed) {
+                    System.out.println("Attacking bamboo tree, health before: " + healthBefore);
+                    System.out.println("Bamboo tree health after attack: " + targetBambooTree.getHealth() + ", destroyed: " + destroyed);
+                }
                 attackedSomething = true;
                 
                 if (destroyed) {
@@ -459,16 +476,21 @@ public class Player {
             }
             
             if (targetBananaTree != null) {
-                System.out.println("Attacking banana tree, health before: " + targetBananaTree.getHealth());
+                float healthBefore = targetBananaTree.getHealth();
                 boolean destroyed = targetBananaTree.attack();
-                System.out.println("Banana tree health after attack: " + targetBananaTree.getHealth() + ", destroyed: " + destroyed);
+                if (destroyed) {
+                    System.out.println("Attacking banana tree, health before: " + healthBefore);
+                    System.out.println("Banana tree health after attack: " + targetBananaTree.getHealth() + ", destroyed: " + destroyed);
+                }
                 attackedSomething = true;
                 
                 if (destroyed) {
+                    // Spawn banana at tree position
+                    bananas.put(targetKey, new Banana(targetBananaTree.getX(), targetBananaTree.getY()));
+                    System.out.println("Banana dropped at: " + targetBananaTree.getX() + ", " + targetBananaTree.getY());
                     targetBananaTree.dispose();
                     bananaTrees.remove(targetKey);
                     clearedPositions.put(targetKey, true);
-                    System.out.println("Banana tree removed from world");
                 }
             }
         }

@@ -569,7 +569,7 @@ public class Player {
             boolean inDamageRange = dx <= 64 && dy <= 96;
             
             if (inDamageRange) {
-                System.out.println("Player in cactus damage range! dx: " + dx + ", dy: " + dy);
+
                 lastCactusDamageTime += deltaTime;
                 
                 // Take damage every 0.5 seconds while in range

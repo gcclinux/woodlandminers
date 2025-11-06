@@ -13,12 +13,15 @@ import wagemaker.uk.trees.AppleTree;
 import wagemaker.uk.trees.BambooTree;
 import wagemaker.uk.trees.BananaTree;
 import wagemaker.uk.trees.CoconutTree;
+import wagemaker.uk.trees.Cactus;
 import java.util.Map;
 
 public class Player {
     private float x, y;
     private float speed = 200;
     private float animTime = 0;
+    private float health = 100; // Player health
+    private float lastCactusDamageTime = 0; // To prevent spam damage
     private Texture spriteSheet;
     private Animation<TextureRegion> walkUpAnimation;
     private Animation<TextureRegion> walkLeftAnimation;
@@ -34,6 +37,8 @@ public class Player {
     private Map<String, BananaTree> bananaTrees;
     private Map<String, Apple> apples;
     private Map<String, Banana> bananas;
+    private Cactus cactus; // Single cactus reference
+    private Object gameInstance; // Reference to MyGdxGame for cactus respawning
     private Map<String, Boolean> clearedPositions;
     
     // Direction tracking
@@ -74,6 +79,14 @@ public class Player {
     
     public void setBananas(Map<String, Banana> bananas) {
         this.bananas = bananas;
+    }
+    
+    public void setCactus(Cactus cactus) {
+        this.cactus = cactus;
+    }
+    
+    public void setGameInstance(Object gameInstance) {
+        this.gameInstance = gameInstance;
     }
     
     public void setClearedPositions(Map<String, Boolean> clearedPositions) {
@@ -162,6 +175,15 @@ public class Player {
             // Reset to first frame when not moving (idle pose)
             animTime = 0;
         }
+        
+        // Check for cactus damage
+        checkCactusDamage(deltaTime);
+        
+        // Check for apple pickups
+        checkApplePickups();
+        
+        // Check for banana pickups
+        checkBananaPickups();
         
         // update camera to follow player
         updateCamera();
@@ -312,6 +334,13 @@ public class Player {
                 if (bananaTree.collidesWith(newX, newY, 64, 64)) {
                     return true;
                 }
+            }
+        }
+        
+        // Check collision with cactus
+        if (cactus != null) {
+            if (cactus.collidesWith(newX, newY, 64, 64)) {
+                return true;
             }
         }
         
@@ -495,9 +524,193 @@ public class Player {
             }
         }
         
+        // Attack cactus within range
+        if (cactus != null && !attackedSomething) {
+            if (cactus.isInAttackRange(x, y)) {
+                float healthBefore = cactus.getHealth();
+                boolean destroyed = cactus.attack();
+                
+                if (destroyed) {
+                    System.out.println("Attacking cactus, health before: " + healthBefore);
+                    System.out.println("Cactus health after attack: " + cactus.getHealth() + ", destroyed: " + destroyed);
+                    System.out.println("Cactus destroyed! Spawning new cactus...");
+                    
+                    // Spawn new cactus at random location
+                    if (gameInstance != null) {
+                        try {
+                            // Use reflection to call spawnNewCactus method
+                            gameInstance.getClass().getMethod("spawnNewCactus").invoke(gameInstance);
+                        } catch (Exception e) {
+                            System.out.println("Error spawning new cactus: " + e.getMessage());
+                        }
+                    }
+                }
+                attackedSomething = true;
+            }
+        }
+        
         if (!attackedSomething) {
             System.out.println("No trees in range to attack");
         }
+    }
+
+    private void checkCactusDamage(float deltaTime) {
+        if (cactus != null) {
+            // Use the same logic as attack range for consistency
+            float cactusCenterX = cactus.getX() + 32;
+            float cactusCenterY = cactus.getY() + 64;
+            float playerCenterX = x + 32;
+            float playerCenterY = y + 32;
+            
+            float dx = Math.abs(cactusCenterX - playerCenterX);
+            float dy = Math.abs(cactusCenterY - playerCenterY);
+            
+            // Use same range as attack range: 64px left/right, 96px up/down
+            boolean inDamageRange = dx <= 64 && dy <= 96;
+            
+            if (inDamageRange) {
+                System.out.println("Player in cactus damage range! dx: " + dx + ", dy: " + dy);
+                lastCactusDamageTime += deltaTime;
+                
+                // Take damage every 0.5 seconds while in range
+                if (lastCactusDamageTime >= 0.5f) {
+                    health -= 10; // 10 damage per half second
+                    lastCactusDamageTime = 0;
+                    
+                    System.out.println("Player taking cactus damage! Health: " + health);
+                    
+                    // Check if player died
+                    if (health <= 0) {
+                        respawnPlayer();
+                    }
+                }
+            } else {
+                // Reset damage timer when not in range
+                lastCactusDamageTime = 0;
+            }
+        }
+    }
+    
+    private void respawnPlayer() {
+        System.out.println("Player died! Respawning...");
+        
+        // Reset health
+        health = 100;
+        
+        // Generate random respawn position far from cactus
+        float newX, newY;
+        if (cactus != null) {
+            do {
+                // Random position in a large area
+                newX = (float)(Math.random() - 0.5) * 2000; // ±1000px
+                newY = (float)(Math.random() - 0.5) * 2000; // ±1000px
+                
+                float distance = (float)Math.sqrt((newX - cactus.getX()) * (newX - cactus.getX()) + 
+                                                 (newY - cactus.getY()) * (newY - cactus.getY()));
+                
+                // Ensure respawn is at least 500px away from cactus
+                if (distance >= 500) {
+                    break;
+                }
+            } while (true);
+        } else {
+            // If no cactus, respawn at origin
+            newX = 0;
+            newY = 0;
+        }
+        
+        // Set new position
+        x = newX;
+        y = newY;
+        
+        System.out.println("Player respawned!");
+    }
+    
+    public float getHealth() {
+        return health;
+    }
+    
+    public float getHealthPercentage() {
+        return health / 100.0f;
+    }
+    
+    private void checkApplePickups() {
+        if (apples != null) {
+            // Check all apples for pickup
+            for (Map.Entry<String, Apple> entry : apples.entrySet()) {
+                Apple apple = entry.getValue();
+                String appleKey = entry.getKey();
+                
+                // Check if player is close enough to pick up apple (32px range)
+                float dx = Math.abs((x + 32) - (apple.getX() + 12)); // Player center to apple center
+                float dy = Math.abs((y + 32) - (apple.getY() + 12)); // Apple is 24x24, so center is +12
+                
+                if (dx <= 32 && dy <= 32) {
+                    // Pick up the apple
+                    pickupApple(appleKey);
+                    break; // Only pick up one apple per frame
+                }
+            }
+        }
+    }
+    
+    private void pickupApple(String appleKey) {
+        // Restore 20% health (20 HP)
+        float healthBefore = health;
+        health = Math.min(100, health + 20); // Cap at 100 HP
+        float healthRestored = health - healthBefore;
+        
+        System.out.println("Apple picked up! Health restored: " + healthRestored + " (Health: " + healthBefore + " → " + health + ")");
+        
+        // Remove apple from game
+        if (apples.containsKey(appleKey)) {
+            Apple apple = apples.get(appleKey);
+            apple.dispose();
+            apples.remove(appleKey);
+            System.out.println("Apple removed from game");
+        }
+    }
+    
+    private void checkBananaPickups() {
+        if (bananas != null) {
+            // Check all bananas for pickup
+            for (Map.Entry<String, Banana> entry : bananas.entrySet()) {
+                Banana banana = entry.getValue();
+                String bananaKey = entry.getKey();
+                
+                // Check if player is close enough to pick up banana (32px range)
+                float dx = Math.abs((x + 32) - (banana.getX() + 16)); // Player center to banana center
+                float dy = Math.abs((y + 32) - (banana.getY() + 16)); // Banana is 32x32, so center is +16
+                
+                if (dx <= 32 && dy <= 32) {
+                    // Pick up the banana
+                    pickupBanana(bananaKey);
+                    break; // Only pick up one banana per frame
+                }
+            }
+        }
+    }
+    
+    private void pickupBanana(String bananaKey) {
+        // Restore 20% health (20 HP)
+        float healthBefore = health;
+        health = Math.min(100, health + 20); // Cap at 100 HP
+        float healthRestored = health - healthBefore;
+        
+        System.out.println("Banana picked up! Health restored: " + healthRestored + " (Health: " + healthBefore + " → " + health + ")");
+        
+        // Remove banana from game
+        if (bananas.containsKey(bananaKey)) {
+            Banana banana = bananas.get(bananaKey);
+            banana.dispose();
+            bananas.remove(bananaKey);
+            System.out.println("Banana removed from game");
+        }
+    }
+
+    public boolean shouldShowHealthBar() {
+        return true; // Always show for testing
+        // return health < 100; // Original logic
     }
 
     public void dispose() {

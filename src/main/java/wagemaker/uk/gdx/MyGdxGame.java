@@ -23,6 +23,7 @@ import wagemaker.uk.trees.BambooTree;
 import wagemaker.uk.trees.BananaTree;
 import wagemaker.uk.trees.CoconutTree;
 import wagemaker.uk.trees.SmallTree;
+import wagemaker.uk.trees.Cactus;
 
 public class MyGdxGame extends ApplicationAdapter {
     SpriteBatch batch;
@@ -38,6 +39,7 @@ public class MyGdxGame extends ApplicationAdapter {
     Map<String, BananaTree> bananaTrees;
     Map<String, Apple> apples;
     Map<String, Banana> bananas;
+    Cactus cactus; // Single cactus near spawn
     Map<String, Boolean> clearedPositions;
     Random random;
     
@@ -66,6 +68,9 @@ public class MyGdxGame extends ApplicationAdapter {
         clearedPositions = new HashMap<>();
         random = new Random();
 
+        // create single cactus near player spawn (128px away)
+        cactus = new Cactus(128, 128);
+
         // create player at origin
         player = new Player(0, 0, camera);
         player.setTrees(trees);
@@ -75,6 +80,8 @@ public class MyGdxGame extends ApplicationAdapter {
         player.setBananaTrees(bananaTrees);
         player.setApples(apples);
         player.setBananas(bananas);
+        player.setCactus(cactus);
+        player.setGameInstance(this);
         player.setClearedPositions(clearedPositions);
 
         // create realistic grass texture
@@ -108,6 +115,11 @@ public class MyGdxGame extends ApplicationAdapter {
             bananaTree.update(deltaTime);
         }
         
+        // update cactus
+        if (cactus != null) {
+            cactus.update(deltaTime);
+        }
+        
         camera.update();
 
         Gdx.gl.glClearColor(0.1f, 0.12f, 0.16f, 1);
@@ -126,6 +138,7 @@ public class MyGdxGame extends ApplicationAdapter {
         drawBambooTrees();
         drawApples();
         drawBananas();
+        drawCactus();
         // draw player before apple trees so foliage appears in front
         batch.draw(player.getCurrentFrame(), player.getX(), player.getY());
         drawAppleTrees();
@@ -358,6 +371,21 @@ public class MyGdxGame extends ApplicationAdapter {
             }
         }
     }
+    
+    private void drawCactus() {
+        if (cactus != null) {
+            float camX = camera.position.x;
+            float camY = camera.position.y;
+            float viewWidth = viewport.getWorldWidth();
+            float viewHeight = viewport.getWorldHeight();
+            
+            // only draw cactus if near camera
+            if (Math.abs(cactus.getX() - camX) < viewWidth && 
+                Math.abs(cactus.getY() - camY) < viewHeight) {
+                batch.draw(cactus.getTexture(), cactus.getX(), cactus.getY());
+            }
+        }
+    }
 
     @Override
     public void resize(int width, int height) {
@@ -463,7 +491,80 @@ public class MyGdxGame extends ApplicationAdapter {
             }
         }
         
+        // Draw cactus health bar
+        if (cactus != null && cactus.shouldShowHealthBar()) {
+            float barWidth = 32;
+            float barHeight = 4;
+            float barX = cactus.getX() + 16;
+            float barY = cactus.getY() + 134;
+            
+            // Green background
+            shapeRenderer.setColor(0, 1, 0, 1);
+            shapeRenderer.rect(barX, barY, barWidth, barHeight);
+            
+            // Red overlay based on damage
+            float damagePercent = 1.0f - cactus.getHealthPercentage();
+            shapeRenderer.setColor(1, 0, 0, 1);
+            shapeRenderer.rect(barX, barY, barWidth * damagePercent, barHeight);
+        }
+        
+        // Draw player health bar (fixed position on screen)
+        if (player.shouldShowHealthBar()) {
+            // Health bar in top-left corner of screen
+            float screenX = camera.position.x - viewport.getWorldWidth() / 2 + 20;
+            float screenY = camera.position.y + viewport.getWorldHeight() / 2 - 40;
+            float barWidth = 200;
+            float barHeight = 20;
+            
+            // Black background
+            shapeRenderer.setColor(0, 0, 0, 0.8f);
+            shapeRenderer.rect(screenX - 2, screenY - 2, barWidth + 4, barHeight + 4);
+            
+            // Red background (full bar)
+            shapeRenderer.setColor(0.8f, 0.2f, 0.2f, 1);
+            shapeRenderer.rect(screenX, screenY, barWidth, barHeight);
+            
+            // Green foreground (current health)
+            float healthPercent = player.getHealthPercentage();
+            shapeRenderer.setColor(0.2f, 0.8f, 0.2f, 1);
+            shapeRenderer.rect(screenX, screenY, barWidth * healthPercent, barHeight);
+            
+            // Health text would go here if we had font rendering
+        }
+        
         shapeRenderer.end();
+    }
+
+    public void spawnNewCactus() {
+        if (cactus != null) {
+            cactus.dispose();
+        }
+        
+        // Generate random position away from player
+        float playerX = player.getX();
+        float playerY = player.getY();
+        float newX, newY;
+        
+        // Keep trying until we find a position far enough from player
+        do {
+            // Random position within a large area around the player
+            newX = playerX + (random.nextFloat() - 0.5f) * 2000; // ±1000px from player
+            newY = playerY + (random.nextFloat() - 0.5f) * 2000; // ±1000px from player
+            
+            float distance = (float)Math.sqrt((newX - playerX) * (newX - playerX) + (newY - playerY) * (newY - playerY));
+            
+            // Ensure cactus spawns at least 400px away from player
+            if (distance >= 400) {
+                break;
+            }
+        } while (true);
+        
+        // Create new cactus at the random position
+        cactus = new Cactus(newX, newY);
+        player.setCactus(cactus);
+        
+        System.out.println("New cactus spawned at: " + newX + ", " + newY + " (distance from player: " + 
+                          Math.sqrt((newX - playerX) * (newX - playerX) + (newY - playerY) * (newY - playerY)) + ")");
     }
 
     private Texture createRealisticGrassTexture() {
@@ -570,6 +671,9 @@ public class MyGdxGame extends ApplicationAdapter {
         }
         for (Banana banana : bananas.values()) {
             banana.dispose();
+        }
+        if (cactus != null) {
+            cactus.dispose();
         }
     }
 }

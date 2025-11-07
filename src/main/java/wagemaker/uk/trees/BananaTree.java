@@ -92,6 +92,10 @@ public class BananaTree {
     public float getHealth() {
         return health;
     }
+    
+    public void setHealth(float health) {
+        this.health = Math.max(0, Math.min(100, health));
+    }
 
     public void dispose() {
         if (texture != null) texture.dispose();

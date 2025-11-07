@@ -117,3 +117,38 @@ java -jar build/libs/java2d-libGDX.jar
 - Additional tree types
 - Sound effects
 - Save/load functionality
+
+## Dedicated server
+$ java -jar build/libs/woodlanders-server.jar --help
+```
+===========================================
+  Woodlanders Dedicated Server
+===========================================
+
+Configuration file not found: server.properties
+Creating default configuration file...
+Created default configuration file: server.properties
+Using default configuration values.
+
+Server Configuration:
+  Port: 25565
+  Max Clients: 20
+  World Seed: Random
+  Heartbeat Interval: 5s
+  Client Timeout: 15s
+  Rate Limit: 100 msg/s
+  Debug Mode: false
+
+Usage: java -jar woodlanders-server.jar [OPTIONS]
+
+Options:
+  --port, -p PORT       Specify the server port (default: 25565)
+  --config, -c FILE     Specify the configuration file (default: server.properties)
+  --help, -h            Display this help message
+
+Examples:
+- java -jar woodlanders-server.jar
+- java -jar woodlanders-server.jar --port 30000
+- java -jar woodlanders-server.jar --config custom.properties
+```
+- - -

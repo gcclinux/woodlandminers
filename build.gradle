@@ -15,6 +15,17 @@ dependencies {
     implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
     implementation "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
     implementation "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
+    
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
 }
 
 java {
@@ -46,4 +57,47 @@ jar {
         attributes 'Main-Class': application.mainClass
     }
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+}
+
+// Server JAR task for dedicated server
+task serverJar(type: Jar) {
+    archiveBaseName = 'woodlanders-server'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    
+    manifest {
+        attributes 'Main-Class': 'wagemaker.uk.server.DedicatedServerLauncher'
+    }
+    
+    // Include compiled classes
+    from sourceSets.main.output
+    
+    // Include dependencies, but exclude LibGDX rendering libraries
+    from {
+        configurations.runtimeClasspath.findAll { 
+            // Only include core LibGDX, exclude rendering backends
+            !it.name.contains('lwjgl') && 
+            !it.name.contains('backend') && 
+            !it.name.contains('platform') &&
+            !it.name.contains('freetype')
+        }.collect { 
+            it.isDirectory() ? it : zipTree(it) 
+        }
+    }
+    
+    // Exclude LibGDX rendering and platform-specific dependencies
+    exclude 'com/badlogic/gdx/backends/**'
+    exclude 'com/badlogic/gdx/graphics/**'
+    exclude 'org/lwjgl/**'
+    exclude '**/*.so'
+    exclude '**/*.dylib'
+    exclude '**/*.dll'
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+    exclude 'META-INF/**/org/lwjgl/**'
+    
+    // Exclude asset files that are only needed for rendering
+    exclude 'sprites/**'
+    exclude 'textures/**'
+    exclude 'fonts/**'
 }

@@ -16,6 +16,7 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 import wagemaker.uk.player.Player;
+import wagemaker.uk.player.RemotePlayer;
 import wagemaker.uk.items.Apple;
 import wagemaker.uk.items.Banana;
 import wagemaker.uk.trees.AppleTree;
@@ -25,8 +26,24 @@ import wagemaker.uk.trees.CoconutTree;
 import wagemaker.uk.trees.SmallTree;
 import wagemaker.uk.trees.Cactus;
 import wagemaker.uk.ui.GameMenu;
+import wagemaker.uk.network.GameServer;
+import wagemaker.uk.network.GameClient;
+import wagemaker.uk.network.WorldState;
+import wagemaker.uk.network.TreeState;
+import wagemaker.uk.network.ItemState;
+import wagemaker.uk.network.TreeType;
+import wagemaker.uk.network.ItemType;
 
 public class MyGdxGame extends ApplicationAdapter {
+    /**
+     * Enum representing the current game mode.
+     */
+    public enum GameMode {
+        SINGLEPLAYER,       // Local single-player game
+        MULTIPLAYER_HOST,   // Hosting a multiplayer server and playing
+        MULTIPLAYER_CLIENT  // Connected to a multiplayer server as client
+    }
+    
     SpriteBatch batch;
     ShapeRenderer shapeRenderer;
     Texture grassTexture;
@@ -43,7 +60,24 @@ public class MyGdxGame extends ApplicationAdapter {
     Cactus cactus; // Single cactus near spawn
     Map<String, Boolean> clearedPositions;
     Random random;
+    long worldSeed; // World seed for deterministic generation
     GameMenu gameMenu;
+    
+    // Multiplayer fields
+    private GameMode gameMode;
+    private GameServer gameServer;  // Only used in MULTIPLAYER_HOST mode
+    private GameClient gameClient;  // Used in both MULTIPLAYER_HOST and MULTIPLAYER_CLIENT modes
+    private Map<String, RemotePlayer> remotePlayers;  // Other players in multiplayer
+    private wagemaker.uk.ui.ConnectionQualityIndicator connectionQualityIndicator;
+    
+    // Notification system
+    private String currentNotification;
+    private float notificationTimer;
+    
+    // Connection state
+    private String pendingConnectionAddress;
+    private int pendingConnectionPort;
+    private boolean isHosting;
     
     // Camera dimensions for infinite world
     static final int CAMERA_WIDTH = 1280;
@@ -51,6 +85,13 @@ public class MyGdxGame extends ApplicationAdapter {
 
     @Override
     public void create() {
+        // Initialize game mode to single-player by default
+        gameMode = GameMode.SINGLEPLAYER;
+        
+        // Initialize notification system
+        currentNotification = null;
+        notificationTimer = 0;
+        
         // setup camera with screen viewport to match window size
         camera = new OrthographicCamera();
         viewport = new ScreenViewport(camera);
@@ -68,7 +109,9 @@ public class MyGdxGame extends ApplicationAdapter {
         apples = new HashMap<>();
         bananas = new HashMap<>();
         clearedPositions = new HashMap<>();
+        remotePlayers = new HashMap<>();
         random = new Random();
+        worldSeed = 0; // Will be set by server in multiplayer, or remain 0 for single-player
 
         // create single cactus near player spawn (128px away)
         cactus = new Cactus(128, 128);
@@ -92,6 +135,9 @@ public class MyGdxGame extends ApplicationAdapter {
         
         // Load player position from save file if it exists
         gameMenu.loadPlayerPosition();
+        
+        // Initialize connection quality indicator (will be set when connecting)
+        connectionQualityIndicator = new wagemaker.uk.ui.ConnectionQualityIndicator(null, gameMenu.getFont());
 
         // create realistic grass texture
         grassTexture = createRealisticGrassTexture();
@@ -105,6 +151,68 @@ public class MyGdxGame extends ApplicationAdapter {
         float deltaTime = Gdx.graphics.getDeltaTime();
 
         gameMenu.update();
+        
+        // Handle error dialog actions
+        if (gameMenu.getErrorDialog().isRetrySelected()) {
+            gameMenu.getErrorDialog().reset();
+            retryConnection();
+        } else if (gameMenu.getErrorDialog().isCancelled()) {
+            gameMenu.getErrorDialog().reset();
+            cancelConnection();
+        }
+        
+        // Handle multiplayer menu selections
+        if (gameMenu.getMultiplayerMenu().isOpen() && Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.ENTER)) {
+            String selected = gameMenu.getMultiplayerMenu().getSelectedOption();
+            if (selected.equals("Host Server")) {
+                gameMenu.getMultiplayerMenu().close();
+                attemptHostServer();
+            }
+        }
+        
+        // Handle connect dialog confirmation
+        if (gameMenu.getConnectDialog().isConfirmed()) {
+            String address = gameMenu.getConnectDialog().getEnteredAddress();
+            gameMenu.getConnectDialog().resetConfirmation();
+            
+            // Parse address and port
+            String[] parts = address.split(":");
+            String serverAddress = parts[0];
+            int port = parts.length > 1 ? Integer.parseInt(parts[1]) : 25565;
+            
+            attemptConnectToServer(serverAddress, port);
+        }
+        
+        // Update notification timer
+        if (currentNotification != null) {
+            notificationTimer -= deltaTime;
+            if (notificationTimer <= 0) {
+                currentNotification = null;
+            }
+        }
+        
+        // Check for connection loss in multiplayer mode
+        if (gameMode != GameMode.SINGLEPLAYER && gameClient != null) {
+            if (!gameClient.isConnected() && !gameClient.isReconnecting()) {
+                // Connection lost and not reconnecting
+                displayNotification("Connection Lost");
+                
+                // Return to single player mode
+                gameMode = GameMode.SINGLEPLAYER;
+                
+                // Clean up multiplayer resources
+                if (gameServer != null) {
+                    gameServer.stop();
+                    gameServer = null;
+                }
+                
+                remotePlayers.clear();
+                
+            } else if (gameClient.isReconnecting()) {
+                // Show reconnection attempt
+                displayNotification("Reconnecting... (" + gameClient.getReconnectAttempts() + "/3)");
+            }
+        }
 
         if (!gameMenu.isOpen()) {
             // update player and camera
@@ -131,6 +239,13 @@ public class MyGdxGame extends ApplicationAdapter {
         if (cactus != null) {
             cactus.update(deltaTime);
         }
+        
+        // update remote players in multiplayer mode
+        if (gameMode != GameMode.SINGLEPLAYER) {
+            for (RemotePlayer remotePlayer : remotePlayers.values()) {
+                remotePlayer.update(deltaTime);
+            }
+        }
         }
         
         camera.update();
@@ -154,6 +269,8 @@ public class MyGdxGame extends ApplicationAdapter {
         drawCactus();
         // draw player before apple trees so foliage appears in front
         batch.draw(player.getCurrentFrame(), player.getX(), player.getY(), 100, 100);
+        // draw remote players at same z-order as local player
+        renderRemotePlayers();
         drawAppleTrees();
         drawBananaTrees();
         batch.end();
@@ -161,11 +278,28 @@ public class MyGdxGame extends ApplicationAdapter {
         // draw player name tag above player
         gameMenu.renderPlayerNameTag(batch);
         
+        // draw remote player name tags in multiplayer mode
+        if (gameMode != GameMode.SINGLEPLAYER) {
+            renderRemotePlayerNameTags();
+        }
+        
         // draw health bars
         drawHealthBars();
         
+        // draw connection quality indicator in multiplayer mode
+        if (gameMode != GameMode.SINGLEPLAYER && connectionQualityIndicator != null) {
+            float screenX = camera.position.x + viewport.getWorldWidth() / 2 - 20;
+            float screenY = camera.position.y + viewport.getWorldHeight() / 2 - 20;
+            connectionQualityIndicator.render(batch, shapeRenderer, screenX, screenY);
+        }
+        
         // draw menu on top
         gameMenu.render(batch, shapeRenderer, camera.position.x, camera.position.y, viewport.getWorldWidth(), viewport.getWorldHeight());
+        
+        // draw notification if active
+        if (currentNotification != null) {
+            renderNotification();
+        }
     }
     
     private void drawInfiniteGrass() {
@@ -196,7 +330,8 @@ public class MyGdxGame extends ApplicationAdapter {
         String key = x + "," + y;
         if (!trees.containsKey(key) && !appleTrees.containsKey(key) && !coconutTrees.containsKey(key) && !bambooTrees.containsKey(key) && !bananaTrees.containsKey(key) && !clearedPositions.containsKey(key)) {
             // 2% chance to generate a tree at this grass tile
-            random.setSeed(x * 31L + y * 17L); // deterministic based on position
+            // Use world seed combined with position for deterministic generation across clients
+            random.setSeed(worldSeed + x * 31L + y * 17L); // deterministic based on world seed and position
             if (random.nextFloat() < 0.02f) {
                 // Check if any tree is within 256px distance
                 if (isTreeNearby(x, y, 256)) {
@@ -414,6 +549,21 @@ public class MyGdxGame extends ApplicationAdapter {
     private void drawHealthBars() {
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        
+        // Draw remote player health bars in multiplayer mode
+        if (gameMode != GameMode.SINGLEPLAYER) {
+            float camX = camera.position.x;
+            float camY = camera.position.y;
+            float viewWidth = viewport.getWorldWidth();
+            float viewHeight = viewport.getWorldHeight();
+            
+            for (RemotePlayer remotePlayer : remotePlayers.values()) {
+                if (Math.abs(remotePlayer.getX() - camX) < viewWidth && 
+                    Math.abs(remotePlayer.getY() - camY) < viewHeight) {
+                    remotePlayer.renderHealthBar(shapeRenderer);
+                }
+            }
+        }
         
         // Draw small tree health bars
         for (SmallTree tree : trees.values()) {
@@ -664,6 +814,557 @@ public class MyGdxGame extends ApplicationAdapter {
         return texture;
     }
 
+    /**
+     * Renders all remote players in multiplayer mode.
+     * This method draws remote player sprites and their name tags.
+     */
+    private void renderRemotePlayers() {
+        if (gameMode == GameMode.SINGLEPLAYER || remotePlayers.isEmpty()) {
+            return;
+        }
+        
+        float camX = camera.position.x;
+        float camY = camera.position.y;
+        float viewWidth = viewport.getWorldWidth();
+        float viewHeight = viewport.getWorldHeight();
+        
+        // Only render remote players near the camera
+        for (RemotePlayer remotePlayer : remotePlayers.values()) {
+            if (Math.abs(remotePlayer.getX() - camX) < viewWidth && 
+                Math.abs(remotePlayer.getY() - camY) < viewHeight) {
+                remotePlayer.render(batch);
+            }
+        }
+    }
+    
+    /**
+     * Renders name tags for all remote players.
+     * This is called after the main batch rendering.
+     */
+    private void renderRemotePlayerNameTags() {
+        if (gameMode == GameMode.SINGLEPLAYER || remotePlayers.isEmpty()) {
+            return;
+        }
+        
+        float camX = camera.position.x;
+        float camY = camera.position.y;
+        float viewWidth = viewport.getWorldWidth();
+        float viewHeight = viewport.getWorldHeight();
+        
+        batch.begin();
+        for (RemotePlayer remotePlayer : remotePlayers.values()) {
+            if (Math.abs(remotePlayer.getX() - camX) < viewWidth && 
+                Math.abs(remotePlayer.getY() - camY) < viewHeight) {
+                remotePlayer.renderNameTag(batch, gameMenu.getFont());
+            }
+        }
+        batch.end();
+    }
+    
+    /**
+     * Starts a multiplayer server and connects to it as the host player.
+     * This method launches a GameServer in the background and then connects
+     * the local client to it.
+     * 
+     * @throws Exception if server startup or connection fails
+     */
+    public void startMultiplayerHost() throws Exception {
+        if (gameMode != GameMode.SINGLEPLAYER) {
+            throw new IllegalStateException("Already in multiplayer mode");
+        }
+        
+        System.out.println("Starting multiplayer host...");
+        
+        try {
+            // Create and start the game server
+            gameServer = new GameServer();
+            gameServer.start();
+            
+            // Wait a moment for server to fully initialize
+            Thread.sleep(100);
+            
+            // Connect to our own server as a client
+            gameClient = new GameClient();
+            gameClient.setMessageHandler(new GameMessageHandler(this));
+            gameClient.connect("localhost", 25565);
+            
+            // Set game mode to host
+            gameMode = GameMode.MULTIPLAYER_HOST;
+            
+            // Update connection quality indicator
+            connectionQualityIndicator.setGameClient(gameClient);
+            
+            // Apply the server's world seed to the host client
+            this.worldSeed = gameServer.getWorldState().getWorldSeed();
+            
+            System.out.println("Multiplayer host started successfully");
+            System.out.println("Server IP: " + gameServer.getPublicIPv4());
+            System.out.println("World seed: " + this.worldSeed);
+            
+        } catch (Exception e) {
+            // Clean up on failure
+            if (gameClient != null) {
+                try {
+                    gameClient.disconnect();
+                } catch (Exception ex) {
+                    // Ignore cleanup errors
+                }
+                gameClient = null;
+            }
+            
+            if (gameServer != null) {
+                try {
+                    gameServer.stop();
+                } catch (Exception ex) {
+                    // Ignore cleanup errors
+                }
+                gameServer = null;
+            }
+            
+            // Log the error
+            System.err.println("Failed to start multiplayer host: " + e.getMessage());
+            e.printStackTrace();
+            
+            // Re-throw to be handled by caller
+            throw new Exception("Failed to start server: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Connects to a multiplayer server as a client.
+     * 
+     * @param serverAddress The IP address or hostname of the server
+     * @param port The server port
+     * @throws Exception if connection fails
+     */
+    public void joinMultiplayerServer(String serverAddress, int port) throws Exception {
+        if (gameMode != GameMode.SINGLEPLAYER) {
+            throw new IllegalStateException("Already in multiplayer mode");
+        }
+        
+        System.out.println("Connecting to server at " + serverAddress + ":" + port);
+        
+        try {
+            // Create and connect the game client
+            gameClient = new GameClient();
+            gameClient.setMessageHandler(new GameMessageHandler(this));
+            gameClient.connect(serverAddress, port);
+            
+            // Set game mode to client
+            gameMode = GameMode.MULTIPLAYER_CLIENT;
+            
+            // Update connection quality indicator
+            connectionQualityIndicator.setGameClient(gameClient);
+            
+            System.out.println("Connected to multiplayer server successfully");
+            
+        } catch (Exception e) {
+            // Clean up on failure
+            if (gameClient != null) {
+                try {
+                    gameClient.disconnect();
+                } catch (Exception ex) {
+                    // Ignore cleanup errors
+                }
+                gameClient = null;
+            }
+            
+            // Log the error
+            System.err.println("Failed to connect to server: " + e.getMessage());
+            e.printStackTrace();
+            
+            // Re-throw to be handled by caller
+            throw new Exception("Connection failed: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Synchronizes the local game state with the server's world state.
+     * This is called when receiving a world state update from the server.
+     * 
+     * @param state The world state from the server
+     */
+    public void syncWorldState(WorldState state) {
+        if (state == null) {
+            return;
+        }
+        
+        System.out.println("Synchronizing world state...");
+        
+        // Apply world seed for deterministic world generation
+        if (state.getWorldSeed() != 0) {
+            this.worldSeed = state.getWorldSeed();
+            System.out.println("Applied world seed: " + state.getWorldSeed());
+        }
+        
+        // Sync cleared positions
+        if (state.getClearedPositions() != null) {
+            clearedPositions.clear();
+            for (String position : state.getClearedPositions()) {
+                clearedPositions.put(position, true);
+            }
+        }
+        
+        // Sync tree states
+        if (state.getTrees() != null) {
+            for (TreeState treeState : state.getTrees().values()) {
+                updateTreeFromState(treeState);
+            }
+        }
+        
+        // Sync item states
+        if (state.getItems() != null) {
+            for (ItemState itemState : state.getItems().values()) {
+                updateItemFromState(itemState);
+            }
+        }
+        
+        System.out.println("World state synchronized");
+    }
+    
+    /**
+     * Updates or creates a tree based on server tree state.
+     * 
+     * @param treeState The tree state from the server
+     */
+    public void updateTreeFromState(TreeState treeState) {
+        if (treeState == null) {
+            return;
+        }
+        
+        String treeId = treeState.getTreeId();
+        
+        // If tree doesn't exist, it was already destroyed
+        if (!treeState.isExists()) {
+            removeTree(treeId);
+            return;
+        }
+        
+        // Update health of existing tree
+        TreeType type = treeState.getType();
+        float health = treeState.getHealth();
+        
+        switch (type) {
+            case SMALL:
+                SmallTree smallTree = trees.get(treeId);
+                if (smallTree != null) {
+                    smallTree.setHealth(health);
+                }
+                break;
+            case APPLE:
+                AppleTree appleTree = appleTrees.get(treeId);
+                if (appleTree != null) {
+                    appleTree.setHealth(health);
+                }
+                break;
+            case COCONUT:
+                CoconutTree coconutTree = coconutTrees.get(treeId);
+                if (coconutTree != null) {
+                    coconutTree.setHealth(health);
+                }
+                break;
+            case BAMBOO:
+                BambooTree bambooTree = bambooTrees.get(treeId);
+                if (bambooTree != null) {
+                    bambooTree.setHealth(health);
+                }
+                break;
+            case BANANA:
+                BananaTree bananaTree = bananaTrees.get(treeId);
+                if (bananaTree != null) {
+                    bananaTree.setHealth(health);
+                }
+                break;
+        }
+    }
+    
+    /**
+     * Removes a tree from the game world.
+     * 
+     * @param treeId The tree ID to remove
+     */
+    public void removeTree(String treeId) {
+        // Try to remove from all tree maps
+        SmallTree smallTree = trees.remove(treeId);
+        if (smallTree != null) {
+            smallTree.dispose();
+            clearedPositions.put(treeId, true);
+            return;
+        }
+        
+        AppleTree appleTree = appleTrees.remove(treeId);
+        if (appleTree != null) {
+            appleTree.dispose();
+            clearedPositions.put(treeId, true);
+            return;
+        }
+        
+        CoconutTree coconutTree = coconutTrees.remove(treeId);
+        if (coconutTree != null) {
+            coconutTree.dispose();
+            clearedPositions.put(treeId, true);
+            return;
+        }
+        
+        BambooTree bambooTree = bambooTrees.remove(treeId);
+        if (bambooTree != null) {
+            bambooTree.dispose();
+            clearedPositions.put(treeId, true);
+            return;
+        }
+        
+        BananaTree bananaTree = bananaTrees.remove(treeId);
+        if (bananaTree != null) {
+            bananaTree.dispose();
+            clearedPositions.put(treeId, true);
+        }
+    }
+    
+    /**
+     * Updates or creates an item based on server item state.
+     * 
+     * @param itemState The item state from the server
+     */
+    public void updateItemFromState(ItemState itemState) {
+        if (itemState == null) {
+            return;
+        }
+        
+        String itemId = itemState.getItemId();
+        
+        // If item is collected, remove it
+        if (itemState.isCollected()) {
+            removeItem(itemId);
+            return;
+        }
+        
+        // Create item if it doesn't exist
+        ItemType type = itemState.getType();
+        float x = itemState.getX();
+        float y = itemState.getY();
+        
+        switch (type) {
+            case APPLE:
+                if (!apples.containsKey(itemId)) {
+                    apples.put(itemId, new Apple(x, y));
+                }
+                break;
+            case BANANA:
+                if (!bananas.containsKey(itemId)) {
+                    bananas.put(itemId, new Banana(x, y));
+                }
+                break;
+        }
+    }
+    
+    /**
+     * Removes an item from the game world.
+     * 
+     * @param itemId The item ID to remove
+     */
+    public void removeItem(String itemId) {
+        Apple apple = apples.remove(itemId);
+        if (apple != null) {
+            apple.dispose();
+            return;
+        }
+        
+        Banana banana = bananas.remove(itemId);
+        if (banana != null) {
+            banana.dispose();
+        }
+    }
+    
+    /**
+     * Gets the current game mode.
+     * 
+     * @return The current game mode
+     */
+    public GameMode getGameMode() {
+        return gameMode;
+    }
+    
+    /**
+     * Gets the game server (only available in host mode).
+     * 
+     * @return The game server, or null if not hosting
+     */
+    public GameServer getGameServer() {
+        return gameServer;
+    }
+    
+    /**
+     * Gets the game client (available in multiplayer modes).
+     * 
+     * @return The game client, or null if in single-player mode
+     */
+    public GameClient getGameClient() {
+        return gameClient;
+    }
+    
+    /**
+     * Gets the map of remote players.
+     * 
+     * @return The map of remote players by player ID
+     */
+    public Map<String, RemotePlayer> getRemotePlayers() {
+        return remotePlayers;
+    }
+    
+    /**
+     * Gets the local player instance.
+     * 
+     * @return The local player
+     */
+    public Player getPlayer() {
+        return player;
+    }
+    
+    /**
+     * Displays a notification message to the player.
+     * The notification will be shown for 3 seconds.
+     * 
+     * @param message The notification message to display
+     */
+    public void displayNotification(String message) {
+        this.currentNotification = message;
+        this.notificationTimer = 3.0f; // Display for 3 seconds
+    }
+    
+    /**
+     * Attempts to host a multiplayer server with error handling.
+     * Shows error dialog on failure.
+     */
+    public void attemptHostServer() {
+        try {
+            isHosting = true;
+            startMultiplayerHost();
+            
+            // Show server IP dialog on success
+            if (gameServer != null) {
+                gameMenu.getServerHostDialog().show(gameServer.getPublicIPv4());
+            }
+            
+        } catch (Exception e) {
+            // Show error dialog
+            String errorMsg = "Failed to start server: " + e.getMessage();
+            gameMenu.showError(errorMsg);
+            isHosting = false;
+        }
+    }
+    
+    /**
+     * Attempts to connect to a server with error handling.
+     * Shows error dialog on failure.
+     * 
+     * @param address The server address
+     * @param port The server port
+     */
+    public void attemptConnectToServer(String address, int port) {
+        try {
+            pendingConnectionAddress = address;
+            pendingConnectionPort = port;
+            
+            joinMultiplayerServer(address, port);
+            
+            // Show success notification
+            displayNotification("Connected to server!");
+            
+        } catch (Exception e) {
+            // Show error dialog
+            String errorMsg = "Failed to connect: " + e.getMessage();
+            gameMenu.showError(errorMsg);
+        }
+    }
+    
+    /**
+     * Handles retry action from error dialog.
+     * Retries the last connection attempt.
+     */
+    public void retryConnection() {
+        if (isHosting) {
+            attemptHostServer();
+        } else if (pendingConnectionAddress != null) {
+            attemptConnectToServer(pendingConnectionAddress, pendingConnectionPort);
+        }
+    }
+    
+    /**
+     * Handles cancel action from error dialog.
+     * Returns to multiplayer menu.
+     */
+    public void cancelConnection() {
+        isHosting = false;
+        pendingConnectionAddress = null;
+        pendingConnectionPort = 0;
+        gameMenu.returnToMultiplayerMenu();
+    }
+    
+    /**
+     * Corrects the local player's position with smooth interpolation.
+     * Called when the server detects position desynchronization.
+     * 
+     * @param correctedX The corrected X position
+     * @param correctedY The corrected Y position
+     * @param correctedDirection The corrected direction
+     */
+    public void correctPlayerPosition(float correctedX, float correctedY, wagemaker.uk.network.Direction correctedDirection) {
+        if (player == null) {
+            return;
+        }
+        
+        // Calculate distance to corrected position
+        float dx = correctedX - player.getX();
+        float dy = correctedY - player.getY();
+        float distance = (float) Math.sqrt(dx * dx + dy * dy);
+        
+        // Log the correction
+        System.err.println("Position desynchronization detected!");
+        System.err.println("  Current position: (" + player.getX() + ", " + player.getY() + ")");
+        System.err.println("  Corrected position: (" + correctedX + ", " + correctedY + ")");
+        System.err.println("  Distance: " + distance + " pixels");
+        
+        // If distance is small, snap immediately
+        if (distance < 10) {
+            player.setPosition(correctedX, correctedY);
+        } else {
+            // For larger distances, use smooth interpolation
+            // We'll interpolate over the next few frames
+            // This is a simple approach - could be enhanced with a proper interpolation system
+            
+            // For now, just snap to the corrected position
+            // A more sophisticated system would interpolate over time
+            player.setPosition(correctedX, correctedY);
+        }
+        
+        // Update direction if needed
+        // Note: Direction enum from network package needs to be converted to player direction
+        // This would require mapping between the two direction systems
+    }
+    
+    /**
+     * Renders the current notification message on screen.
+     */
+    private void renderNotification() {
+        if (currentNotification == null) {
+            return;
+        }
+        
+        batch.begin();
+        
+        // Calculate position (top center of screen)
+        float screenX = camera.position.x;
+        float screenY = camera.position.y + viewport.getWorldHeight() / 2 - 80;
+        
+        // Draw notification text
+        gameMenu.getFont().setColor(1, 1, 0, 1); // Yellow color
+        gameMenu.getFont().draw(batch, currentNotification, 
+            screenX - gameMenu.getFont().getSpaceXadvance() * currentNotification.length() / 4, 
+            screenY);
+        
+        batch.end();
+    }
+
     @Override
     public void dispose() {
         batch.dispose();
@@ -695,5 +1396,22 @@ public class MyGdxGame extends ApplicationAdapter {
             cactus.dispose();
         }
         gameMenu.dispose();
+        
+        // Clean up multiplayer resources
+        if (gameClient != null) {
+            gameClient.disconnect();
+            gameClient = null;
+        }
+        
+        if (gameServer != null) {
+            gameServer.stop();
+            gameServer = null;
+        }
+        
+        // Dispose remote players
+        for (RemotePlayer remotePlayer : remotePlayers.values()) {
+            remotePlayer.dispose();
+        }
+        remotePlayers.clear();
     }
 }

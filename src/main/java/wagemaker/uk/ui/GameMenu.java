@@ -21,17 +21,23 @@ public class GameMenu {
     private Texture woodenPlank;
     private BitmapFont font;
     private BitmapFont playerNameFont; // Custom font for player name
-    private String[] menuItems = {"Player Name", "Save", "Exit"};
+    private String[] menuItems = {"Player Name", "Multiplayer", "Save", "Exit"};
     private int selectedIndex = 0;
     private float menuX, menuY;
     private Player player;
     private static final float MENU_WIDTH = 250;
-    private static final float MENU_HEIGHT = 190; // Increased height for additional menu item
+    private static final float MENU_HEIGHT = 220; // Increased height for additional menu item
     
     // Player name dialog
     private boolean nameDialogOpen = false;
     private String playerName = "Player";
     private String inputBuffer = "";
+    
+    // Multiplayer components
+    private MultiplayerMenu multiplayerMenu;
+    private ServerHostDialog serverHostDialog;
+    private ConnectDialog connectDialog;
+    private ErrorDialog errorDialog;
 
 
     public GameMenu() {
@@ -42,6 +48,12 @@ public class GameMenu {
         
         // Create custom font for player name
         createPlayerNameFont();
+        
+        // Initialize multiplayer components
+        multiplayerMenu = new MultiplayerMenu();
+        serverHostDialog = new ServerHostDialog();
+        connectDialog = new ConnectDialog();
+        errorDialog = new ErrorDialog();
     }
     
     private void createPlayerNameFont() {
@@ -250,29 +262,73 @@ public class GameMenu {
     }
 
     public void update() {
+        // Handle dialogs first (highest priority)
+        if (errorDialog.isVisible()) {
+            errorDialog.handleInput();
+            return;
+        }
+        
+        if (connectDialog.isVisible()) {
+            connectDialog.handleInput();
+            return;
+        }
+        
+        if (serverHostDialog.isVisible()) {
+            serverHostDialog.handleInput();
+            return;
+        }
+        
         if (nameDialogOpen) {
             handleNameDialogInput();
-        } else {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-                isOpen = !isOpen;
+            return;
+        }
+        
+        // Handle multiplayer menu
+        if (multiplayerMenu.isOpen()) {
+            multiplayerMenu.update();
+            // Check if user selected an option
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+                handleMultiplayerMenuSelection();
             }
+            return;
+        }
+        
+        // Handle main menu
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            isOpen = !isOpen;
+        }
 
-            if (isOpen) {
-                if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
-                    selectedIndex = (selectedIndex - 1 + menuItems.length) % menuItems.length;
-                }
-                if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
-                    selectedIndex = (selectedIndex + 1) % menuItems.length;
-                }
-                if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-                    executeMenuItem(selectedIndex);
-                }
+        if (isOpen) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
+                selectedIndex = (selectedIndex - 1 + menuItems.length) % menuItems.length;
+            }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+                selectedIndex = (selectedIndex + 1) % menuItems.length;
+            }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+                executeMenuItem(selectedIndex);
             }
         }
     }
 
     public void render(SpriteBatch batch, ShapeRenderer shapeRenderer, float camX, float camY, float viewWidth, float viewHeight) {
-        if (!isOpen && !nameDialogOpen) return;
+        // Render dialogs (highest priority)
+        if (errorDialog.isVisible()) {
+            errorDialog.render(batch, shapeRenderer, camX, camY);
+            return;
+        }
+        
+        if (connectDialog.isVisible()) {
+            connectDialog.render(batch, shapeRenderer, camX, camY);
+            return;
+        }
+        
+        if (serverHostDialog.isVisible()) {
+            serverHostDialog.render(batch, shapeRenderer, camX, camY);
+            return;
+        }
+        
+        if (!isOpen && !nameDialogOpen && !multiplayerMenu.isOpen()) return;
 
         batch.begin();
         
@@ -316,17 +372,67 @@ public class GameMenu {
         }
         
         batch.end();
+        
+        // Render multiplayer menu if open
+        if (multiplayerMenu.isOpen()) {
+            multiplayerMenu.render(batch, shapeRenderer, camX, camY, viewWidth, viewHeight);
+        }
     }
 
     private void executeMenuItem(int index) {
         if (index == 0) { // Player Name
             openNameDialog();
-        } else if (index == 1) { // Save
+        } else if (index == 1) { // Multiplayer
+            openMultiplayerMenu();
+        } else if (index == 2) { // Save
             savePlayerPosition();
-        } else if (index == 2) { // Exit
+        } else if (index == 3) { // Exit
             savePlayerPosition(); // Auto-save before exit
             Gdx.app.exit();
         }
+    }
+    
+    /**
+     * Opens the multiplayer menu.
+     */
+    private void openMultiplayerMenu() {
+        isOpen = false; // Close main menu
+        multiplayerMenu.open();
+    }
+    
+    /**
+     * Handles selection in the multiplayer menu.
+     */
+    private void handleMultiplayerMenuSelection() {
+        String selected = multiplayerMenu.getSelectedOption();
+        
+        if (selected.equals("Host Server")) {
+            multiplayerMenu.close();
+            // This will be connected to MyGdxGame.startMultiplayerHost() externally
+            System.out.println("Host Server selected - to be handled by MyGdxGame");
+        } else if (selected.equals("Connect to Server")) {
+            multiplayerMenu.close();
+            connectDialog.show();
+        } else if (selected.equals("Back")) {
+            multiplayerMenu.close();
+            isOpen = true; // Return to main menu
+        }
+    }
+    
+    /**
+     * Shows an error dialog with the specified message.
+     * @param message The error message to display
+     */
+    public void showError(String message) {
+        errorDialog.show(message);
+    }
+    
+    /**
+     * Returns to the multiplayer menu.
+     */
+    public void returnToMultiplayerMenu() {
+        isOpen = false;
+        multiplayerMenu.open();
     }
     
     private void savePlayerPosition() {
@@ -401,19 +507,19 @@ public class GameMenu {
 
 
     private Texture createWoodenPlank() {
-        Pixmap pixmap = new Pixmap(250, 160, Pixmap.Format.RGBA8888); // Increased height
+        Pixmap pixmap = new Pixmap(250, 220, Pixmap.Format.RGBA8888); // Increased height for multiplayer option
         
         pixmap.setColor(0.4f, 0.25f, 0.1f, 1.0f);
         pixmap.fill();
         
         pixmap.setColor(0.3f, 0.18f, 0.08f, 1.0f);
-        for (int y = 10; y < 160; y += 15) { // Updated for new height
+        for (int y = 10; y < 220; y += 15) { // Updated for new height
             pixmap.drawLine(0, y, 250, y + 5);
         }
         
         pixmap.setColor(0.2f, 0.12f, 0.05f, 1.0f);
-        pixmap.drawRectangle(0, 0, 250, 160); // Updated for new height
-        pixmap.drawRectangle(2, 2, 246, 156); // Updated for new height
+        pixmap.drawRectangle(0, 0, 250, 220); // Updated for new height
+        pixmap.drawRectangle(2, 2, 246, 216); // Updated for new height
         
         Texture texture = new Texture(pixmap);
         pixmap.dispose();
@@ -447,12 +553,64 @@ public class GameMenu {
     public boolean isOpen() {
         return isOpen;
     }
+    
+    /**
+     * Gets the player name font for rendering text.
+     * @return The player name font
+     */
+    public BitmapFont getFont() {
+        return playerNameFont;
+    }
+
+    /**
+     * Gets the multiplayer menu instance.
+     * @return The multiplayer menu
+     */
+    public MultiplayerMenu getMultiplayerMenu() {
+        return multiplayerMenu;
+    }
+    
+    /**
+     * Gets the server host dialog instance.
+     * @return The server host dialog
+     */
+    public ServerHostDialog getServerHostDialog() {
+        return serverHostDialog;
+    }
+    
+    /**
+     * Gets the connect dialog instance.
+     * @return The connect dialog
+     */
+    public ConnectDialog getConnectDialog() {
+        return connectDialog;
+    }
+    
+    /**
+     * Gets the error dialog instance.
+     * @return The error dialog
+     */
+    public ErrorDialog getErrorDialog() {
+        return errorDialog;
+    }
 
     public void dispose() {
         woodenPlank.dispose();
         font.dispose();
         if (playerNameFont != null) {
             playerNameFont.dispose();
+        }
+        if (multiplayerMenu != null) {
+            multiplayerMenu.dispose();
+        }
+        if (serverHostDialog != null) {
+            serverHostDialog.dispose();
+        }
+        if (connectDialog != null) {
+            connectDialog.dispose();
+        }
+        if (errorDialog != null) {
+            errorDialog.dispose();
         }
     }
 }

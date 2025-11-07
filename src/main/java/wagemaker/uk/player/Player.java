@@ -15,6 +15,7 @@ import wagemaker.uk.trees.BananaTree;
 import wagemaker.uk.trees.CoconutTree;
 import wagemaker.uk.trees.Cactus;
 import wagemaker.uk.ui.GameMenu;
+import wagemaker.uk.network.GameClient;
 import java.util.Map;
 
 public class Player {
@@ -23,6 +24,12 @@ public class Player {
     private float animTime = 0;
     private float health = 100; // Player health
     private float lastCactusDamageTime = 0; // To prevent spam damage
+    private float previousHealth = 100; // Track previous health for change detection
+    
+    // Multiplayer fields
+    private String playerId; // Unique identifier for multiplayer
+    private GameClient gameClient; // Reference for sending network updates
+    private boolean isLocalPlayer = true; // Distinguish local vs remote players
     private Texture spriteSheet;
     private Animation<TextureRegion> walkUpAnimation;
     private Animation<TextureRegion> walkLeftAnimation;
@@ -98,6 +105,31 @@ public class Player {
     public void setGameMenu(GameMenu gameMenu) {
         this.gameMenu = gameMenu;
     }
+    
+    // Multiplayer getters and setters
+    public String getPlayerId() {
+        return playerId;
+    }
+    
+    public void setPlayerId(String playerId) {
+        this.playerId = playerId;
+    }
+    
+    public GameClient getGameClient() {
+        return gameClient;
+    }
+    
+    public void setGameClient(GameClient gameClient) {
+        this.gameClient = gameClient;
+    }
+    
+    public boolean isLocalPlayer() {
+        return isLocalPlayer;
+    }
+    
+    public void setLocalPlayer(boolean isLocalPlayer) {
+        this.isLocalPlayer = isLocalPlayer;
+    }
 
     public void update(float deltaTime) {
         isMoving = false;
@@ -168,6 +200,12 @@ public class Player {
             currentDirection = Direction.DOWN;
             currentAnimation = walkDownAnimation;
         }
+        
+        // Send position updates to server in multiplayer mode (client-side prediction)
+        if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+            wagemaker.uk.network.Direction networkDirection = convertToNetworkDirection(currentDirection);
+            gameClient.sendPlayerMovement(x, y, networkDirection, isMoving);
+        }
 
         // handle attack
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
@@ -190,6 +228,9 @@ public class Player {
         
         // Check for banana pickups
         checkBananaPickups();
+        
+        // Send health updates to server in multiplayer mode
+        checkAndSendHealthUpdate();
         
         // update camera to follow player
         updateCamera();
@@ -366,19 +407,27 @@ public class Player {
             }
             
             if (targetTree != null) {
-                float healthBefore = targetTree.getHealth();
-                boolean destroyed = targetTree.attack();
-                if (destroyed) {
-                    System.out.println("Attacking tree, health before: " + healthBefore);
-                    System.out.println("Tree health after attack: " + targetTree.getHealth() + ", destroyed: " + destroyed);
-                }
-                attackedSomething = true;
-                
-                if (destroyed) {
-                    targetTree.dispose();
-                    trees.remove(targetKey);
-                    clearedPositions.put(targetKey, true);
-                    System.out.println("Tree removed from world");
+                // Send attack action to server in multiplayer mode
+                if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+                    gameClient.sendAttackAction(targetKey);
+                    // In multiplayer, server handles tree destruction
+                    attackedSomething = true;
+                } else {
+                    // Single-player mode: handle locally
+                    float healthBefore = targetTree.getHealth();
+                    boolean destroyed = targetTree.attack();
+                    if (destroyed) {
+                        System.out.println("Attacking tree, health before: " + healthBefore);
+                        System.out.println("Tree health after attack: " + targetTree.getHealth() + ", destroyed: " + destroyed);
+                    }
+                    attackedSomething = true;
+                    
+                    if (destroyed) {
+                        targetTree.dispose();
+                        trees.remove(targetKey);
+                        clearedPositions.put(targetKey, true);
+                        System.out.println("Tree removed from world");
+                    }
                 }
             }
         }
@@ -399,21 +448,29 @@ public class Player {
             }
             
             if (targetAppleTree != null) {
-                float healthBefore = targetAppleTree.getHealth();
-                boolean destroyed = targetAppleTree.attack();
-                if (destroyed) {
-                    System.out.println("Attacking apple tree, health before: " + healthBefore);
-                    System.out.println("Apple tree health after attack: " + targetAppleTree.getHealth() + ", destroyed: " + destroyed);
-                }
-                attackedSomething = true;
-                
-                if (destroyed) {
-                    // Spawn apple at tree position
-                    apples.put(targetKey, new Apple(targetAppleTree.getX(), targetAppleTree.getY()));
-                    System.out.println("Apple dropped at: " + targetAppleTree.getX() + ", " + targetAppleTree.getY());
-                    targetAppleTree.dispose();
-                    appleTrees.remove(targetKey);
-                    clearedPositions.put(targetKey, true);
+                // Send attack action to server in multiplayer mode
+                if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+                    gameClient.sendAttackAction(targetKey);
+                    // In multiplayer, server handles tree destruction and item spawning
+                    attackedSomething = true;
+                } else {
+                    // Single-player mode: handle locally
+                    float healthBefore = targetAppleTree.getHealth();
+                    boolean destroyed = targetAppleTree.attack();
+                    if (destroyed) {
+                        System.out.println("Attacking apple tree, health before: " + healthBefore);
+                        System.out.println("Apple tree health after attack: " + targetAppleTree.getHealth() + ", destroyed: " + destroyed);
+                    }
+                    attackedSomething = true;
+                    
+                    if (destroyed) {
+                        // Spawn apple at tree position
+                        apples.put(targetKey, new Apple(targetAppleTree.getX(), targetAppleTree.getY()));
+                        System.out.println("Apple dropped at: " + targetAppleTree.getX() + ", " + targetAppleTree.getY());
+                        targetAppleTree.dispose();
+                        appleTrees.remove(targetKey);
+                        clearedPositions.put(targetKey, true);
+                    }
                 }
             }
         }
@@ -434,19 +491,27 @@ public class Player {
             }
             
             if (targetCoconutTree != null) {
-                float healthBefore = targetCoconutTree.getHealth();
-                boolean destroyed = targetCoconutTree.attack();
-                if (destroyed) {
-                    System.out.println("Attacking coconut tree, health before: " + healthBefore);
-                    System.out.println("Coconut tree health after attack: " + targetCoconutTree.getHealth() + ", destroyed: " + destroyed);
-                }
-                attackedSomething = true;
-                
-                if (destroyed) {
-                    targetCoconutTree.dispose();
-                    coconutTrees.remove(targetKey);
-                    clearedPositions.put(targetKey, true);
-                    System.out.println("Coconut tree removed from world");
+                // Send attack action to server in multiplayer mode
+                if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+                    gameClient.sendAttackAction(targetKey);
+                    // In multiplayer, server handles tree destruction
+                    attackedSomething = true;
+                } else {
+                    // Single-player mode: handle locally
+                    float healthBefore = targetCoconutTree.getHealth();
+                    boolean destroyed = targetCoconutTree.attack();
+                    if (destroyed) {
+                        System.out.println("Attacking coconut tree, health before: " + healthBefore);
+                        System.out.println("Coconut tree health after attack: " + targetCoconutTree.getHealth() + ", destroyed: " + destroyed);
+                    }
+                    attackedSomething = true;
+                    
+                    if (destroyed) {
+                        targetCoconutTree.dispose();
+                        coconutTrees.remove(targetKey);
+                        clearedPositions.put(targetKey, true);
+                        System.out.println("Coconut tree removed from world");
+                    }
                 }
             }
         }
@@ -467,19 +532,27 @@ public class Player {
             }
             
             if (targetBambooTree != null) {
-                float healthBefore = targetBambooTree.getHealth();
-                boolean destroyed = targetBambooTree.attack();
-                if (destroyed) {
-                    System.out.println("Attacking bamboo tree, health before: " + healthBefore);
-                    System.out.println("Bamboo tree health after attack: " + targetBambooTree.getHealth() + ", destroyed: " + destroyed);
-                }
-                attackedSomething = true;
-                
-                if (destroyed) {
-                    targetBambooTree.dispose();
-                    bambooTrees.remove(targetKey);
-                    clearedPositions.put(targetKey, true);
-                    System.out.println("Bamboo tree removed from world");
+                // Send attack action to server in multiplayer mode
+                if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+                    gameClient.sendAttackAction(targetKey);
+                    // In multiplayer, server handles tree destruction
+                    attackedSomething = true;
+                } else {
+                    // Single-player mode: handle locally
+                    float healthBefore = targetBambooTree.getHealth();
+                    boolean destroyed = targetBambooTree.attack();
+                    if (destroyed) {
+                        System.out.println("Attacking bamboo tree, health before: " + healthBefore);
+                        System.out.println("Bamboo tree health after attack: " + targetBambooTree.getHealth() + ", destroyed: " + destroyed);
+                    }
+                    attackedSomething = true;
+                    
+                    if (destroyed) {
+                        targetBambooTree.dispose();
+                        bambooTrees.remove(targetKey);
+                        clearedPositions.put(targetKey, true);
+                        System.out.println("Bamboo tree removed from world");
+                    }
                 }
             }
         }
@@ -500,21 +573,29 @@ public class Player {
             }
             
             if (targetBananaTree != null) {
-                float healthBefore = targetBananaTree.getHealth();
-                boolean destroyed = targetBananaTree.attack();
-                if (destroyed) {
-                    System.out.println("Attacking banana tree, health before: " + healthBefore);
-                    System.out.println("Banana tree health after attack: " + targetBananaTree.getHealth() + ", destroyed: " + destroyed);
-                }
-                attackedSomething = true;
-                
-                if (destroyed) {
-                    // Spawn banana at tree position
-                    bananas.put(targetKey, new Banana(targetBananaTree.getX(), targetBananaTree.getY()));
-                    System.out.println("Banana dropped at: " + targetBananaTree.getX() + ", " + targetBananaTree.getY());
-                    targetBananaTree.dispose();
-                    bananaTrees.remove(targetKey);
-                    clearedPositions.put(targetKey, true);
+                // Send attack action to server in multiplayer mode
+                if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+                    gameClient.sendAttackAction(targetKey);
+                    // In multiplayer, server handles tree destruction and item spawning
+                    attackedSomething = true;
+                } else {
+                    // Single-player mode: handle locally
+                    float healthBefore = targetBananaTree.getHealth();
+                    boolean destroyed = targetBananaTree.attack();
+                    if (destroyed) {
+                        System.out.println("Attacking banana tree, health before: " + healthBefore);
+                        System.out.println("Banana tree health after attack: " + targetBananaTree.getHealth() + ", destroyed: " + destroyed);
+                    }
+                    attackedSomething = true;
+                    
+                    if (destroyed) {
+                        // Spawn banana at tree position
+                        bananas.put(targetKey, new Banana(targetBananaTree.getX(), targetBananaTree.getY()));
+                        System.out.println("Banana dropped at: " + targetBananaTree.getX() + ", " + targetBananaTree.getY());
+                        targetBananaTree.dispose();
+                        bananaTrees.remove(targetKey);
+                        clearedPositions.put(targetKey, true);
+                    }
                 }
             }
         }
@@ -654,19 +735,27 @@ public class Player {
     }
     
     private void pickupApple(String appleKey) {
-        // Restore 20% health (20 HP)
-        float healthBefore = health;
-        health = Math.min(100, health + 20); // Cap at 100 HP
-        float healthRestored = health - healthBefore;
-        
-        System.out.println("Apple picked up! Health restored: " + healthRestored + " (Health: " + healthBefore + " → " + health + ")");
-        
-        // Remove apple from game
-        if (apples.containsKey(appleKey)) {
-            Apple apple = apples.get(appleKey);
-            apple.dispose();
-            apples.remove(appleKey);
-            System.out.println("Apple removed from game");
+        // Send pickup request to server in multiplayer mode
+        if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+            gameClient.sendItemPickup(appleKey);
+            // In multiplayer, server handles item removal and health restoration
+            // The server will broadcast the pickup to all clients
+        } else {
+            // Single-player mode: handle locally
+            // Restore 20% health (20 HP)
+            float healthBefore = health;
+            health = Math.min(100, health + 20); // Cap at 100 HP
+            float healthRestored = health - healthBefore;
+            
+            System.out.println("Apple picked up! Health restored: " + healthRestored + " (Health: " + healthBefore + " → " + health + ")");
+            
+            // Remove apple from game
+            if (apples.containsKey(appleKey)) {
+                Apple apple = apples.get(appleKey);
+                apple.dispose();
+                apples.remove(appleKey);
+                System.out.println("Apple removed from game");
+            }
         }
     }
     
@@ -691,25 +780,64 @@ public class Player {
     }
     
     private void pickupBanana(String bananaKey) {
-        // Restore 20% health (20 HP)
-        float healthBefore = health;
-        health = Math.min(100, health + 20); // Cap at 100 HP
-        float healthRestored = health - healthBefore;
-        
-        System.out.println("Banana picked up! Health restored: " + healthRestored + " (Health: " + healthBefore + " → " + health + ")");
-        
-        // Remove banana from game
-        if (bananas.containsKey(bananaKey)) {
-            Banana banana = bananas.get(bananaKey);
-            banana.dispose();
-            bananas.remove(bananaKey);
-            System.out.println("Banana removed from game");
+        // Send pickup request to server in multiplayer mode
+        if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+            gameClient.sendItemPickup(bananaKey);
+            // In multiplayer, server handles item removal and health restoration
+            // The server will broadcast the pickup to all clients
+        } else {
+            // Single-player mode: handle locally
+            // Restore 20% health (20 HP)
+            float healthBefore = health;
+            health = Math.min(100, health + 20); // Cap at 100 HP
+            float healthRestored = health - healthBefore;
+            
+            System.out.println("Banana picked up! Health restored: " + healthRestored + " (Health: " + healthBefore + " → " + health + ")");
+            
+            // Remove banana from game
+            if (bananas.containsKey(bananaKey)) {
+                Banana banana = bananas.get(bananaKey);
+                banana.dispose();
+                bananas.remove(bananaKey);
+                System.out.println("Banana removed from game");
+            }
         }
     }
 
     public boolean shouldShowHealthBar() {
         return true; // Always show for testing
         // return health < 100; // Original logic
+    }
+    
+    /**
+     * Convert Player's internal Direction enum to network Direction enum.
+     */
+    private wagemaker.uk.network.Direction convertToNetworkDirection(Direction direction) {
+        switch (direction) {
+            case UP:
+                return wagemaker.uk.network.Direction.UP;
+            case DOWN:
+                return wagemaker.uk.network.Direction.DOWN;
+            case LEFT:
+                return wagemaker.uk.network.Direction.LEFT;
+            case RIGHT:
+                return wagemaker.uk.network.Direction.RIGHT;
+            default:
+                return wagemaker.uk.network.Direction.DOWN;
+        }
+    }
+    
+    /**
+     * Check if health has changed and send update to server in multiplayer mode.
+     */
+    private void checkAndSendHealthUpdate() {
+        if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+            // Only send update if health has changed
+            if (health != previousHealth) {
+                gameClient.sendPlayerHealth(health);
+                previousHealth = health;
+            }
+        }
     }
 
     public void dispose() {

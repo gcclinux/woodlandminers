@@ -32,6 +32,90 @@ public class WorldState implements Serializable {
     public WorldState(long worldSeed) {
         this();
         this.worldSeed = worldSeed;
+        // Generate initial trees around spawn point
+        generateInitialTrees();
+    }
+    
+    /**
+     * Generates initial trees around the spawn point (0,0).
+     * This ensures players have trees to interact with when they spawn.
+     * Trees are generated in a large area around spawn using deterministic generation.
+     */
+    private void generateInitialTrees() {
+        java.util.Random random = new java.util.Random();
+        
+        // Generate trees in a 5000x5000 area around spawn (-2500 to +2500)
+        // This gives players plenty of trees to explore
+        int minX = -2500;
+        int maxX = 2500;
+        int minY = -2500;
+        int maxY = 2500;
+        int gridSize = 64; // Same as grass tile size
+        
+        for (int x = minX; x <= maxX; x += gridSize) {
+            for (int y = minY; y <= maxY; y += gridSize) {
+                String key = x + "," + y;
+                
+                // Use world seed combined with position for deterministic generation
+                random.setSeed(worldSeed + x * 31L + y * 17L);
+                
+                // 2% chance to generate a tree at this position
+                if (random.nextFloat() < 0.02f) {
+                    // Check if any tree is within 256px distance
+                    if (isTreeNearby(x, y, 256)) {
+                        continue;
+                    }
+                    
+                    // Don't spawn trees too close to spawn point (within 200px)
+                    float distanceFromSpawn = (float) Math.sqrt(x * x + y * y);
+                    if (distanceFromSpawn < 200) {
+                        continue;
+                    }
+                    
+                    // 20% chance each for different tree types
+                    float treeTypeRoll = random.nextFloat();
+                    TreeType treeType;
+                    
+                    if (treeTypeRoll < 0.2f) {
+                        treeType = TreeType.SMALL;
+                    } else if (treeTypeRoll < 0.4f) {
+                        treeType = TreeType.APPLE;
+                    } else if (treeTypeRoll < 0.6f) {
+                        treeType = TreeType.COCONUT;
+                    } else if (treeTypeRoll < 0.8f) {
+                        treeType = TreeType.BAMBOO;
+                    } else {
+                        treeType = TreeType.BANANA;
+                    }
+                    
+                    // Create tree state with full health
+                    TreeState tree = new TreeState(key, treeType, x, y, 100.0f, true);
+                    this.trees.put(key, tree);
+                }
+            }
+        }
+        
+        System.out.println("Generated " + trees.size() + " initial trees for world seed: " + worldSeed);
+    }
+    
+    /**
+     * Checks if there's a tree nearby within the specified distance.
+     */
+    private boolean isTreeNearby(int x, int y, int minDistance) {
+        for (TreeState tree : trees.values()) {
+            if (!tree.isExists()) {
+                continue;
+            }
+            
+            float dx = tree.getX() - x;
+            float dy = tree.getY() - y;
+            float distance = (float) Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < minDistance) {
+                return true;
+            }
+        }
+        return false;
     }
     
     /**

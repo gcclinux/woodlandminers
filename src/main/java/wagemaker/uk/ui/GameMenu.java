@@ -25,6 +25,7 @@ public class GameMenu {
     private int selectedIndex = 0;
     private float menuX, menuY;
     private Player player;
+    private wagemaker.uk.gdx.MyGdxGame gameInstance;
     private static final float MENU_WIDTH = 250;
     private static final float MENU_HEIGHT = 220; // Increased height for additional menu item
     
@@ -81,6 +82,10 @@ public class GameMenu {
     
     public void setPlayer(Player player) {
         this.player = player;
+    }
+    
+    public void setGameInstance(wagemaker.uk.gdx.MyGdxGame gameInstance) {
+        this.gameInstance = gameInstance;
     }
     
     private void openNameDialog() {
@@ -408,8 +413,11 @@ public class GameMenu {
         
         if (selected.equals("Host Server")) {
             multiplayerMenu.close();
-            // This will be connected to MyGdxGame.startMultiplayerHost() externally
-            System.out.println("Host Server selected - to be handled by MyGdxGame");
+            if (gameInstance != null) {
+                gameInstance.attemptHostServer();
+            } else {
+                System.err.println("Cannot host server: game instance not set");
+            }
         } else if (selected.equals("Connect to Server")) {
             multiplayerMenu.close();
             connectDialog.show();
@@ -552,6 +560,21 @@ public class GameMenu {
 
     public boolean isOpen() {
         return isOpen;
+    }
+    
+    /**
+     * Checks if any menu or dialog is currently open.
+     * This includes the main menu, multiplayer menu, name dialog, and all other dialogs.
+     * 
+     * @return true if any menu or dialog is open, false otherwise
+     */
+    public boolean isAnyMenuOpen() {
+        return isOpen || 
+               nameDialogOpen || 
+               multiplayerMenu.isOpen() || 
+               errorDialog.isVisible() || 
+               connectDialog.isVisible() || 
+               serverHostDialog.isVisible();
     }
     
     /**

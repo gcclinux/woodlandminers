@@ -131,6 +131,7 @@ public class MyGdxGame extends ApplicationAdapter {
 
         gameMenu = new GameMenu();
         gameMenu.setPlayer(player); // Set player reference for saving
+        gameMenu.setGameInstance(this); // Set game instance reference for multiplayer
         player.setGameMenu(gameMenu);
         
         // Load player position from save file if it exists
@@ -161,14 +162,8 @@ public class MyGdxGame extends ApplicationAdapter {
             cancelConnection();
         }
         
-        // Handle multiplayer menu selections
-        if (gameMenu.getMultiplayerMenu().isOpen() && Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.ENTER)) {
-            String selected = gameMenu.getMultiplayerMenu().getSelectedOption();
-            if (selected.equals("Host Server")) {
-                gameMenu.getMultiplayerMenu().close();
-                attemptHostServer();
-            }
-        }
+        // Handle multiplayer menu selections - delegated to GameMenu
+        // GameMenu will call back to attemptHostServer() when needed
         
         // Handle connect dialog confirmation
         if (gameMenu.getConnectDialog().isConfirmed()) {
@@ -214,7 +209,7 @@ public class MyGdxGame extends ApplicationAdapter {
             }
         }
 
-        if (!gameMenu.isOpen()) {
+        if (!gameMenu.isAnyMenuOpen()) {
             // update player and camera
             player.update(deltaTime);
         

@@ -15,26 +15,125 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
-import wagemaker.uk.player.Player;
-import wagemaker.uk.player.RemotePlayer;
 import wagemaker.uk.items.Apple;
 import wagemaker.uk.items.Banana;
+import wagemaker.uk.network.GameClient;
+import wagemaker.uk.network.GameServer;
+import wagemaker.uk.network.ItemState;
+import wagemaker.uk.network.ItemType;
+import wagemaker.uk.network.PlayerJoinMessage;
+import wagemaker.uk.network.TreeState;
+import wagemaker.uk.network.TreeType;
+import wagemaker.uk.network.WorldState;
+import wagemaker.uk.player.Player;
+import wagemaker.uk.player.RemotePlayer;
 import wagemaker.uk.trees.AppleTree;
 import wagemaker.uk.trees.BambooTree;
 import wagemaker.uk.trees.BananaTree;
+import wagemaker.uk.trees.Cactus;
 import wagemaker.uk.trees.CoconutTree;
 import wagemaker.uk.trees.SmallTree;
-import wagemaker.uk.trees.Cactus;
 import wagemaker.uk.ui.GameMenu;
-import wagemaker.uk.network.GameServer;
-import wagemaker.uk.network.GameClient;
-import wagemaker.uk.network.WorldState;
-import wagemaker.uk.network.TreeState;
-import wagemaker.uk.network.ItemState;
-import wagemaker.uk.network.TreeType;
-import wagemaker.uk.network.ItemType;
-import wagemaker.uk.network.PlayerJoinMessage;
 
+/**
+ * Main game class for Woodlanders multiplayer game.
+ * 
+ * <h2>MULTIPLAYER THREADING GUIDELINES</h2>
+ * 
+ * <p>This game uses a multi-threaded architecture for multiplayer networking. Understanding
+ * the threading model is critical to avoid crashes and ensure stability.</p>
+ * 
+ * <h3>Threading Model:</h3>
+ * <ul>
+ *   <li><b>Render Thread (Main Thread):</b> Owns the OpenGL context and handles all rendering operations.
+ *       This is the only thread that can safely call OpenGL functions.</li>
+ *   <li><b>Network Thread (GameClient-Receive):</b> Receives and processes network messages from the server.
+ *       This thread runs in the background and must NOT call OpenGL functions directly.</li>
+ * </ul>
+ * 
+ * <h3>Critical Rule:</h3>
+ * <p><b>ALL OpenGL operations MUST execute on the Render Thread.</b> This includes:</p>
+ * <ul>
+ *   <li>Texture creation and disposal (texture.dispose())</li>
+ *   <li>Shader operations</li>
+ *   <li>Buffer operations</li>
+ *   <li>Any LibGDX graphics calls</li>
+ * </ul>
+ * 
+ * <h3>The Deferred Operation Pattern:</h3>
+ * <p>When network message handlers need to perform OpenGL operations, they must use the
+ * deferred operation pattern via the {@link #deferOperation(Runnable)} method.</p>
+ * 
+ * <h4>How It Works:</h4>
+ * <ol>
+ *   <li>Network thread receives a message (e.g., item pickup)</li>
+ *   <li>Handler immediately updates game state (remove from maps)</li>
+ *   <li>Handler defers OpenGL operations (texture disposal) to render thread</li>
+ *   <li>Render thread processes deferred operations at start of next frame</li>
+ * </ol>
+ * 
+ * <h4>Example - CORRECT Usage:</h4>
+ * <pre>{@code
+ * // In network message handler (Network Thread)
+ * public void handleItemPickup(ItemPickupMessage message) {
+ *     // ✅ CORRECT: Immediate state update (thread-safe)
+ *     Apple apple = apples.remove(message.getItemId());
+ *     if (apple != null) {
+ *         // ✅ CORRECT: Defer OpenGL operation to render thread
+ *         deferOperation(() -> apple.dispose());
+ *     }
+ * }
+ * }</pre>
+ * 
+ * <h4>Example - INCORRECT Usage:</h4>
+ * <pre>{@code
+ * // In network message handler (Network Thread)
+ * public void handleItemPickup(ItemPickupMessage message) {
+ *     Apple apple = apples.remove(message.getItemId());
+ *     if (apple != null) {
+ *         // ❌ INCORRECT: OpenGL call from network thread - WILL CRASH!
+ *         apple.dispose();  // This calls texture.dispose() internally
+ *     }
+ * }
+ * }</pre>
+ * 
+ * <h3>When to Use deferOperation():</h3>
+ * <ul>
+ *   <li>Disposing textures, sprites, or any graphics resources</li>
+ *   <li>Creating new graphics resources from network messages</li>
+ *   <li>Any operation that touches OpenGL state</li>
+ *   <li>When in doubt, defer it!</li>
+ * </ul>
+ * 
+ * <h3>When NOT to Use deferOperation():</h3>
+ * <ul>
+ *   <li>Updating game state (maps, lists, variables)</li>
+ *   <li>Logging or printing</li>
+ *   <li>Network operations</li>
+ *   <li>Pure data processing</li>
+ * </ul>
+ * 
+ * <h3>Thread Safety Notes:</h3>
+ * <ul>
+ *   <li>The deferred operation queue uses {@link java.util.concurrent.ConcurrentLinkedQueue}
+ *       which is lock-free and thread-safe for concurrent add/poll operations.</li>
+ *   <li>Game state updates (map operations) should happen immediately on the network thread
+ *       to ensure responsive gameplay.</li>
+ *   <li>Only resource disposal should be deferred to avoid visual artifacts.</li>
+ * </ul>
+ * 
+ * <h3>Debugging Threading Issues:</h3>
+ * <p>If you encounter OpenGL errors or crashes:</p>
+ * <ol>
+ *   <li>Check if the crash occurs during multiplayer item pickup or player join/leave</li>
+ *   <li>Look for OpenGL calls (dispose(), texture operations) in network message handlers</li>
+ *   <li>Ensure all such operations are wrapped in deferOperation()</li>
+ *   <li>Enable debug logging to see deferred operation queue activity</li>
+ * </ol>
+ * 
+ * @see #deferOperation(Runnable)
+ * @see #removeItem(String)
+ */
 public class MyGdxGame extends ApplicationAdapter {
     /**
      * Enum representing the current game mode.
@@ -87,6 +186,9 @@ public class MyGdxGame extends ApplicationAdapter {
     private java.util.concurrent.ConcurrentLinkedQueue<String> pendingTreeRemovals;
     private java.util.concurrent.ConcurrentLinkedQueue<TreeState> pendingTreeCreations;
     
+    // Queue for operations that must execute on the render thread (e.g., OpenGL operations)
+    private java.util.concurrent.ConcurrentLinkedQueue<Runnable> pendingDeferredOperations;
+    
     // Camera dimensions for infinite world
     static final int CAMERA_WIDTH = 1280;
     static final int CAMERA_HEIGHT = 1024;
@@ -127,6 +229,9 @@ public class MyGdxGame extends ApplicationAdapter {
         pendingItemSpawns = new java.util.concurrent.ConcurrentLinkedQueue<>();
         pendingTreeRemovals = new java.util.concurrent.ConcurrentLinkedQueue<>();
         pendingTreeCreations = new java.util.concurrent.ConcurrentLinkedQueue<>();
+        
+        // Initialize deferred operations queue
+        pendingDeferredOperations = new java.util.concurrent.ConcurrentLinkedQueue<>();
 
         // create single cactus near player spawn (128px away)
         cactus = new Cactus(128, 128);
@@ -165,6 +270,21 @@ public class MyGdxGame extends ApplicationAdapter {
     @Override
     public void render() {
         float deltaTime = Gdx.graphics.getDeltaTime();
+        
+        // Process all pending deferred operations (must run on render thread)
+        Runnable operation;
+        while ((operation = pendingDeferredOperations.poll()) != null) {
+            try {
+                // Optional: Log for debugging
+                if (Gdx.app.getLogLevel() >= com.badlogic.gdx.Application.LOG_DEBUG) {
+                    System.out.println("[DEBUG] Executing deferred operation on render thread");
+                }
+                operation.run();
+            } catch (Exception e) {
+                System.err.println("Error executing deferred operation: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
         
         // Process pending player joins on main thread (for OpenGL context)
         processPendingPlayerJoins();
@@ -1256,18 +1376,93 @@ public class MyGdxGame extends ApplicationAdapter {
     /**
      * Removes an item from the game world.
      * 
-     * @param itemId The item ID to remove
+     * <p>This method demonstrates the correct pattern for handling resource cleanup in a
+     * multi-threaded environment. It separates immediate game state updates from deferred
+     * OpenGL operations to ensure thread safety while maintaining responsive gameplay.</p>
+     * 
+     * <h3>Thread Safety Design:</h3>
+     * <ol>
+     *   <li><b>Immediate State Update:</b> The item is removed from the game state maps
+     *       immediately on the calling thread. This ensures the item disappears from
+     *       gameplay instantly, providing responsive multiplayer experience.</li>
+     *   <li><b>Deferred Resource Disposal:</b> The texture disposal is queued for execution
+     *       on the render thread via {@link #deferOperation(Runnable)}. This prevents
+     *       OpenGL threading violations that would cause crashes.</li>
+     * </ol>
+     * 
+     * <h3>Why This Pattern Works:</h3>
+     * <ul>
+     *   <li><b>Responsiveness:</b> Item removal is immediate - no waiting for render thread</li>
+     *   <li><b>Safety:</b> OpenGL operations only happen on the correct thread</li>
+     *   <li><b>No Visual Artifacts:</b> Item is removed from maps before disposal, so it
+     *       won't be rendered even if disposal is delayed by one frame</li>
+     * </ul>
+     * 
+     * <h3>Call Context:</h3>
+     * <p>This method can be safely called from:</p>
+     * <ul>
+     *   <li>Network message handlers (GameClient-Receive thread)</li>
+     *   <li>Render thread (main game loop)</li>
+     *   <li>Any other thread that needs to remove items</li>
+     * </ul>
+     * 
+     * <h3>Usage Example:</h3>
+     * <pre>{@code
+     * // In GameMessageHandler (Network Thread)
+     * public void handleItemPickup(ItemPickupMessage message) {
+     *     String itemId = message.getItemId();
+     *     
+     *     // This is safe to call from network thread
+     *     game.removeItem(itemId);
+     *     
+     *     // Item is immediately removed from game state
+     *     // Texture disposal happens on next render frame
+     * }
+     * }</pre>
+     * 
+     * <h3>Implementation Pattern:</h3>
+     * <pre>{@code
+     * // Step 1: Immediate state update (thread-safe map operation)
+     * Apple apple = apples.remove(itemId);
+     * 
+     * // Step 2: Defer OpenGL operation if item existed
+     * if (apple != null) {
+     *     deferOperation(() -> apple.dispose());
+     * }
+     * }</pre>
+     * 
+     * <h3>Supported Item Types:</h3>
+     * <ul>
+     *   <li>{@link wagemaker.uk.items.Apple} - Dropped by AppleTrees</li>
+     *   <li>{@link wagemaker.uk.items.Banana} - Dropped by BananaTrees</li>
+     * </ul>
+     * 
+     * <h3>Related Methods:</h3>
+     * <p>This same pattern is used throughout the codebase for thread-safe resource management:</p>
+     * <ul>
+     *   <li>{@link #removeTree(String)} - For tree removal</li>
+     *   <li>{@link #queuePlayerLeave(String)} - For remote player cleanup</li>
+     * </ul>
+     * 
+     * @param itemId The unique identifier of the item to remove. If the item doesn't exist,
+     *               this method does nothing (safe to call with non-existent IDs).
+     * 
+     * @see #deferOperation(Runnable)
+     * @see #updateItemFromState(ItemState)
      */
     public void removeItem(String itemId) {
+        // Immediately remove from game state (thread-safe map operations)
         Apple apple = apples.remove(itemId);
         if (apple != null) {
-            apple.dispose();
+            // Defer texture disposal to render thread
+            deferOperation(() -> apple.dispose());
             return;
         }
         
         Banana banana = bananas.remove(itemId);
         if (banana != null) {
-            banana.dispose();
+            // Defer texture disposal to render thread
+            deferOperation(() -> banana.dispose());
         }
     }
     
@@ -1314,6 +1509,121 @@ public class MyGdxGame extends ApplicationAdapter {
      */
     public Player getPlayer() {
         return player;
+    }
+    
+    /**
+     * Defers an operation to be executed on the render thread.
+     * 
+     * <p>This method is the cornerstone of thread-safe OpenGL operations in multiplayer mode.
+     * It allows network message handlers (running on the Network Thread) to schedule OpenGL
+     * operations for execution on the Render Thread, which owns the OpenGL context.</p>
+     * 
+     * <h3>Why This Is Necessary:</h3>
+     * <p>OpenGL has a strict threading requirement: all OpenGL calls must be made from the
+     * thread that created the OpenGL context (the Render Thread). Violating this rule causes
+     * immediate crashes with errors like "INVALID_OPERATION" or "context not current".</p>
+     * 
+     * <h3>When to Use This Method:</h3>
+     * <ul>
+     *   <li><b>Texture Disposal:</b> When removing items, players, or any entity with textures</li>
+     *   <li><b>Resource Creation:</b> When spawning entities from network messages</li>
+     *   <li><b>Shader Operations:</b> Any shader compilation or uniform updates</li>
+     *   <li><b>Buffer Operations:</b> VBO/IBO creation or disposal</li>
+     *   <li><b>General Rule:</b> If it touches graphics, defer it!</li>
+     * </ul>
+     * 
+     * <h3>Usage Examples:</h3>
+     * 
+     * <h4>Example 1: Item Disposal (Most Common)</h4>
+     * <pre>{@code
+     * // In network message handler
+     * public void handleItemPickup(String itemId) {
+     *     Apple apple = apples.remove(itemId);  // Immediate state update
+     *     if (apple != null) {
+     *         deferOperation(() -> apple.dispose());  // Deferred texture disposal
+     *     }
+     * }
+     * }</pre>
+     * 
+     * <h4>Example 2: Remote Player Cleanup</h4>
+     * <pre>{@code
+     * // In network message handler
+     * public void handlePlayerLeave(String playerId) {
+     *     RemotePlayer player = remotePlayers.remove(playerId);
+     *     if (player != null) {
+     *         deferOperation(() -> player.dispose());  // Deferred texture disposal
+     *     }
+     * }
+     * }</pre>
+     * 
+     * <h4>Example 3: Multiple Operations</h4>
+     * <pre>{@code
+     * // In network message handler
+     * public void handleGameEnd() {
+     *     // Defer multiple cleanup operations
+     *     deferOperation(() -> {
+     *         for (Apple apple : apples.values()) {
+     *             apple.dispose();
+     *         }
+     *         apples.clear();
+     *     });
+     * }
+     * }</pre>
+     * 
+     * <h3>What NOT to Defer:</h3>
+     * <pre>{@code
+     * // ❌ DON'T defer simple state updates
+     * deferOperation(() -> apples.remove(itemId));  // Unnecessary!
+     * 
+     * // ✅ DO update state immediately, defer only OpenGL operations
+     * Apple apple = apples.remove(itemId);
+     * if (apple != null) {
+     *     deferOperation(() -> apple.dispose());
+     * }
+     * }</pre>
+     * 
+     * <h3>Thread Safety:</h3>
+     * <p>This method is thread-safe and can be called from any thread. Operations are queued
+     * in a {@link java.util.concurrent.ConcurrentLinkedQueue} and processed at the start of
+     * each render frame in FIFO order.</p>
+     * 
+     * <h3>Performance Considerations:</h3>
+     * <ul>
+     *   <li>Operations are executed synchronously during the render loop</li>
+     *   <li>Typical queue size: 0-10 operations per frame</li>
+     *   <li>Warning logged if queue exceeds 100 operations (possible memory leak)</li>
+     *   <li>No blocking or waiting - network thread continues immediately</li>
+     * </ul>
+     * 
+     * <h3>Error Handling:</h3>
+     * <p>If an operation throws an exception, it is caught and logged, but other queued
+     * operations continue to execute. This prevents one failed disposal from blocking
+     * the entire queue.</p>
+     * 
+     * @param operation The operation to execute on the render thread. Must not be null.
+     *                  Typically a lambda expression like {@code () -> texture.dispose()}
+     * 
+     * @see #removeItem(String)
+     * @see #render()
+     */
+    public void deferOperation(Runnable operation) {
+        if (operation == null) {
+            return;
+        }
+        
+        pendingDeferredOperations.add(operation);
+        
+        // Optional: Log for debugging
+        if (Gdx.app.getLogLevel() >= com.badlogic.gdx.Application.LOG_DEBUG) {
+            System.out.println("[DEBUG] Deferred operation queued. Queue size: " + 
+                              pendingDeferredOperations.size());
+        }
+        
+        // Optional: Warn if queue is getting large
+        if (pendingDeferredOperations.size() > 100) {
+            System.err.println("[WARNING] Deferred operation queue size exceeds 100. " +
+                              "Possible memory leak or render thread stall.");
+        }
     }
     
     /**

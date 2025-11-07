@@ -200,24 +200,13 @@ public class Player {
         spriteSheet = new Texture("sprites/player/man_start.png");
         
         // Get sprite sheet dimensions
-        int spriteSheetHeight = spriteSheet.getHeight();
+        // int spriteSheetHeight = spriteSheet.getHeight();
         
         // Create animation frames for each direction
         TextureRegion[] walkUpFrames = new TextureRegion[9];
         TextureRegion[] walkLeftFrames = new TextureRegion[9];
         TextureRegion[] walkDownFrames = new TextureRegion[9];
         TextureRegion[] walkRightFrames = new TextureRegion[9];
-        
-        // Your coordinates are bottom-left, LibGDX needs top-left
-        // Convert bottom-left Y to top-left Y: topY = spriteSheetHeight - bottomY - height
-        
-        // Fixed mapping based on your feedback:
-        // RIGHT uses UP row, LEFT uses DOWN row, DOWN uses LEFT row, UP uses RIGHT row
-        // So the actual mapping is:
-        // Row 1 (Y=512-576): Walking RIGHT (not UP)
-        // Row 2 (Y=576-640): Walking UP (not LEFT)  
-        // Row 3 (Y=640-704): Walking LEFT (not DOWN)
-        // Row 4 (Y=704-768): Walking DOWN (not RIGHT)
         
         // UP frames: 1st row (Y=512 in LibGDX coordinates)
         // Using coordinates: 0,512 | 64,512 | 128,512 | 192,512 | 256,512 | 320,512 | 384,512 | 448,512 | 512,512

@@ -70,49 +70,17 @@ public class GameMessageHandler extends DefaultMessageHandler {
     protected void handlePlayerJoin(PlayerJoinMessage message) {
         super.handlePlayerJoin(message);
         
-        String playerId = message.getPlayerId();
-        String playerName = message.getPlayerName();
-        
-        // Don't create a remote player for ourselves
-        if (game.getGameClient() != null && 
-            playerId.equals(game.getGameClient().getClientId())) {
-            return;
-        }
-        
-        // Create new remote player
-        RemotePlayer remotePlayer = new RemotePlayer(
-            playerId, 
-            playerName, 
-            message.getX(), 
-            message.getY(),
-            Direction.DOWN,
-            100.0f,
-            false
-        );
-        
-        game.getRemotePlayers().put(playerId, remotePlayer);
-        
-        // Display join notification
-        System.out.println("Player joined: " + playerName);
-        game.displayNotification(playerName + " joined the game");
+        // Queue the player join to be processed on the main thread
+        // This is necessary because RemotePlayer creation involves OpenGL operations
+        game.queuePlayerJoin(message);
     }
     
     @Override
     protected void handlePlayerLeave(PlayerLeaveMessage message) {
         super.handlePlayerLeave(message);
         
-        String playerId = message.getPlayerId();
-        String playerName = message.getPlayerName();
-        
-        // Remove remote player
-        RemotePlayer remotePlayer = game.getRemotePlayers().remove(playerId);
-        if (remotePlayer != null) {
-            remotePlayer.dispose();
-        }
-        
-        // Display leave notification
-        System.out.println("Player left: " + playerName);
-        game.displayNotification(playerName + " left the game");
+        // Queue the player leave to be processed on the main thread
+        game.queuePlayerLeave(message.getPlayerId());
     }
     
     @Override

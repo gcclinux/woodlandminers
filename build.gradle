@@ -51,7 +51,9 @@ run {
     workingDir = project.rootDir
 }
 
+// Client JAR task (full game with rendering)
 jar {
+    archiveBaseName = 'woodlanders-client'
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     manifest {
         attributes 'Main-Class': application.mainClass
@@ -59,7 +61,7 @@ jar {
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
 }
 
-// Server JAR task for dedicated server
+// Server JAR task for dedicated server (headless, no rendering)
 task serverJar(type: Jar) {
     archiveBaseName = 'woodlanders-server'
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
@@ -71,22 +73,22 @@ task serverJar(type: Jar) {
     // Include compiled classes
     from sourceSets.main.output
     
-    // Include dependencies, but exclude LibGDX rendering libraries
+    // Include only core dependencies, exclude rendering libraries
     from {
         configurations.runtimeClasspath.findAll { 
-            // Only include core LibGDX, exclude rendering backends
+            // Only include core LibGDX, exclude rendering backends and natives
             !it.name.contains('lwjgl') && 
             !it.name.contains('backend') && 
             !it.name.contains('platform') &&
-            !it.name.contains('freetype')
+            !it.name.contains('freetype') &&
+            !it.name.contains('natives')
         }.collect { 
             it.isDirectory() ? it : zipTree(it) 
         }
     }
     
-    // Exclude LibGDX rendering and platform-specific dependencies
+    // Exclude LibGDX rendering and platform-specific classes
     exclude 'com/badlogic/gdx/backends/**'
-    exclude 'com/badlogic/gdx/graphics/**'
     exclude 'org/lwjgl/**'
     exclude '**/*.so'
     exclude '**/*.dylib'
@@ -94,10 +96,15 @@ task serverJar(type: Jar) {
     exclude 'META-INF/*.SF'
     exclude 'META-INF/*.DSA'
     exclude 'META-INF/*.RSA'
-    exclude 'META-INF/**/org/lwjgl/**'
     
     // Exclude asset files that are only needed for rendering
     exclude 'sprites/**'
     exclude 'textures/**'
     exclude 'fonts/**'
+    exclude 'shaders/**'
+    exclude 'sounds/**'
+    exclude 'music/**'
 }
+
+// Make build task create both JARs
+build.dependsOn serverJar

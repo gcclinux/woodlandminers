@@ -33,6 +33,7 @@ import wagemaker.uk.network.TreeState;
 import wagemaker.uk.network.ItemState;
 import wagemaker.uk.network.TreeType;
 import wagemaker.uk.network.ItemType;
+import wagemaker.uk.network.PlayerJoinMessage;
 
 public class MyGdxGame extends ApplicationAdapter {
     /**
@@ -79,6 +80,10 @@ public class MyGdxGame extends ApplicationAdapter {
     private int pendingConnectionPort;
     private boolean isHosting;
     
+    // Pending player joins (to be processed on main thread)
+    private java.util.concurrent.ConcurrentLinkedQueue<PlayerJoinMessage> pendingPlayerJoins;
+    private java.util.concurrent.ConcurrentLinkedQueue<String> pendingPlayerLeaves;
+    
     // Camera dimensions for infinite world
     static final int CAMERA_WIDTH = 1280;
     static final int CAMERA_HEIGHT = 1024;
@@ -112,6 +117,10 @@ public class MyGdxGame extends ApplicationAdapter {
         remotePlayers = new HashMap<>();
         random = new Random();
         worldSeed = 0; // Will be set by server in multiplayer, or remain 0 for single-player
+        
+        // Initialize pending player queues
+        pendingPlayerJoins = new java.util.concurrent.ConcurrentLinkedQueue<>();
+        pendingPlayerLeaves = new java.util.concurrent.ConcurrentLinkedQueue<>();
 
         // create single cactus near player spawn (128px away)
         cactus = new Cactus(128, 128);
@@ -150,6 +159,10 @@ public class MyGdxGame extends ApplicationAdapter {
     @Override
     public void render() {
         float deltaTime = Gdx.graphics.getDeltaTime();
+        
+        // Process pending player joins on main thread (for OpenGL context)
+        processPendingPlayerJoins();
+        processPendingPlayerLeaves();
 
         gameMenu.update();
         
@@ -1000,6 +1013,25 @@ public class MyGdxGame extends ApplicationAdapter {
             }
         }
         
+        // Sync player states (create remote players for existing players)
+        if (state.getPlayers() != null) {
+            for (wagemaker.uk.network.PlayerState playerState : state.getPlayers().values()) {
+                // Don't create a remote player for ourselves
+                if (gameClient != null && playerState.getPlayerId().equals(gameClient.getClientId())) {
+                    continue;
+                }
+                
+                // Create PlayerJoinMessage and queue it for main thread processing
+                wagemaker.uk.network.PlayerJoinMessage joinMessage = new wagemaker.uk.network.PlayerJoinMessage(
+                    playerState.getPlayerId(),
+                    playerState.getPlayerName(),
+                    playerState.getX(),
+                    playerState.getY()
+                );
+                queuePlayerJoin(joinMessage);
+            }
+        }
+        
         // Sync tree states
         if (state.getTrees() != null) {
             for (TreeState treeState : state.getTrees().values()) {
@@ -1358,6 +1390,75 @@ public class MyGdxGame extends ApplicationAdapter {
             screenY);
         
         batch.end();
+    }
+    
+    /**
+     * Queues a player join to be processed on the main thread.
+     * This is necessary because RemotePlayer creation involves OpenGL operations.
+     * 
+     * @param message The player join message
+     */
+    public void queuePlayerJoin(wagemaker.uk.network.PlayerJoinMessage message) {
+        pendingPlayerJoins.offer(message);
+    }
+    
+    /**
+     * Queues a player leave to be processed on the main thread.
+     * 
+     * @param playerId The ID of the player leaving
+     */
+    public void queuePlayerLeave(String playerId) {
+        pendingPlayerLeaves.offer(playerId);
+    }
+    
+    /**
+     * Processes pending player joins on the main render thread.
+     * This ensures OpenGL operations happen in the correct context.
+     */
+    private void processPendingPlayerJoins() {
+        wagemaker.uk.network.PlayerJoinMessage message;
+        while ((message = pendingPlayerJoins.poll()) != null) {
+            String playerId = message.getPlayerId();
+            String playerName = message.getPlayerName();
+            
+            // Don't create a remote player for ourselves
+            if (gameClient != null && playerId.equals(gameClient.getClientId())) {
+                continue;
+            }
+            
+            // Create new remote player (safe on main thread)
+            // Default direction is DOWN since PlayerJoinMessage doesn't include direction
+            RemotePlayer remotePlayer = new RemotePlayer(
+                playerId, 
+                playerName, 
+                message.getX(), 
+                message.getY(),
+                wagemaker.uk.network.Direction.DOWN,
+                100.0f,
+                false
+            );
+            
+            remotePlayers.put(playerId, remotePlayer);
+            
+            // Display join notification
+            System.out.println("Player joined: " + playerName);
+            displayNotification(playerName + " joined the game");
+        }
+    }
+    
+    /**
+     * Processes pending player leaves on the main render thread.
+     */
+    private void processPendingPlayerLeaves() {
+        String playerId;
+        while ((playerId = pendingPlayerLeaves.poll()) != null) {
+            RemotePlayer remotePlayer = remotePlayers.remove(playerId);
+            if (remotePlayer != null) {
+                remotePlayer.dispose();
+                System.out.println("Player left: " + remotePlayer.getPlayerName());
+                displayNotification(remotePlayer.getPlayerName() + " left the game");
+            }
+        }
     }
 
     @Override

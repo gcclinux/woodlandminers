@@ -35,7 +35,7 @@ public class RemotePlayer {
     // Position interpolation for smooth movement
     private float targetX;
     private float targetY;
-    private static final float INTERPOLATION_SPEED = 10f; // Units per second
+    private static final float INTERPOLATION_SPEED = 500f; // Units per second (faster than player speed for responsiveness)
     
     public RemotePlayer(String playerId, String playerName, float x, float y, 
                        Direction direction, float health, boolean isMoving) {
@@ -164,7 +164,13 @@ public class RemotePlayer {
         float dy = targetY - y;
         float distance = (float) Math.sqrt(dx * dx + dy * dy);
         
-        if (distance > 0.5f) {
+        // If distance is large (more than 50 pixels), snap immediately to avoid lag
+        // This happens when updates are delayed or player moves quickly
+        if (distance > 50f) {
+            x = targetX;
+            y = targetY;
+        } else if (distance > 0.5f) {
+            // For small distances, use fast interpolation for smooth movement
             float moveAmount = Math.min(INTERPOLATION_SPEED * deltaTime, distance);
             x += (dx / distance) * moveAmount;
             y += (dy / distance) * moveAmount;

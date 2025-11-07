@@ -46,6 +46,12 @@ public class GameMessageHandler extends DefaultMessageHandler {
     
     @Override
     protected void handlePlayerMovement(PlayerMovementMessage message) {
+        // Validate message
+        if (message == null || message.getSenderId() == null) {
+            System.err.println("Received invalid player movement message (null sender)");
+            return;
+        }
+        
         // Don't process our own movement messages
         if (game.getGameClient() != null && 
             message.getSenderId().equals(game.getGameClient().getClientId())) {
@@ -63,6 +69,19 @@ public class GameMessageHandler extends DefaultMessageHandler {
                 message.getDirection(), 
                 message.isMoving()
             );
+        } else {
+            // Remote player doesn't exist yet - create it on-demand
+            // This can happen if movement messages arrive before the join message is processed
+            System.out.println("Creating remote player on-demand for: " + playerId);
+            
+            // Create a PlayerJoinMessage and queue it for main thread processing
+            PlayerJoinMessage joinMessage = new PlayerJoinMessage(
+                playerId,
+                "Player_" + playerId.substring(0, 8), // Default name
+                message.getX(),
+                message.getY()
+            );
+            game.queuePlayerJoin(joinMessage);
         }
     }
     

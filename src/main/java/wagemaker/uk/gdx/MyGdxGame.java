@@ -83,6 +83,8 @@ public class MyGdxGame extends ApplicationAdapter {
     // Pending player joins (to be processed on main thread)
     private java.util.concurrent.ConcurrentLinkedQueue<PlayerJoinMessage> pendingPlayerJoins;
     private java.util.concurrent.ConcurrentLinkedQueue<String> pendingPlayerLeaves;
+    private java.util.concurrent.ConcurrentLinkedQueue<ItemState> pendingItemSpawns;
+    private java.util.concurrent.ConcurrentLinkedQueue<String> pendingTreeRemovals;
     
     // Camera dimensions for infinite world
     static final int CAMERA_WIDTH = 1280;
@@ -121,6 +123,8 @@ public class MyGdxGame extends ApplicationAdapter {
         // Initialize pending player queues
         pendingPlayerJoins = new java.util.concurrent.ConcurrentLinkedQueue<>();
         pendingPlayerLeaves = new java.util.concurrent.ConcurrentLinkedQueue<>();
+        pendingItemSpawns = new java.util.concurrent.ConcurrentLinkedQueue<>();
+        pendingTreeRemovals = new java.util.concurrent.ConcurrentLinkedQueue<>();
 
         // create single cactus near player spawn (128px away)
         cactus = new Cactus(128, 128);
@@ -163,6 +167,8 @@ public class MyGdxGame extends ApplicationAdapter {
         // Process pending player joins on main thread (for OpenGL context)
         processPendingPlayerJoins();
         processPendingPlayerLeaves();
+        processPendingItemSpawns();
+        processPendingTreeRemovals();
 
         gameMenu.update();
         
@@ -902,6 +908,12 @@ public class MyGdxGame extends ApplicationAdapter {
             // Update connection quality indicator
             connectionQualityIndicator.setGameClient(gameClient);
             
+            // Set the player's game client reference for sending updates
+            player.setGameClient(gameClient);
+            
+            // Reset player position to spawn point (0,0) for multiplayer
+            player.setPosition(0, 0);
+            
             // Apply the server's world seed to the host client
             this.worldSeed = gameServer.getWorldState().getWorldSeed();
             
@@ -963,6 +975,12 @@ public class MyGdxGame extends ApplicationAdapter {
             
             // Update connection quality indicator
             connectionQualityIndicator.setGameClient(gameClient);
+            
+            // Set the player's game client reference for sending updates
+            player.setGameClient(gameClient);
+            
+            // Reset player position to spawn point (0,0) for multiplayer
+            player.setPosition(0, 0);
             
             System.out.println("Connected to multiplayer server successfully");
             
@@ -1071,6 +1089,44 @@ public class MyGdxGame extends ApplicationAdapter {
         TreeType type = treeState.getType();
         float health = treeState.getHealth();
         
+        // If type is null (from TreeHealthUpdateMessage), try to find the tree in all maps
+        if (type == null) {
+            // Try each tree type map
+            SmallTree smallTree = trees.get(treeId);
+            if (smallTree != null) {
+                smallTree.setHealth(health);
+                return;
+            }
+            
+            AppleTree appleTree = appleTrees.get(treeId);
+            if (appleTree != null) {
+                appleTree.setHealth(health);
+                return;
+            }
+            
+            CoconutTree coconutTree = coconutTrees.get(treeId);
+            if (coconutTree != null) {
+                coconutTree.setHealth(health);
+                return;
+            }
+            
+            BambooTree bambooTree = bambooTrees.get(treeId);
+            if (bambooTree != null) {
+                bambooTree.setHealth(health);
+                return;
+            }
+            
+            BananaTree bananaTree = bananaTrees.get(treeId);
+            if (bananaTree != null) {
+                bananaTree.setHealth(health);
+                return;
+            }
+            
+            // Tree doesn't exist on client - this is normal if it hasn't been generated yet
+            return;
+        }
+        
+        // Type is known, use switch statement
         switch (type) {
             case SMALL:
                 SmallTree smallTree = trees.get(treeId);
@@ -1107,10 +1163,21 @@ public class MyGdxGame extends ApplicationAdapter {
     
     /**
      * Removes a tree from the game world.
+     * Queues removal to be processed on main thread for OpenGL context safety.
      * 
      * @param treeId The tree ID to remove
      */
     public void removeTree(String treeId) {
+        // Queue tree removal to be processed on main thread
+        pendingTreeRemovals.offer(treeId);
+    }
+    
+    /**
+     * Actually removes a tree from the game world (called on main thread).
+     * 
+     * @param treeId The tree ID to remove
+     */
+    private void removeTreeImmediate(String treeId) {
         // Try to remove from all tree maps
         SmallTree smallTree = trees.remove(treeId);
         if (smallTree != null) {
@@ -1149,6 +1216,7 @@ public class MyGdxGame extends ApplicationAdapter {
     
     /**
      * Updates or creates an item based on server item state.
+     * This method queues item creation to be processed on the main thread.
      * 
      * @param itemState The item state from the server
      */
@@ -1159,29 +1227,14 @@ public class MyGdxGame extends ApplicationAdapter {
         
         String itemId = itemState.getItemId();
         
-        // If item is collected, remove it
+        // If item is collected, remove it (safe to do from any thread)
         if (itemState.isCollected()) {
             removeItem(itemId);
             return;
         }
         
-        // Create item if it doesn't exist
-        ItemType type = itemState.getType();
-        float x = itemState.getX();
-        float y = itemState.getY();
-        
-        switch (type) {
-            case APPLE:
-                if (!apples.containsKey(itemId)) {
-                    apples.put(itemId, new Apple(x, y));
-                }
-                break;
-            case BANANA:
-                if (!bananas.containsKey(itemId)) {
-                    bananas.put(itemId, new Banana(x, y));
-                }
-                break;
-        }
+        // Queue item spawn to be processed on main thread (for OpenGL context)
+        pendingItemSpawns.offer(itemState);
     }
     
     /**
@@ -1458,6 +1511,45 @@ public class MyGdxGame extends ApplicationAdapter {
                 System.out.println("Player left: " + remotePlayer.getPlayerName());
                 displayNotification(remotePlayer.getPlayerName() + " left the game");
             }
+        }
+    }
+    
+    /**
+     * Processes pending item spawns on the main render thread.
+     * This ensures OpenGL operations happen in the correct context.
+     */
+    private void processPendingItemSpawns() {
+        ItemState itemState;
+        while ((itemState = pendingItemSpawns.poll()) != null) {
+            String itemId = itemState.getItemId();
+            ItemType type = itemState.getType();
+            float x = itemState.getX();
+            float y = itemState.getY();
+            
+            // Create item on main thread (safe for OpenGL context)
+            switch (type) {
+                case APPLE:
+                    if (!apples.containsKey(itemId)) {
+                        apples.put(itemId, new Apple(x, y));
+                    }
+                    break;
+                case BANANA:
+                    if (!bananas.containsKey(itemId)) {
+                        bananas.put(itemId, new Banana(x, y));
+                    }
+                    break;
+            }
+        }
+    }
+    
+    /**
+     * Processes pending tree removals on the main render thread.
+     * This ensures OpenGL operations happen in the correct context.
+     */
+    private void processPendingTreeRemovals() {
+        String treeId;
+        while ((treeId = pendingTreeRemovals.poll()) != null) {
+            removeTreeImmediate(treeId);
         }
     }
 

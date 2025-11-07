@@ -306,6 +306,11 @@ public class GameClient {
      * @param isMoving Whether the player is currently moving
      */
     public void sendPlayerMovement(float x, float y, Direction direction, boolean isMoving) {
+        // Don't send if client ID not set yet
+        if (clientId == null) {
+            return;
+        }
+        
         // Throttle position updates to 20 per second
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastPositionUpdateTime < POSITION_UPDATE_INTERVAL_MS) {

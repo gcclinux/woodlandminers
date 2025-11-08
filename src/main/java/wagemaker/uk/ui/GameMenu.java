@@ -1,5 +1,11 @@
 package wagemaker.uk.ui;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
@@ -9,12 +15,9 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+
+import wagemaker.uk.client.PlayerConfig;
 import wagemaker.uk.player.Player;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
 public class GameMenu {
     private boolean isOpen = false;
@@ -420,6 +423,14 @@ public class GameMenu {
             }
         } else if (selected.equals("Connect to Server")) {
             multiplayerMenu.close();
+            
+            // Load PlayerConfig and pre-fill the saved server address
+            PlayerConfig config = PlayerConfig.load();
+            String lastServer = config.getLastServer();
+            if (lastServer != null && !lastServer.isEmpty()) {
+                connectDialog.setPrefilledAddress(lastServer);
+            }
+            
             connectDialog.show();
         } else if (selected.equals("Back")) {
             multiplayerMenu.close();

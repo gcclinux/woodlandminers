@@ -1,6 +1,22 @@
 package wagemaker.uk.gdx;
 
-import wagemaker.uk.network.*;
+import wagemaker.uk.client.PlayerConfig;
+import wagemaker.uk.network.ConnectionAcceptedMessage;
+import wagemaker.uk.network.DefaultMessageHandler;
+import wagemaker.uk.network.ItemPickupMessage;
+import wagemaker.uk.network.ItemSpawnMessage;
+import wagemaker.uk.network.ItemState;
+import wagemaker.uk.network.PlayerHealthUpdateMessage;
+import wagemaker.uk.network.PlayerJoinMessage;
+import wagemaker.uk.network.PlayerLeaveMessage;
+import wagemaker.uk.network.PlayerMovementMessage;
+import wagemaker.uk.network.PongMessage;
+import wagemaker.uk.network.PositionCorrectionMessage;
+import wagemaker.uk.network.TreeDestroyedMessage;
+import wagemaker.uk.network.TreeHealthUpdateMessage;
+import wagemaker.uk.network.TreeState;
+import wagemaker.uk.network.WorldState;
+import wagemaker.uk.network.WorldStateMessage;
 import wagemaker.uk.player.RemotePlayer;
 
 /**
@@ -25,6 +41,13 @@ public class GameMessageHandler extends DefaultMessageHandler {
         // Set the client ID
         if (game.getGameClient() != null) {
             game.getGameClient().setClientId(message.getAssignedClientId());
+        }
+        
+        // Save the server address for future connections
+        String serverAddress = game.getLastConnectionAddress();
+        if (serverAddress != null) {
+            PlayerConfig config = PlayerConfig.load();
+            config.saveLastServer(serverAddress);
         }
         
         System.out.println("Connected to server. Client ID: " + message.getAssignedClientId());

@@ -96,6 +96,22 @@ public class ConnectDialog {
     }
     
     /**
+     * Sets a pre-filled address in the input buffer.
+     * This allows the dialog to display a previously used server address.
+     * Handles null and empty string cases gracefully by treating them as empty input.
+     * The pre-filled address can be edited and cleared by the player.
+     * 
+     * @param address The server address to pre-fill, or null/empty for no pre-fill
+     */
+    public void setPrefilledAddress(String address) {
+        if (address == null || address.isEmpty()) {
+            this.inputBuffer = "";
+        } else {
+            this.inputBuffer = address;
+        }
+    }
+    
+    /**
      * Handles keyboard input for text entry.
      * Supports alphanumeric characters, dots, colons, and backspace.
      * Enter confirms the input, ESC cancels.

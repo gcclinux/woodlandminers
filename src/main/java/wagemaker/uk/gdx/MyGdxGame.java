@@ -178,6 +178,7 @@ public class MyGdxGame extends ApplicationAdapter {
     private String pendingConnectionAddress;
     private int pendingConnectionPort;
     private boolean isHosting;
+    private String lastConnectionAddress; // Full address with port for saving to config
     
     // Pending player joins (to be processed on main thread)
     private java.util.concurrent.ConcurrentLinkedQueue<PlayerJoinMessage> pendingPlayerJoins;
@@ -1512,6 +1513,16 @@ public class MyGdxGame extends ApplicationAdapter {
     }
     
     /**
+     * Gets the last connection address (with port) used for connecting to a server.
+     * This is used to save the server address after a successful connection.
+     * 
+     * @return The last connection address in format "address:port", or null if no connection attempted
+     */
+    public String getLastConnectionAddress() {
+        return lastConnectionAddress;
+    }
+    
+    /**
      * Defers an operation to be executed on the render thread.
      * 
      * <p>This method is the cornerstone of thread-safe OpenGL operations in multiplayer mode.
@@ -1671,7 +1682,14 @@ public class MyGdxGame extends ApplicationAdapter {
             pendingConnectionAddress = address;
             pendingConnectionPort = port;
             
+            // Store the full address string (with port) for saving after successful connection
+            lastConnectionAddress = address + ":" + port;
+            
             joinMultiplayerServer(address, port);
+            
+            // Save the last server address to config after successful connection
+            wagemaker.uk.client.PlayerConfig config = wagemaker.uk.client.PlayerConfig.load();
+            config.saveLastServer(lastConnectionAddress);
             
             // Show success notification
             displayNotification("Connected to server!");

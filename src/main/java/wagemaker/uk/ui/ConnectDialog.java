@@ -11,18 +11,21 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 /**
- * ConnectDialog provides an input field for entering a server IP address.
- * Players can type an IP address and press Enter to connect, or ESC to cancel.
+ * ConnectDialog provides separate input fields for entering a server IP address and port.
+ * Players can type an IP address and port, then press Enter to connect, or ESC to cancel.
  */
 public class ConnectDialog {
     private boolean isVisible = false;
     private boolean confirmed = false;
     private Texture woodenPlank;
     private BitmapFont dialogFont;
-    private String inputBuffer = "";
+    private String ipAddressBuffer = "";
+    private String portBuffer = "25565"; // Default port
+    private boolean editingIpAddress = true; // true = editing IP, false = editing port
     private static final float DIALOG_WIDTH = 400;
-    private static final float DIALOG_HEIGHT = 200;
+    private static final float DIALOG_HEIGHT = 250;
     private static final int MAX_IP_LENGTH = 45; // Max length for IPv4 or IPv6
+    private static final int MAX_PORT_LENGTH = 5; // Max 5 digits for port
     
     /**
      * Creates a new ConnectDialog with wooden plank background and custom font.
@@ -92,28 +95,64 @@ public class ConnectDialog {
     public void show() {
         this.isVisible = true;
         this.confirmed = false;
-        this.inputBuffer = "";
+        this.editingIpAddress = true; // Start with IP field focused
+        // Don't clear buffers here - they may have been pre-filled
+        if (this.ipAddressBuffer == null) {
+            this.ipAddressBuffer = "";
+        }
+        if (this.portBuffer == null || this.portBuffer.isEmpty()) {
+            this.portBuffer = "25565";
+        }
     }
     
     /**
-     * Sets a pre-filled address in the input buffer.
+     * Shows the connect dialog with an optional pre-filled address.
+     * This is a convenience method that combines show() and setPrefilledAddress().
+     * 
+     * @param address The server address to pre-fill (format: "ip:port" or just "ip"), or null/empty for defaults
+     */
+    public void show(String address) {
+        this.isVisible = true;
+        this.confirmed = false;
+        this.editingIpAddress = true; // Start with IP field focused
+        
+        if (address == null || address.isEmpty()) {
+            this.ipAddressBuffer = "";
+            this.portBuffer = "25565";
+            System.out.println("ConnectDialog: No saved address, using defaults");
+        } else {
+            // Parse address:port format
+            String[] parts = address.split(":");
+            this.ipAddressBuffer = parts[0];
+            this.portBuffer = parts.length > 1 ? parts[1] : "25565";
+            System.out.println("ConnectDialog: Pre-filled with IP=" + this.ipAddressBuffer + ", Port=" + this.portBuffer);
+        }
+    }
+    
+    /**
+     * Sets a pre-filled address in the input buffers.
      * This allows the dialog to display a previously used server address.
-     * Handles null and empty string cases gracefully by treating them as empty input.
+     * Handles null and empty string cases gracefully by treating them as defaults.
      * The pre-filled address can be edited and cleared by the player.
      * 
-     * @param address The server address to pre-fill, or null/empty for no pre-fill
+     * @param address The server address to pre-fill (format: "ip:port" or just "ip"), or null/empty for defaults
      */
     public void setPrefilledAddress(String address) {
         if (address == null || address.isEmpty()) {
-            this.inputBuffer = "";
+            this.ipAddressBuffer = "";
+            this.portBuffer = "25565";
         } else {
-            this.inputBuffer = address;
+            // Parse address:port format
+            String[] parts = address.split(":");
+            this.ipAddressBuffer = parts[0];
+            this.portBuffer = parts.length > 1 ? parts[1] : "25565";
         }
     }
     
     /**
      * Handles keyboard input for text entry.
-     * Supports alphanumeric characters, dots, colons, and backspace.
+     * Supports alphanumeric characters, dots for IP, numbers for port, and backspace.
+     * Tab switches between IP and port fields.
      * Enter confirms the input, ESC cancels.
      */
     public void handleInput() {
@@ -121,29 +160,43 @@ public class ConnectDialog {
             return;
         }
         
-        // Handle text input for IP address
+        // Handle Tab to switch between fields
+        if (Gdx.input.isKeyJustPressed(Input.Keys.TAB)) {
+            editingIpAddress = !editingIpAddress;
+            return;
+        }
+        
+        // Handle text input based on which field is active
         for (int i = 0; i < 256; i++) {
             if (Gdx.input.isKeyJustPressed(i)) {
-                char character = getCharFromKeyCode(i);
-                if (character != 0 && inputBuffer.length() < MAX_IP_LENGTH) {
-                    inputBuffer += character;
+                char character = getCharFromKeyCode(i, editingIpAddress);
+                if (character != 0) {
+                    if (editingIpAddress && ipAddressBuffer.length() < MAX_IP_LENGTH) {
+                        ipAddressBuffer += character;
+                    } else if (!editingIpAddress && portBuffer.length() < MAX_PORT_LENGTH) {
+                        portBuffer += character;
+                    }
                 }
             }
         }
         
         // Handle backspace
-        if (Gdx.input.isKeyJustPressed(Input.Keys.BACKSPACE) && inputBuffer.length() > 0) {
-            inputBuffer = inputBuffer.substring(0, inputBuffer.length() - 1);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.BACKSPACE)) {
+            if (editingIpAddress && ipAddressBuffer.length() > 0) {
+                ipAddressBuffer = ipAddressBuffer.substring(0, ipAddressBuffer.length() - 1);
+            } else if (!editingIpAddress && portBuffer.length() > 0) {
+                portBuffer = portBuffer.substring(0, portBuffer.length() - 1);
+            }
         }
         
         // Handle enter (confirm)
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-            if (isValidIpFormat(inputBuffer)) {
+            if (isValidInput()) {
                 confirmed = true;
                 isVisible = false;
-                System.out.println("Connecting to: " + inputBuffer);
+                System.out.println("Connecting to: " + ipAddressBuffer + ":" + portBuffer);
             } else {
-                System.out.println("Invalid IP address format");
+                System.out.println("Invalid IP address or port");
             }
         }
         
@@ -151,112 +204,108 @@ public class ConnectDialog {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             confirmed = false;
             isVisible = false;
-            inputBuffer = "";
+            ipAddressBuffer = "";
+            portBuffer = "25565";
         }
     }
     
     /**
-     * Converts a key code to a character suitable for IP address input.
-     * Supports numbers, dots, colons, and letters (for hostnames).
+     * Converts a key code to a character suitable for IP address or port input.
      * 
      * @param keyCode The LibGDX key code
+     * @param forIpAddress true if for IP address field, false if for port field
      * @return The character, or 0 if invalid
      */
-    private char getCharFromKeyCode(int keyCode) {
-        // Handle numbers (0-9)
+    private char getCharFromKeyCode(int keyCode, boolean forIpAddress) {
+        // Handle numbers (0-9) - valid for both IP and port
         if (keyCode >= Input.Keys.NUM_0 && keyCode <= Input.Keys.NUM_9) {
             return (char)('0' + (keyCode - Input.Keys.NUM_0));
         }
         
-        // Handle numpad numbers
+        // Handle numpad numbers - valid for both IP and port
         if (keyCode >= Input.Keys.NUMPAD_0 && keyCode <= Input.Keys.NUMPAD_9) {
             return (char)('0' + (keyCode - Input.Keys.NUMPAD_0));
         }
         
-        // Handle letters (for hostnames like "localhost")
-        if (keyCode >= Input.Keys.A && keyCode <= Input.Keys.Z) {
-            return (char)('a' + (keyCode - Input.Keys.A));
-        }
-        
-        // Handle period/dot (.)
-        if (keyCode == Input.Keys.PERIOD || keyCode == Input.Keys.NUMPAD_DOT) {
-            return '.';
-        }
-        
-        // Handle colon (:) for port specification
-        if (keyCode == Input.Keys.COLON) {
-            return ':';
-        }
-        
-        // Handle minus/hyphen (-) for hostnames
-        if (keyCode == Input.Keys.MINUS) {
-            return '-';
+        // The following are only valid for IP address field
+        if (forIpAddress) {
+            // Handle letters (for hostnames like "localhost")
+            if (keyCode >= Input.Keys.A && keyCode <= Input.Keys.Z) {
+                return (char)('a' + (keyCode - Input.Keys.A));
+            }
+            
+            // Handle period/dot (.)
+            if (keyCode == Input.Keys.PERIOD || keyCode == Input.Keys.NUMPAD_DOT) {
+                return '.';
+            }
+            
+            // Handle minus/hyphen (-) for hostnames
+            if (keyCode == Input.Keys.MINUS) {
+                return '-';
+            }
         }
         
         return 0; // Invalid character
     }
     
     /**
-     * Validates the IP address format.
-     * Accepts IPv4 addresses, hostnames, and addresses with port numbers.
+     * Validates the IP address and port input.
+     * Accepts IPv4 addresses and hostnames for IP, and valid port numbers (1-65535).
      * 
-     * @param input The input string to validate
-     * @return true if the format is valid, false otherwise
+     * @return true if both IP and port are valid, false otherwise
      */
-    private boolean isValidIpFormat(String input) {
-        if (input == null || input.trim().isEmpty()) {
+    private boolean isValidInput() {
+        // Validate IP address
+        String ip = ipAddressBuffer.trim();
+        if (ip.isEmpty()) {
             return false;
         }
         
-        input = input.trim();
-        
         // Allow "localhost"
-        if (input.equalsIgnoreCase("localhost")) {
-            return true;
-        }
-        
-        // Split by colon to handle port
-        String[] parts = input.split(":");
-        String ipPart = parts[0];
-        
-        // Validate port if present
-        if (parts.length > 1) {
-            try {
-                int port = Integer.parseInt(parts[1]);
-                if (port < 1 || port > 65535) {
-                    return false;
-                }
-            } catch (NumberFormatException e) {
-                return false;
-            }
-        }
-        
-        // Basic IPv4 validation (xxx.xxx.xxx.xxx)
-        String[] octets = ipPart.split("\\.");
-        if (octets.length == 4) {
-            for (String octet : octets) {
-                try {
-                    int value = Integer.parseInt(octet);
-                    if (value < 0 || value > 255) {
+        if (ip.equalsIgnoreCase("localhost")) {
+            // Continue to port validation
+        } else {
+            // Basic IPv4 validation (xxx.xxx.xxx.xxx)
+            String[] octets = ip.split("\\.");
+            if (octets.length == 4) {
+                for (String octet : octets) {
+                    try {
+                        int value = Integer.parseInt(octet);
+                        if (value < 0 || value > 255) {
+                            return false;
+                        }
+                    } catch (NumberFormatException e) {
                         return false;
                     }
-                } catch (NumberFormatException e) {
+                }
+            } else {
+                // Allow hostnames (basic check - contains letters and valid characters)
+                if (!ip.matches("[a-zA-Z0-9.-]+")) {
                     return false;
                 }
             }
-            return true;
         }
         
-        // Allow hostnames (basic check - contains letters)
-        if (ipPart.matches("[a-zA-Z0-9.-]+")) {
-            return true;
+        // Validate port
+        String port = portBuffer.trim();
+        if (port.isEmpty()) {
+            return false;
         }
         
-        return false;
+        try {
+            int portNum = Integer.parseInt(port);
+            if (portNum < 1 || portNum > 65535) {
+                return false;
+            }
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        
+        return true;
     }
     
     /**
-     * Renders the connect dialog with the input field.
+     * Renders the connect dialog with separate IP address and port input fields.
      * 
      * @param batch The sprite batch for rendering
      * @param shapeRenderer The shape renderer (unused but kept for consistency)
@@ -281,17 +330,27 @@ public class ConnectDialog {
         dialogFont.setColor(Color.WHITE);
         dialogFont.draw(batch, "Connect to Server", dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
         
-        // Draw input label
-        dialogFont.setColor(Color.LIGHT_GRAY);
-        dialogFont.draw(batch, "Enter IP Address:", dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
+        // Draw IP Address label
+        dialogFont.setColor(editingIpAddress ? Color.WHITE : Color.LIGHT_GRAY);
+        dialogFont.draw(batch, "IP Address:", dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
         
-        // Draw input field with cursor
-        dialogFont.setColor(Color.YELLOW);
-        String displayText = inputBuffer + "_";
-        dialogFont.draw(batch, displayText, dialogX + 20, dialogY + DIALOG_HEIGHT - 100);
+        // Draw IP Address input field with cursor
+        dialogFont.setColor(editingIpAddress ? Color.YELLOW : Color.LIGHT_GRAY);
+        String ipDisplayText = ipAddressBuffer + (editingIpAddress ? "_" : "");
+        dialogFont.draw(batch, ipDisplayText, dialogX + 20, dialogY + DIALOG_HEIGHT - 95);
+        
+        // Draw Port label
+        dialogFont.setColor(!editingIpAddress ? Color.WHITE : Color.LIGHT_GRAY);
+        dialogFont.draw(batch, "Port Number:", dialogX + 20, dialogY + DIALOG_HEIGHT - 135);
+        
+        // Draw Port input field with cursor
+        dialogFont.setColor(!editingIpAddress ? Color.YELLOW : Color.LIGHT_GRAY);
+        String portDisplayText = portBuffer + (!editingIpAddress ? "_" : "");
+        dialogFont.draw(batch, portDisplayText, dialogX + 20, dialogY + DIALOG_HEIGHT - 160);
         
         // Draw instructions
         dialogFont.setColor(Color.LIGHT_GRAY);
+        dialogFont.draw(batch, "Tab to switch fields", dialogX + 20, dialogY + 60);
         dialogFont.draw(batch, "Enter to connect, ESC to cancel", dialogX + 20, dialogY + 40);
         
         batch.end();
@@ -316,12 +375,12 @@ public class ConnectDialog {
     }
     
     /**
-     * Gets the entered IP address.
+     * Gets the entered IP address with port in "ip:port" format.
      * 
-     * @return The entered IP address string
+     * @return The entered address string in format "ip:port"
      */
     public String getEnteredAddress() {
-        return inputBuffer.trim();
+        return ipAddressBuffer.trim() + ":" + portBuffer.trim();
     }
     
     /**
@@ -338,6 +397,7 @@ public class ConnectDialog {
     public void hide() {
         isVisible = false;
         confirmed = false;
+        editingIpAddress = true; // Reset to IP field for next time
     }
     
     /**

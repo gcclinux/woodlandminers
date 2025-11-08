@@ -31,11 +31,14 @@ public class GameMenu {
     private wagemaker.uk.gdx.MyGdxGame gameInstance;
     private static final float MENU_WIDTH = 250;
     private static final float MENU_HEIGHT = 220; // Increased height for additional menu item
+    private static final float NAME_DIALOG_WIDTH = 320; // Wider for player name dialog
+    private static final float NAME_DIALOG_HEIGHT = 220;
     
     // Player name dialog
     private boolean nameDialogOpen = false;
     private String playerName = "Player";
     private String inputBuffer = "";
+    private Texture nameDialogPlank; // Separate texture for name dialog
     
     // Multiplayer components
     private MultiplayerMenu multiplayerMenu;
@@ -46,6 +49,7 @@ public class GameMenu {
 
     public GameMenu() {
         woodenPlank = createWoodenPlank();
+        nameDialogPlank = createNameDialogPlank();
         font = new BitmapFont();
         font.getData().setScale(1.5f);
         font.setColor(Color.WHITE);
@@ -342,23 +346,41 @@ public class GameMenu {
         
         if (nameDialogOpen) {
             // Render name editor on wooden plank - centered on screen
-            float centerX = camX - MENU_WIDTH / 2;
-            float centerY = camY - MENU_HEIGHT / 2;
+            float centerX = camX - NAME_DIALOG_WIDTH / 2;
+            float centerY = camY - NAME_DIALOG_HEIGHT / 2;
 
-            batch.draw(woodenPlank, centerX, centerY, MENU_WIDTH, MENU_HEIGHT);
+            batch.draw(nameDialogPlank, centerX, centerY, NAME_DIALOG_WIDTH, NAME_DIALOG_HEIGHT);
             
-            // Title
+            // Title - centered (removed colon)
             playerNameFont.setColor(Color.WHITE);
-            playerNameFont.draw(batch, "Enter Player Name:", centerX + 20, centerY + MENU_HEIGHT - 30);
+            String title = "Enter Player Name";
+            com.badlogic.gdx.graphics.g2d.GlyphLayout titleLayout = new com.badlogic.gdx.graphics.g2d.GlyphLayout();
+            titleLayout.setText(playerNameFont, title);
+            float titleX = centerX + (NAME_DIALOG_WIDTH - titleLayout.width) / 2;
+            playerNameFont.draw(batch, title, titleX, centerY + NAME_DIALOG_HEIGHT - 30);
             
-            // Input text (no solid background) - added more space
+            // Input text - centered with cursor
             playerNameFont.setColor(Color.YELLOW);
-            playerNameFont.draw(batch, inputBuffer + "_", centerX + 20, centerY + MENU_HEIGHT - 80);
+            String inputText = inputBuffer + "_";
+            com.badlogic.gdx.graphics.g2d.GlyphLayout inputLayout = new com.badlogic.gdx.graphics.g2d.GlyphLayout();
+            inputLayout.setText(playerNameFont, inputText);
+            float inputX = centerX + (NAME_DIALOG_WIDTH - inputLayout.width) / 2;
+            playerNameFont.draw(batch, inputText, inputX, centerY + NAME_DIALOG_HEIGHT - 80);
             
-            // Instructions
+            // Min characters warning - centered
             playerNameFont.setColor(Color.LIGHT_GRAY);
-            playerNameFont.draw(batch, "Min 3 chars - Enter to confirm", centerX + 20, centerY + 50);
-            playerNameFont.draw(batch, "ESC to cancel", centerX + 20, centerY + 30);
+            String minCharsText = "Min 3 Characters!!!";
+            com.badlogic.gdx.graphics.g2d.GlyphLayout minCharsLayout = new com.badlogic.gdx.graphics.g2d.GlyphLayout();
+            minCharsLayout.setText(playerNameFont, minCharsText);
+            float minCharsX = centerX + (NAME_DIALOG_WIDTH - minCharsLayout.width) / 2;
+            playerNameFont.draw(batch, minCharsText, minCharsX, centerY + 70);
+            
+            // Instructions - centered
+            String instructionsText = "Enter, or Esc to Cancel";
+            com.badlogic.gdx.graphics.g2d.GlyphLayout instructionsLayout = new com.badlogic.gdx.graphics.g2d.GlyphLayout();
+            instructionsLayout.setText(playerNameFont, instructionsText);
+            float instructionsX = centerX + (NAME_DIALOG_WIDTH - instructionsLayout.width) / 2;
+            playerNameFont.draw(batch, instructionsText, instructionsX, centerY + 40);
             
         } else if (isOpen) {
             // Render main menu
@@ -427,11 +449,9 @@ public class GameMenu {
             // Load PlayerConfig and pre-fill the saved server address
             PlayerConfig config = PlayerConfig.load();
             String lastServer = config.getLastServer();
-            if (lastServer != null && !lastServer.isEmpty()) {
-                connectDialog.setPrefilledAddress(lastServer);
-            }
             
-            connectDialog.show();
+            // Show dialog with pre-filled address (or empty if no last server)
+            connectDialog.show(lastServer);
         } else if (selected.equals("Back")) {
             multiplayerMenu.close();
             isOpen = true; // Return to main menu
@@ -469,33 +489,48 @@ public class GameMenu {
             
             File saveFile = new File(configDir, "woodlanders.json");
             
-            // Create JSON content with player position, health, and name
-            String jsonContent = String.format(
-                "{\n" +
-                "  \"playerPosition\": {\n" +
-                "    \"x\": %.2f,\n" +
-                "    \"y\": %.2f\n" +
-                "  },\n" +
-                "  \"playerHealth\": %.1f,\n" +
-                "  \"playerName\": \"%s\",\n" +
-                "  \"savedAt\": \"%s\"\n" +
-                "}",
-                player.getX(),
-                player.getY(),
-                player.getHealth(),
-                playerName,
-                new java.util.Date().toString()
-            );
+            // Read existing lastServer value if file exists
+            String lastServer = null;
+            if (saveFile.exists()) {
+                try {
+                    String existingContent = new String(Files.readAllBytes(Paths.get(saveFile.getAbsolutePath())));
+                    lastServer = parseJsonString(existingContent, "\"lastServer\":");
+                } catch (Exception e) {
+                    // If we can't read the existing file, just continue without lastServer
+                    System.out.println("Could not read existing lastServer value: " + e.getMessage());
+                }
+            }
+            
+            // Create JSON content with player position, health, name, and lastServer
+            StringBuilder jsonBuilder = new StringBuilder();
+            jsonBuilder.append("{\n");
+            jsonBuilder.append("  \"playerPosition\": {\n");
+            jsonBuilder.append(String.format("    \"x\": %.2f,\n", player.getX()));
+            jsonBuilder.append(String.format("    \"y\": %.2f\n", player.getY()));
+            jsonBuilder.append("  },\n");
+            jsonBuilder.append(String.format("  \"playerHealth\": %.1f,\n", player.getHealth()));
+            jsonBuilder.append(String.format("  \"playerName\": \"%s\",\n", playerName));
+            
+            // Include lastServer if it exists
+            if (lastServer != null && !lastServer.isEmpty()) {
+                jsonBuilder.append(String.format("  \"lastServer\": \"%s\",\n", lastServer));
+            }
+            
+            jsonBuilder.append(String.format("  \"savedAt\": \"%s\"\n", new java.util.Date().toString()));
+            jsonBuilder.append("}");
             
             // Write to file
             try (FileWriter writer = new FileWriter(saveFile)) {
-                writer.write(jsonContent);
+                writer.write(jsonBuilder.toString());
             }
             
             System.out.println("Game saved to: " + saveFile.getAbsolutePath());
             System.out.println("Player position saved: (" + player.getX() + ", " + player.getY() + ")");
             System.out.println("Player health saved: " + player.getHealth());
             System.out.println("Player name saved: " + playerName);
+            if (lastServer != null) {
+                System.out.println("Last server preserved: " + lastServer);
+            }
             
         } catch (IOException e) {
             System.out.println("Error saving game: " + e.getMessage());
@@ -539,6 +574,26 @@ public class GameMenu {
         pixmap.setColor(0.2f, 0.12f, 0.05f, 1.0f);
         pixmap.drawRectangle(0, 0, 250, 220); // Updated for new height
         pixmap.drawRectangle(2, 2, 246, 216); // Updated for new height
+        
+        Texture texture = new Texture(pixmap);
+        pixmap.dispose();
+        return texture;
+    }
+
+    private Texture createNameDialogPlank() {
+        Pixmap pixmap = new Pixmap((int)NAME_DIALOG_WIDTH, (int)NAME_DIALOG_HEIGHT, Pixmap.Format.RGBA8888);
+        
+        pixmap.setColor(0.4f, 0.25f, 0.1f, 1.0f);
+        pixmap.fill();
+        
+        pixmap.setColor(0.3f, 0.18f, 0.08f, 1.0f);
+        for (int y = 10; y < NAME_DIALOG_HEIGHT; y += 15) {
+            pixmap.drawLine(0, y, (int)NAME_DIALOG_WIDTH, y + 5);
+        }
+        
+        pixmap.setColor(0.2f, 0.12f, 0.05f, 1.0f);
+        pixmap.drawRectangle(0, 0, (int)NAME_DIALOG_WIDTH, (int)NAME_DIALOG_HEIGHT);
+        pixmap.drawRectangle(2, 2, (int)NAME_DIALOG_WIDTH - 4, (int)NAME_DIALOG_HEIGHT - 4);
         
         Texture texture = new Texture(pixmap);
         pixmap.dispose();
@@ -630,6 +685,9 @@ public class GameMenu {
 
     public void dispose() {
         woodenPlank.dispose();
+        if (nameDialogPlank != null) {
+            nameDialogPlank.dispose();
+        }
         font.dispose();
         if (playerNameFont != null) {
             playerNameFont.dispose();

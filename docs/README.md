@@ -58,6 +58,61 @@ Solutions for common issues and debugging techniques.
 
 **Start here if**: You're experiencing problems with your server.
 
+### 🏠 [Localhost Testing Guide](LOCALHOST.md)
+Instructions for running multiple game instances on the same computer for testing.
+
+**Topics covered**:
+- Running 2 instances for multiplayer testing
+- Using Gradle for local testing
+- Using built JAR files for testing
+- Host and client setup
+
+**Start here if**: You want to test multiplayer functionality locally before deploying.
+
+### 📝 [Last Server Persistence](LASTSERVER_PERSISTENCE.md)
+Documentation on the last server connection feature.
+
+**Topics covered**:
+- Configuration file location
+- JSON structure
+- Auto-fill functionality
+- Cross-platform support
+
+**Start here if**: You want to understand how the game remembers server connections.
+
+### 🔄 [Multiplayer Configuration Update](MULTIPLAYER_CONFIG_UPDATE.md)
+Technical documentation on the multiplayer configuration system changes.
+
+**Topics covered**:
+- Storage format changes (Properties to JSON)
+- Migration support
+- Platform-specific paths
+- Implementation details
+
+**Start here if**: You're a developer working on the configuration system.
+
+### ✅ [Test Execution Summary](TEST_EXECUTION_SUMMARY.md)
+Summary of automated testing for multiplayer threading fixes.
+
+**Topics covered**:
+- Test approach and strategy
+- Test results
+- Threading fix verification
+- Quality assurance
+
+**Start here if**: You want to understand the testing methodology and results.
+
+### 🧪 [Multiplayer Test Results](MULTIPLAYER_TEST_RESULTS.md)
+Detailed test results for multiplayer functionality.
+
+**Topics covered**:
+- Threading fix integration tests
+- Item pickup testing
+- Deferred operation verification
+- Test environment details
+
+**Start here if**: You need detailed test case results and verification data.
+
 ## Quick Start
 
 ### 1. Install Java
@@ -336,9 +391,9 @@ Include:
 
 ### Support Channels
 
-- **GitHub Issues**: https://github.com/yourusername/woodlanders/issues
-- **Community Discord**: [Your Discord Link]
-- **Documentation**: https://github.com/yourusername/woodlanders/wiki
+- **Repository**: https://wagemaker.uk:3000/ricardo/Woodlanders
+- **Issues**: https://wagemaker.uk:3000/ricardo/Woodlanders/issues
+- **Documentation**: https://wagemaker.uk:3000/ricardo/Woodlanders/wiki
 
 ## Additional Resources
 
@@ -371,6 +426,6 @@ This documentation is part of the Woodlanders project and is licensed under the 
 
 ---
 
-**Last Updated**: 2025-11-07  
+**Last Updated**: 2025-11-08  
 **Server Version**: 1.0  
 **Documentation Version**: 1.0

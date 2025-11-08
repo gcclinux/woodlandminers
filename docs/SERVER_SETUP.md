@@ -582,6 +582,6 @@ For common issues and solutions, see the [Troubleshooting Guide](TROUBLESHOOTING
 
 ## Support
 
-- GitHub Issues: https://github.com/yourusername/woodlanders/issues
-- Community Discord: [Your Discord Link]
-- Documentation: https://github.com/yourusername/woodlanders/wiki
+- Repository: https://wagemaker.uk:3000/ricardo/Woodlanders
+- Issues: https://wagemaker.uk:3000/ricardo/Woodlanders/issues
+- Documentation: https://wagemaker.uk:3000/ricardo/Woodlanders/wiki

@@ -737,10 +737,9 @@ echo "Debug information collected: $OUTPUT"
 
 ### Support Channels
 
-- **GitHub Issues**: https://github.com/yourusername/woodlanders/issues
-- **Community Discord**: [Your Discord Link]
-- **Documentation**: https://github.com/yourusername/woodlanders/wiki
-- **Email Support**: support@example.com
+- **Repository**: https://wagemaker.uk:3000/ricardo/Woodlanders
+- **Issues**: https://wagemaker.uk:3000/ricardo/Woodlanders/issues
+- **Documentation**: https://wagemaker.uk:3000/ricardo/Woodlanders/wiki
 
 ## Preventive Maintenance
 

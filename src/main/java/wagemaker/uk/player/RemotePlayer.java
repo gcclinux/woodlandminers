@@ -59,7 +59,7 @@ public class RemotePlayer {
      */
     private void loadAnimations() {
         // Load the same sprite sheet as the local player
-        spriteSheet = new Texture("sprites/player/man_start.png");
+        spriteSheet = new Texture("sprites/player/remote_start.png");
         
         // Create animation frames for each direction
         TextureRegion[] walkUpFrames = new TextureRegion[9];
@@ -243,7 +243,7 @@ public class RemotePlayer {
             float healthBarWidth = 100;
             float healthBarHeight = 6;
             float healthBarX = x;
-            float healthBarY = y + 106; // Above player sprite (100px sprite + 6px gap)
+            float healthBarY = y + 90; // Above player sprite (100px sprite + 2px gap)
             
             // Draw background (red)
             shapeRenderer.setColor(Color.RED);
@@ -262,7 +262,7 @@ public class RemotePlayer {
     public void renderNameTag(SpriteBatch batch, BitmapFont font) {
         if (playerName != null && !playerName.isEmpty()) {
             // Calculate text position (centered above player)
-            float nameTagY = y + 121; // Above health bar (100px sprite + 6px health bar + 15px gap)
+            float nameTagY = y + 115; // Above health bar (100px sprite + 2px gap + 6px health bar + 7px gap)
             
             // Get text width for centering
             com.badlogic.gdx.graphics.g2d.GlyphLayout layout = 

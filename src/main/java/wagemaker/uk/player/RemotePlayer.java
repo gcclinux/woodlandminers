@@ -30,7 +30,10 @@ public class RemotePlayer {
     private Animation<TextureRegion> walkDownAnimation;
     private Animation<TextureRegion> walkRightAnimation;
     private Animation<TextureRegion> currentAnimation;
-    private TextureRegion idleFrame;
+    private TextureRegion idleUpFrame;
+    private TextureRegion idleDownFrame;
+    private TextureRegion idleLeftFrame;
+    private TextureRegion idleRightFrame;
     
     // Position interpolation for smooth movement
     private float targetX;
@@ -107,8 +110,11 @@ public class RemotePlayer {
         walkDownAnimation.setPlayMode(Animation.PlayMode.LOOP);
         walkRightAnimation.setPlayMode(Animation.PlayMode.LOOP);
         
-        // Create idle frame (same as local player)
-        idleFrame = new TextureRegion(spriteSheet, 0, 640, 64, 64);
+        // Create directional idle frames (first frame of each animation)
+        idleUpFrame = new TextureRegion(spriteSheet, 0, 512, 64, 64);    // First UP frame
+        idleLeftFrame = new TextureRegion(spriteSheet, 0, 576, 64, 64);  // First LEFT frame
+        idleDownFrame = new TextureRegion(spriteSheet, 0, 640, 64, 64);  // First DOWN frame
+        idleRightFrame = new TextureRegion(spriteSheet, 0, 704, 64, 64); // First RIGHT frame
         
         // Set default animation
         currentAnimation = walkDownAnimation;
@@ -194,7 +200,19 @@ public class RemotePlayer {
         if (isMoving) {
             return currentAnimation.getKeyFrame(animTime);
         } else {
-            return idleFrame;
+            // Return directional idle frame based on last movement direction
+            switch (currentDirection) {
+                case UP:
+                    return idleUpFrame;
+                case DOWN:
+                    return idleDownFrame;
+                case LEFT:
+                    return idleLeftFrame;
+                case RIGHT:
+                    return idleRightFrame;
+                default:
+                    return idleDownFrame; // Fallback
+            }
         }
     }
     

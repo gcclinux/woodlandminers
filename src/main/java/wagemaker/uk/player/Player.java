@@ -36,7 +36,10 @@ public class Player {
     private Animation<TextureRegion> walkDownAnimation;
     private Animation<TextureRegion> walkRightAnimation;
     private Animation<TextureRegion> currentAnimation;
-    private TextureRegion idleFrame;
+    private TextureRegion idleUpFrame;
+    private TextureRegion idleDownFrame;
+    private TextureRegion idleLeftFrame;
+    private TextureRegion idleRightFrame;
     private OrthographicCamera camera;
     private Map<String, SmallTree> trees;
     private Map<String, AppleTree> appleTrees;
@@ -293,10 +296,11 @@ public class Player {
         walkDownAnimation.setPlayMode(Animation.PlayMode.LOOP);
         walkRightAnimation.setPlayMode(Animation.PlayMode.LOOP);
         
-        // Create idle frame: 1st image on 3rd row of red rectangle
-        // 0px from left, 640px from top (LibGDX coordinates)
-        // This corresponds to (0, 704) in bottom-left coordinates
-        idleFrame = new TextureRegion(spriteSheet, 0, 640, 64, 64);
+        // Create directional idle frames (first frame of each animation)
+        idleUpFrame = new TextureRegion(spriteSheet, 0, 512, 64, 64);    // First UP frame
+        idleLeftFrame = new TextureRegion(spriteSheet, 0, 576, 64, 64);  // First LEFT frame
+        idleDownFrame = new TextureRegion(spriteSheet, 0, 640, 64, 64);  // First DOWN frame
+        idleRightFrame = new TextureRegion(spriteSheet, 0, 704, 64, 64); // First RIGHT frame
         
         // Set default animation to LEFT (Row 3 - character facing camera/standing still)
         currentAnimation = walkLeftAnimation;
@@ -306,8 +310,19 @@ public class Player {
         if (isMoving) {
             return currentAnimation.getKeyFrame(animTime);
         } else {
-            // Return idle frame when not moving
-            return idleFrame;
+            // Return directional idle frame based on last movement direction
+            switch (currentDirection) {
+                case UP:
+                    return idleUpFrame;
+                case DOWN:
+                    return idleDownFrame;
+                case LEFT:
+                    return idleLeftFrame;
+                case RIGHT:
+                    return idleRightFrame;
+                default:
+                    return idleDownFrame; // Fallback
+            }
         }
     }
 

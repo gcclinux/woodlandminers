@@ -54,6 +54,34 @@ This isn't just a game - it's proof of concept that complex software can be buil
 
 A 2D top-down multiplayer adventure game built with libGDX featuring infinite world exploration, animated characters, tree chopping mechanics, and real-time multiplayer gameplay.
 
+## 📸 Screenshots
+
+<div align="center">
+
+### Multiplayer Menu - Host Server
+![Multiplayer Menu](screenshots/mp-menu01.png)
+*Host your own server or connect to existing multiplayer games*
+
+### Single Player Menu - Player Name
+![Connect Dialog](screenshots/mp-menu02.png)
+*Enter server IP and port to join multiplayer sessions*
+
+### Multiplayer Menu - Host or Connect
+![Player Name Setup](screenshots/mp-menu03.png)
+*Customize your player name for multiplayer identification*
+
+### Multiplayer Gameplay - Player 1
+![Multiplayer Player 1](screenshots/mp-player01.png)
+*Real-time multiplayer with synchronized player movements and actions*
+
+### Multiplayer Gameplay - Player 2
+![Multiplayer Player 2](screenshots/mp-player02.png)
+*Multiple players exploring the infinite world together*
+
+</div>
+
+> **Note**: All screenshots are 800x600 resolution showcasing multiplayer features.
+
 ## Requirements
 - Java 21+ (OpenJDK 21.0.8)
 - Gradle 9.2.0+
@@ -153,74 +181,20 @@ Access the main menu at any time by pressing the Escape key. From here you can c
 
 *Exits the game and returns to desktop. The game automatically saves all player data including your position, health, inventory, and world changes before closing. All progress is preserved for your next session.*
 
-## Game Features
+## 🎮 Game Features
 
-### Player Character
-- **Animated Human Sprite**: 64x64 pixel character with skin, black hair, blue shirt, brown pants, and black shoes
-- **Walking Animation**: Arms and legs animate with opposite motion (realistic walking pattern)
-- **Smooth Movement**: 200 pixels/second movement speed with arrow key controls
-- **Camera Following**: Camera centers on player and follows movement
-- **Health System**: Player health can be damaged and restored through gameplay
+For a comprehensive list of all game features, mechanics, and technical details, see **[FEATURES.md](docs/FEATURES.md)**.
 
-### World System
-- **Infinite World**: Minecraft-like infinite terrain generation
-- **Grass Background**: Seamless tiled grass texture covering the entire world
-- **Fixed Viewport**: 800x600 camera view regardless of screen size
-- **Chunk-Based Rendering**: Only renders visible areas for optimal performance
-
-### Environmental Hazards
-- **Cactus Damage**: Walking into cacti damages the player, adding environmental danger to exploration
-- **Collision Detection**: Cacti have collision boxes that trigger damage on contact
-
-### Tree System
-- **Three Tree Types**:
-  - **Regular Trees**: 64x64 brown trunk with green leaves
-  - **Apple Trees**: 128x128 larger trees with red apples scattered on leaves - restore player health when harvested
-  - **Banana Trees**: Restore player health when harvested
-- **Random Generation**: 5% spawn chance per grass tile with distribution across tree types
-- **Collision Detection**: Players cannot walk through trees (optimized collision boxes)
-- **Deterministic Placement**: Same trees appear in same locations every time
-- **Destructible**: Players can destroy trees by attacking them
-- **Health Regeneration**: Trees that are damaged but not fully destroyed will slowly regain health over time
-
-### Combat & Interaction System
-- **Tree Chopping**: Attack trees with spacebar key
-- **Health System**: Each tree has 100 health, loses 10 per attack (10 hits to destroy)
-- **Attack Range**: 
-  - **Regular Trees**: 64px in all directions from center (128x128 attack area)
-  - **Apple Trees**: 64px left/right, 128px up/down from center
-- **Health Bars**: 
-  - Appear above trees when attacked (3-second visibility)
-  - Green background with red overlay showing damage percentage
-  - Half the width of each tree type (32px for trees, 64px for apple trees)
-- **Permanent Destruction**: Destroyed trees never regenerate
-- **Collision Removal**: Destroyed trees no longer block movement
-- **Health Restoration**: Apple and banana trees provide health recovery when harvested
-
-### Controls
-- **Arrow Keys**: Move character (Up/Down/Left/Right)
-- **Spacebar**: Attack nearby trees
-- **Escape**: Open/close menu
-- **Fullscreen**: Maintains proper scaling and collision detection
-
-### Multiplayer Features
-- **Dedicated Server**: Run standalone server for multiplayer gameplay
-- **Client Connection**: Connect to servers via IP address and port
-- **Player Names**: Customizable player names (minimum 3 characters)
-- **Server Configuration**: Configurable via server.properties file
-- **Network Synchronization**: Real-time player position and action updates
-
-### Technical Features
-- **Collision Detection**: Precise collision boxes for trees, cacti, and player
-- **Individual Attack Ranges**: Each tree type has unique attack collision detection
-- **Health Bar Rendering**: Dynamic health visualization using ShapeRenderer
-- **Health Regeneration System**: Damaged trees slowly recover health over time
-- **Environmental Damage**: Cactus collision detection and damage system
-- **Memory Management**: Proper texture disposal and cleanup
-- **Performance Optimization**: Only processes visible objects
-- **Modular Design**: Separate classes for Player, Tree, AppleTree, and environmental objects
-- **Infinite Generation**: Dynamic world expansion without performance loss
-- **Cleared Position Tracking**: Prevents tree regeneration at destroyed locations
+### Quick Feature Highlights
+- ✨ **Infinite Procedurally Generated World** - Explore endlessly with dynamic terrain
+- 🏃 **Animated Player Character** - Smooth walking animations and responsive controls
+- 🌳 **Multiple Tree Types** - Regular trees, apple trees, and banana trees with unique properties
+- ⚔️ **Combat System** - Attack and destroy trees with visual health bars
+- 🌵 **Environmental Hazards** - Cacti that damage players on contact
+- 💚 **Health System** - Player health management with restoration items
+- 🌐 **Multiplayer Support** - Real-time multiplayer with dedicated server
+- 🎯 **Collision Detection** - Precise hitboxes for all game objects
+- 🔄 **Health Regeneration** - Damaged trees slowly recover over time
 
 ## Game Classes
 - `MyGdxGame.java` - Main game loop and rendering

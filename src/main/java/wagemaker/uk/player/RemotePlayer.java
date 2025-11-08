@@ -232,7 +232,7 @@ public class RemotePlayer {
      */
     public void render(SpriteBatch batch) {
         TextureRegion currentFrame = getCurrentFrame();
-        batch.draw(currentFrame, x, y, 64, 64);
+        batch.draw(currentFrame, x, y, 100, 100);
     }
     
     /**
@@ -240,10 +240,10 @@ public class RemotePlayer {
      */
     public void renderHealthBar(ShapeRenderer shapeRenderer) {
         if (health < 100) {
-            float healthBarWidth = 64;
+            float healthBarWidth = 100;
             float healthBarHeight = 6;
             float healthBarX = x;
-            float healthBarY = y + 70; // Above player sprite
+            float healthBarY = y + 106; // Above player sprite (100px sprite + 6px gap)
             
             // Draw background (red)
             shapeRenderer.setColor(Color.RED);
@@ -262,13 +262,13 @@ public class RemotePlayer {
     public void renderNameTag(SpriteBatch batch, BitmapFont font) {
         if (playerName != null && !playerName.isEmpty()) {
             // Calculate text position (centered above player)
-            float nameTagY = y + 85; // Above health bar
+            float nameTagY = y + 121; // Above health bar (100px sprite + 6px health bar + 15px gap)
             
             // Get text width for centering
             com.badlogic.gdx.graphics.g2d.GlyphLayout layout = 
                 new com.badlogic.gdx.graphics.g2d.GlyphLayout(font, playerName);
             float textWidth = layout.width;
-            float nameTagX = x + (64 - textWidth) / 2; // Center on player sprite
+            float nameTagX = x + (100 - textWidth) / 2; // Center on player sprite
             
             // Draw text with shadow for better visibility
             font.setColor(Color.BLACK);

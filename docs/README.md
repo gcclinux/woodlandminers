@@ -2,7 +2,26 @@
 
 Welcome to the Woodlanders dedicated server documentation. This guide will help you set up, configure, and maintain a multiplayer server for the Woodlanders game.
 
-## Documentation Overview
+## Game Documentation
+
+### 🎮 [Game Features](FEATURES.md)
+Complete list of all game features, mechanics, and technical details.
+
+**Topics covered**:
+- Player character and animations
+- World system and generation
+- Environmental hazards
+- Tree system and types
+- Combat and interaction mechanics
+- Controls
+- Multiplayer features
+- Technical implementation details
+
+**Start here if**: You want to understand the game's features and mechanics.
+
+---
+
+## Server Documentation Overview
 
 ### 🚀 [Server Setup Guide](SERVER_SETUP.md)
 Complete installation and deployment instructions for running a Woodlanders server.

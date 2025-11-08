@@ -11,6 +11,7 @@ The goal was simple yet audacious: **build a complete, enjoyable multiplayer gam
 [![Issues](https://img.shields.io/badge/🐛_Report_Issues-GitHub-red?style=for-the-badge)](https://github.com/gcclinux/Woodlanders/issues)
 [![Discussions](https://img.shields.io/badge/💬_Join_Discussions-GitHub-blue?style=for-the-badge)](https://github.com/gcclinux/Woodlanders/discussions)
 [![Buy Me A Coffee](https://img.shields.io/badge/☕_Buy_Me_A_Coffee-Support-yellow?style=for-the-badge)](https://www.buymeacoffee.com/gcclinux)
+[![Kiro.dev](https://img.shields.io/badge/🛠️_IDE-Kiro.dev-0EA5A4?style=for-the-badge)](https://kiro.dev/)
 [![Sponsor](https://img.shields.io/badge/🤝_Sponsor-GitHub_Sponsors-8A3FFC?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sponsors/gcclinux)
 
 ### The Kiro Contains: Two Powerful Approaches

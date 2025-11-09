@@ -34,7 +34,19 @@ jobs:
         run: mkdir jpackage-input
       
       - name: Copy JAR to jpackage input
-        run: copy build\libs\woodlanders-client-*.jar jpackage-input\woodlanders.jar
+        run: |
+          $jar = Get-ChildItem -Path build\libs\woodlanders-client-*.jar | Select-Object -First 1
+          Copy-Item $jar.FullName -Destination jpackage-input\woodlanders.jar
+      
+      - name: Verify JAR exists
+        run: |
+          if (Test-Path jpackage-input\woodlanders.jar) {
+            Write-Host "JAR file found successfully"
+            Get-Item jpackage-input\woodlanders.jar
+          } else {
+            Write-Error "JAR file not found!"
+            exit 1
+          }
       
       - name: Create portable Windows executable with jpackage
         run: |

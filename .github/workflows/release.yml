@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+      - '[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
     inputs:
       tag_name:
@@ -77,13 +78,22 @@ jobs:
         id: get_tag
         shell: bash
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          if [ "${{ github.event_name }}" = "push" ] && [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG_NAME=${GITHUB_REF#refs/tags/}
+            echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+            echo "is_tag=true" >> $GITHUB_OUTPUT
+            echo "Detected tag: $TAG_NAME"
           elif [ -n "${{ github.event.inputs.tag_name }}" ]; then
             echo "tag_name=${{ github.event.inputs.tag_name }}" >> $GITHUB_OUTPUT
+            echo "is_tag=true" >> $GITHUB_OUTPUT
+            echo "Manual tag: ${{ github.event.inputs.tag_name }}"
+          else
+            echo "is_tag=false" >> $GITHUB_OUTPUT
+            echo "No tag detected"
           fi
       
       - name: Create GitHub Release
+        if: steps.get_tag.outputs.is_tag == 'true'
         id: create_release
         uses: softprops/action-gh-release@v1
         with:

@@ -17,6 +17,8 @@ import wagemaker.uk.network.TreeHealthUpdateMessage;
 import wagemaker.uk.network.TreeState;
 import wagemaker.uk.network.WorldState;
 import wagemaker.uk.network.WorldStateMessage;
+import wagemaker.uk.network.WorldStateUpdate;
+import wagemaker.uk.network.WorldStateUpdateMessage;
 import wagemaker.uk.player.RemotePlayer;
 
 /**
@@ -65,6 +67,42 @@ public class GameMessageHandler extends DefaultMessageHandler {
         worldState.setClearedPositions(message.getClearedPositions());
         
         game.syncWorldState(worldState);
+    }
+    
+    @Override
+    protected void handleWorldStateUpdate(WorldStateUpdateMessage message) {
+        super.handleWorldStateUpdate(message);
+        
+        // Process tree updates
+        if (message.getUpdatedTrees() != null) {
+            for (TreeState treeState : message.getUpdatedTrees().values()) {
+                game.updateTreeFromState(treeState);
+            }
+        }
+        
+        // Process item updates
+        if (message.getUpdatedItems() != null) {
+            for (ItemState itemState : message.getUpdatedItems().values()) {
+                game.updateItemFromState(itemState);
+            }
+        }
+        
+        // Process player updates (if needed in the future)
+        if (message.getUpdatedPlayers() != null) {
+            for (wagemaker.uk.network.PlayerState playerState : message.getUpdatedPlayers().values()) {
+                // Update remote player if exists
+                RemotePlayer remotePlayer = game.getRemotePlayers().get(playerState.getPlayerId());
+                if (remotePlayer != null) {
+                    remotePlayer.updatePosition(
+                        playerState.getX(),
+                        playerState.getY(),
+                        playerState.getDirection(),
+                        playerState.isMoving()
+                    );
+                    remotePlayer.updateHealth(playerState.getHealth());
+                }
+            }
+        }
     }
     
     @Override

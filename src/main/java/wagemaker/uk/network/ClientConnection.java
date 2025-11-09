@@ -375,6 +375,17 @@ public class ClientConnection implements Runnable {
                     server.getWorldState().addOrUpdateTree(tree);
                     
                     System.out.println("Created tree state for " + targetId + " (type: " + treeType + ")");
+                    
+                    // CRITICAL FIX: Broadcast the newly created tree to ALL clients
+                    // This ensures all players see the same trees, even if they weren't in the initial spawn area
+                    Map<String, TreeState> newTreeMap = new HashMap<>();
+                    newTreeMap.put(targetId, tree);
+                    WorldStateUpdateMessage updateMsg = new WorldStateUpdateMessage("server", 
+                        new HashMap<>(), // no player updates
+                        newTreeMap,      // tree update
+                        new HashMap<>()); // no item updates
+                    server.broadcastToAll(updateMsg);
+                    
                 } else {
                     // Tree doesn't exist at this position according to world generation
                     System.err.println("No tree exists at position " + targetId);

@@ -24,7 +24,8 @@ public class GameMenu {
     private Texture woodenPlank;
     private BitmapFont font;
     private BitmapFont playerNameFont; // Custom font for player name
-    private String[] menuItems = {"Player Name", "Multiplayer", "Save", "Exit"};
+    private String[] singleplayerMenuItems = {"Player Name", "Multiplayer", "Save", "Exit"};
+    private String[] multiplayerMenuItems = {"Player Name", "Disconnect", "Exit"};
     private int selectedIndex = 0;
     private float menuX, menuY;
     private Player player;
@@ -311,11 +312,12 @@ public class GameMenu {
         }
 
         if (isOpen) {
+            String[] currentMenuItems = getCurrentMenuItems();
             if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
-                selectedIndex = (selectedIndex - 1 + menuItems.length) % menuItems.length;
+                selectedIndex = (selectedIndex - 1 + currentMenuItems.length) % currentMenuItems.length;
             }
             if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
-                selectedIndex = (selectedIndex + 1) % menuItems.length;
+                selectedIndex = (selectedIndex + 1) % currentMenuItems.length;
             }
             if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
                 executeMenuItem(selectedIndex);
@@ -389,7 +391,8 @@ public class GameMenu {
 
             batch.draw(woodenPlank, menuX, menuY, MENU_WIDTH, MENU_HEIGHT);
             
-            for (int i = 0; i < menuItems.length; i++) {
+            String[] currentMenuItems = getCurrentMenuItems();
+            for (int i = 0; i < currentMenuItems.length; i++) {
                 if (i == selectedIndex) {
                     playerNameFont.setColor(Color.YELLOW);
                 } else {
@@ -397,7 +400,7 @@ public class GameMenu {
                 }
                 float textX = menuX + 40;
                 float textY = menuY + MENU_HEIGHT - 40 - (i * 30);
-                playerNameFont.draw(batch, menuItems[i], textX, textY);
+                playerNameFont.draw(batch, currentMenuItems[i], textX, textY);
             }
         }
         
@@ -410,15 +413,41 @@ public class GameMenu {
     }
 
     private void executeMenuItem(int index) {
-        if (index == 0) { // Player Name
+        String[] currentMenuItems = getCurrentMenuItems();
+        String selectedItem = currentMenuItems[index];
+        
+        if (selectedItem.equals("Player Name")) {
             openNameDialog();
-        } else if (index == 1) { // Multiplayer
+        } else if (selectedItem.equals("Multiplayer")) {
             openMultiplayerMenu();
-        } else if (index == 2) { // Save
+        } else if (selectedItem.equals("Disconnect")) {
+            disconnectFromMultiplayer();
+        } else if (selectedItem.equals("Save")) {
             savePlayerPosition();
-        } else if (index == 3) { // Exit
+        } else if (selectedItem.equals("Exit")) {
             savePlayerPosition(); // Auto-save before exit
             Gdx.app.exit();
+        }
+    }
+    
+    /**
+     * Gets the current menu items based on game mode.
+     * @return The appropriate menu items array
+     */
+    private String[] getCurrentMenuItems() {
+        if (gameInstance != null && gameInstance.getGameMode() != wagemaker.uk.gdx.MyGdxGame.GameMode.SINGLEPLAYER) {
+            return multiplayerMenuItems;
+        }
+        return singleplayerMenuItems;
+    }
+    
+    /**
+     * Disconnects from multiplayer and returns to singleplayer mode.
+     */
+    private void disconnectFromMultiplayer() {
+        if (gameInstance != null) {
+            gameInstance.disconnectFromMultiplayer();
+            isOpen = false; // Close menu after disconnect
         }
     }
     

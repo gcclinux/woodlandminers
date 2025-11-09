@@ -35,8 +35,15 @@ jobs:
       
       - name: Copy JAR to jpackage input
         run: |
-          $jar = Get-ChildItem -Path build\libs\woodlanders-client-*.jar | Select-Object -First 1
-          Copy-Item $jar.FullName -Destination jpackage-input\woodlanders.jar
+          if (Test-Path build\libs\woodlanders-client.jar) {
+            Write-Host "Found woodlanders-client.jar"
+            Copy-Item build\libs\woodlanders-client.jar -Destination jpackage-input\woodlanders.jar
+          } else {
+            Write-Error "woodlanders-client.jar not found in build/libs"
+            Write-Host "Available files:"
+            Get-ChildItem -Path build\libs
+            exit 1
+          }
       
       - name: Verify JAR exists
         run: |

@@ -28,7 +28,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
       
       - name: Build JAR with Gradle
-        run: ./gradlew jar --no-daemon
+        run: gradle jar --no-daemon
       
       - name: Create jpackage directory
         run: mkdir jpackage-input

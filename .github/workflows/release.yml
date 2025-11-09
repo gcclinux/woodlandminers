@@ -11,6 +11,9 @@ on:
         description: 'Tag name for manual release'
         required: false
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -94,7 +97,6 @@ jobs:
       
       - name: Create GitHub Release
         if: steps.get_tag.outputs.is_tag == 'true'
-        id: create_release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.get_tag.outputs.tag_name }}
@@ -105,9 +107,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Upload artifact for manual download
-        if: github.event_name == 'workflow_dispatch'
+      - name: Upload artifact as backup
         uses: actions/upload-artifact@v4
         with:
           name: Woodlanders-Windows-Portable
           path: dist/Woodlanders-Windows-Portable.zip
+          retention-days: 90

@@ -31,8 +31,8 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
       
-      - name: Build JAR with Gradle
-        run: gradle jar --no-daemon
+      - name: Build JARs with Gradle
+        run: gradle jar serverJar --no-daemon
       
       - name: Create jpackage directory
         run: mkdir jpackage-input
@@ -103,7 +103,71 @@ jobs:
           name: Release ${{ steps.get_tag.outputs.tag_name }}
           draft: false
           prerelease: false
-          files: ./dist/Woodlanders-Windows-Portable.zip
+          body: |
+            ## Downloads
+            - **Woodlanders-Windows-Portable.zip** - Windows executable with bundled JRE (no Java installation required)
+            - **woodlanders-client.jar** - Client JAR (requires Java 21+)
+            - **woodlanders-server.jar** - Dedicated server JAR (requires Java 21+)
+            
+            ## Server Requirements by Player Count
+            | Players | CPU Cores | RAM | Upload Speed |
+            |---------|-----------|-----|--------------|
+            | 5-10    | 2         | 1GB | 2 Mbps       |
+            | 10-20   | 2-4       | 2GB | 5 Mbps       |
+            | 20-50   | 4         | 4GB | 10 Mbps      |
+            | 50+     | 8+        | 8GB | 20 Mbps      |
+            
+            ## Configuration Quick Reference
+            
+            ### server.properties
+            ```properties
+            # Server port (default: 25565)
+            server.port=25565
+            
+            # Maximum concurrent clients (default: 20)
+            server.max-clients=20
+            
+            # World seed - 0 for random (default: 0)
+            world.seed=0
+            
+            # Heartbeat interval in seconds (default: 5)
+            server.heartbeat-interval=5
+            
+            # Client timeout in seconds (default: 15)
+            server.client-timeout=15
+            
+            # Message rate limit per client (default: 100)
+            server.rate-limit=100
+            
+            # Enable debug logging (default: false)
+            server.debug=false
+            ```
+            
+            ## Server Launch Commands
+            
+            ```bash
+            # Basic start
+            java -jar woodlanders-server.jar
+            
+            # Basic & config
+            java -jar woodlanders-server.jar --config server.properties
+            
+            # With memory allocation
+            java -Xms2G -Xmx2G -jar woodlanders-server.jar
+            
+            # With memory & config
+            java -Xms2G -Xmx2G -jar woodlanders-server.jar --config server.properties
+            
+            # With custom port
+            java -jar woodlanders-server.jar --port 7777
+            
+            # With all options
+            java -Xms4G -Xmx4G -XX:+UseG1GC -jar woodlanders-server.jar --port 25565 --max-clients 50
+            ```
+          files: |
+            ./dist/Woodlanders-Windows-Portable.zip
+            ./build/libs/woodlanders-client.jar
+            ./build/libs/woodlanders-server.jar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       

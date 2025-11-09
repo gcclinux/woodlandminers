@@ -30,6 +30,9 @@ public class Player {
     private String playerId; // Unique identifier for multiplayer
     private GameClient gameClient; // Reference for sending network updates
     private boolean isLocalPlayer = true; // Distinguish local vs remote players
+    private Map<String, RemotePlayer> remotePlayers; // Reference to remote players for PvP
+    private float lastPlayerAttackTime = 0; // Client-side attack cooldown tracking
+    private static final float PLAYER_ATTACK_COOLDOWN = 0.5f; // 0.5 seconds between player attacks
     private Texture spriteSheet;
     private Animation<TextureRegion> walkUpAnimation;
     private Animation<TextureRegion> walkLeftAnimation;
@@ -133,6 +136,68 @@ public class Player {
     public void setLocalPlayer(boolean isLocalPlayer) {
         this.isLocalPlayer = isLocalPlayer;
     }
+    
+    public void setRemotePlayers(Map<String, RemotePlayer> remotePlayers) {
+        this.remotePlayers = remotePlayers;
+    }
+    
+    /**
+     * Find the nearest remote player within attack range (100 pixels).
+     * @return The nearest remote player in range, or null if none found
+     */
+    private RemotePlayer findNearestRemotePlayerInRange() {
+        if (remotePlayers == null || remotePlayers.isEmpty()) {
+            return null;
+        }
+        
+        RemotePlayer nearestPlayer = null;
+        float nearestDistance = Float.MAX_VALUE;
+        
+        for (RemotePlayer remotePlayer : remotePlayers.values()) {
+            if (isPlayerInAttackRange(remotePlayer)) {
+                float distance = calculateDistance(remotePlayer);
+                if (distance < nearestDistance) {
+                    nearestDistance = distance;
+                    nearestPlayer = remotePlayer;
+                }
+            }
+        }
+        
+        return nearestPlayer;
+    }
+    
+    /**
+     * Check if a specific remote player is within attack range (100 pixels).
+     * Uses Euclidean distance calculation: sqrt(dx² + dy²)
+     * @param remotePlayer The remote player to check
+     * @return true if player is within 100 pixels, false otherwise
+     */
+    private boolean isPlayerInAttackRange(RemotePlayer remotePlayer) {
+        if (remotePlayer == null) {
+            return false;
+        }
+        
+        float distance = calculateDistance(remotePlayer);
+        return distance <= 100; // 100 pixel attack range
+    }
+    
+    /**
+     * Calculate Euclidean distance between this player and a remote player.
+     * @param remotePlayer The remote player to calculate distance to
+     * @return The distance in pixels
+     */
+    private float calculateDistance(RemotePlayer remotePlayer) {
+        // Calculate center positions
+        float playerCenterX = x + 32; // Player is 64x64, center is +32
+        float playerCenterY = y + 32;
+        float remoteCenterX = remotePlayer.getX() + 32;
+        float remoteCenterY = remotePlayer.getY() + 32;
+        
+        // Calculate distance using Euclidean formula: sqrt(dx² + dy²)
+        float dx = remoteCenterX - playerCenterX;
+        float dy = remoteCenterY - playerCenterY;
+        return (float) Math.sqrt(dx * dx + dy * dy);
+    }
 
     public void update(float deltaTime) {
         isMoving = false;
@@ -212,7 +277,7 @@ public class Player {
 
         // handle attack
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-            attackNearbyTrees();
+            attackNearbyTargets();
         }
 
         // update animation time
@@ -403,7 +468,28 @@ public class Player {
         this.y = newY;
     }
 
-    private void attackNearbyTrees() {
+    private void attackNearbyTargets() {
+        // Priority 1: Check for remote players in range
+        RemotePlayer targetPlayer = findNearestRemotePlayerInRange();
+        if (targetPlayer != null && gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+            // TODO: Cooldown for player attacks (currently disabled for testing)
+            // Check cooldown for player attacks only (0.5 seconds since last player attack)
+            // float currentTime = System.currentTimeMillis() / 1000.0f; // Convert to seconds
+            // if (currentTime - lastPlayerAttackTime < PLAYER_ATTACK_COOLDOWN) {
+            //     // Still on cooldown for player attacks
+            //     System.out.println("Player attack on cooldown");
+            //     return;
+            // }
+            
+            // Attack the remote player
+            String targetPlayerId = targetPlayer.getPlayerId();
+            gameClient.sendAttackAction(targetPlayerId);
+            // lastPlayerAttackTime = currentTime; // Disabled with cooldown
+            System.out.println("Attacking player: " + targetPlayerId);
+            return; // Don't attack trees if we attacked a player
+        }
+        
+        // Priority 2: Attack trees if no players in range (no cooldown for trees)
         boolean attackedSomething = false;
         
         // Attack trees within range (individual collision)
@@ -820,8 +906,7 @@ public class Player {
     }
 
     public boolean shouldShowHealthBar() {
-        return true; // Always show for testing
-        // return health < 100; // Original logic
+        return health < 100;
     }
     
     /**

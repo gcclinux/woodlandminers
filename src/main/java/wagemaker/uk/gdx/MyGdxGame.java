@@ -249,6 +249,7 @@ public class MyGdxGame extends ApplicationAdapter {
         player.setCactus(cactus);
         player.setGameInstance(this);
         player.setClearedPositions(clearedPositions);
+        player.setRemotePlayers(remotePlayers);
 
         gameMenu = new GameMenu();
         gameMenu.setPlayer(player); // Set player reference for saving

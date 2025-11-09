@@ -167,6 +167,7 @@ public class GameMessageHandler extends DefaultMessageHandler {
         if (game.getGameClient() != null && 
             playerId.equals(game.getGameClient().getClientId())) {
             game.getPlayer().setHealth(health);
+            System.out.println("Taking damage! Health: " + health);
         }
         
         // Update remote player health

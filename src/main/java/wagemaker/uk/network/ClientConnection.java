@@ -3,6 +3,8 @@ package wagemaker.uk.network;
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -19,6 +21,8 @@ public class ClientConnection implements Runnable {
     private static final float MAX_DISTANCE_PER_UPDATE = MAX_SPEED / UPDATE_RATE * 2; // ~50 pixels with buffer
     private static final float ATTACK_RANGE = 100.0f; // pixels
     private static final float PICKUP_RANGE = 50.0f; // pixels
+    private static final long PLAYER_ATTACK_COOLDOWN_MS = 500; // 500 milliseconds
+    private static final float PLAYER_DAMAGE = 10.0f; // damage per attack
     
     private Socket socket;
     private ObjectInputStream input;
@@ -31,6 +35,7 @@ public class ClientConnection implements Runnable {
     private long lastMessageTime;
     private int messageCount;
     private boolean running;
+    private Map<String, Long> playerAttackCooldowns;
     
     /**
      * Creates a new ClientConnection.
@@ -47,6 +52,7 @@ public class ClientConnection implements Runnable {
         this.lastHeartbeat = System.currentTimeMillis();
         this.lastMessageTime = System.currentTimeMillis();
         this.messageCount = 0;
+        this.playerAttackCooldowns = new HashMap<>();
         
         // Create output stream first (important for ObjectStream protocol)
         this.output = new ObjectOutputStream(socket.getOutputStream());
@@ -297,6 +303,14 @@ public class ClientConnection implements Runnable {
             return;
         }
         
+        // Check if target is a player
+        if (server.getWorldState().getPlayers().containsKey(targetId)) {
+            // Target is a player, route to player attack handler
+            handlePlayerAttack(message);
+            return;
+        }
+        
+        // Target is not a player, continue with existing tree attack logic
         TreeState tree = server.getWorldState().getTrees().get(targetId);
         
         // If tree doesn't exist in server state, we need to create it from the targetId
@@ -532,6 +546,148 @@ public class ClientConnection implements Runnable {
         
         // Broadcast health update to all clients
         server.broadcastToAll(message);
+    }
+    
+    /**
+     * Generates a cooldown key for tracking player attacks.
+     * @param attackerId The ID of the attacking player
+     * @param targetId The ID of the target player
+     * @return A unique key in the format "attackerId:targetId"
+     */
+    private String getCooldownKey(String attackerId, String targetId) {
+        return attackerId + ":" + targetId;
+    }
+    
+    /**
+     * Checks if a player attack is currently on cooldown.
+     * @param attackerId The ID of the attacking player
+     * @param targetId The ID of the target player
+     * @return true if the attack is on cooldown, false otherwise
+     */
+    private boolean isPlayerAttackOnCooldown(String attackerId, String targetId) {
+        String key = getCooldownKey(attackerId, targetId);
+        Long lastAttackTime = playerAttackCooldowns.get(key);
+        
+        if (lastAttackTime == null) {
+            return false;
+        }
+        
+        long currentTime = System.currentTimeMillis();
+        return (currentTime - lastAttackTime) < PLAYER_ATTACK_COOLDOWN_MS;
+    }
+    
+    /**
+     * Updates the cooldown timestamp for a player attack.
+     * @param attackerId The ID of the attacking player
+     * @param targetId The ID of the target player
+     */
+    private void updatePlayerAttackCooldown(String attackerId, String targetId) {
+        String key = getCooldownKey(attackerId, targetId);
+        playerAttackCooldowns.put(key, System.currentTimeMillis());
+    }
+    
+    /**
+     * Handles a player-vs-player attack.
+     * @param message The attack message
+     */
+    private void handlePlayerAttack(AttackActionMessage message) {
+        String targetId = message.getTargetId();
+        
+        // Validate target player exists in world state
+        PlayerState targetPlayer = server.getWorldState().getPlayers().get(targetId);
+        if (targetPlayer == null) {
+            System.err.println("Target player does not exist: " + targetId);
+            logSecurityViolation("Attack on non-existent player: " + targetId);
+            return;
+        }
+        
+        // Check cooldown
+        if (isPlayerAttackOnCooldown(clientId, targetId)) {
+            System.out.println("Player attack on cooldown: " + clientId + " -> " + targetId);
+            logSecurityViolation("Player attack on cooldown: " + clientId + " -> " + targetId);
+            return;
+        }
+        
+        // Calculate distance between attacker and target positions
+        float dx = targetPlayer.getX() - playerState.getX();
+        float dy = targetPlayer.getY() - playerState.getY();
+        float distance = (float) Math.sqrt(dx * dx + dy * dy);
+        
+        // Validate distance is within ATTACK_RANGE (100 pixels)
+        if (distance > ATTACK_RANGE) {
+            System.out.println("Player attack out of range from " + clientId + ": distance=" + distance);
+            logSecurityViolation("Player attack out of range: distance=" + distance);
+            return;
+        }
+        
+        // Apply 10 damage to target player's health
+        float newHealth = targetPlayer.getHealth() - PLAYER_DAMAGE;
+        
+        // Clamp health to minimum of 0
+        newHealth = Math.max(0, newHealth);
+        
+        // Update target player health in world state
+        targetPlayer.setHealth(newHealth);
+        server.getWorldState().addOrUpdatePlayer(targetPlayer);
+        
+        // Update cooldown timestamp
+        updatePlayerAttackCooldown(clientId, targetId);
+        
+        // Broadcast PlayerHealthUpdateMessage to all clients
+        PlayerHealthUpdateMessage healthMsg = new PlayerHealthUpdateMessage("server", targetId, newHealth);
+        server.broadcastToAll(healthMsg);
+        
+        System.out.println("Player " + clientId + " attacked player " + targetId + 
+                         " (Health: " + (newHealth + PLAYER_DAMAGE) + " -> " + newHealth + ")");
+        
+        // Check if target player died (health reached 0)
+        if (newHealth <= 0) {
+            // Respawn the target player at a random location
+            respawnPlayer(targetPlayer);
+        }
+    }
+    
+    /**
+     * Respawns a player at a random location with full health.
+     * @param player The player to respawn
+     */
+    private void respawnPlayer(PlayerState player) {
+        System.out.println("Player " + player.getPlayerId() + " died! Respawning...");
+        
+        // Reset health to 100
+        player.setHealth(100);
+        
+        // Generate random respawn position (±1000 pixels from origin)
+        java.util.Random random = new java.util.Random();
+        float newX = (random.nextFloat() - 0.5f) * 2000; // ±1000px
+        float newY = (random.nextFloat() - 0.5f) * 2000; // ±1000px
+        
+        // Update player position
+        player.setX(newX);
+        player.setY(newY);
+        
+        // Update in world state
+        server.getWorldState().addOrUpdatePlayer(player);
+        
+        System.out.println("Player " + player.getPlayerId() + " respawned at (" + newX + ", " + newY + ") with full health");
+        
+        // Broadcast respawn to all clients (position update)
+        PlayerMovementMessage respawnMsg = new PlayerMovementMessage(
+            player.getPlayerId(), 
+            newX, 
+            newY, 
+            player.getDirection(), 
+            false
+        );
+        server.broadcastToAll(respawnMsg);
+        
+        // Broadcast health update (full health)
+        PlayerHealthUpdateMessage healthMsg = new PlayerHealthUpdateMessage(
+            "server", 
+            player.getPlayerId(), 
+            100
+        );
+        server.broadcastToAll(healthMsg);
     }
     
     /**

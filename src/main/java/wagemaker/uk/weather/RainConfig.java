@@ -206,12 +206,12 @@ public class RainConfig {
      * Radius of the spawn area rain zone in pixels.
      * Players within this distance from the center experience full rain intensity.
      * 
-     * Requirement: 2.1 - Rain zone with 640px radius
+     * Requirement: 2.1 - Rain zone with 640px radius (quadrupled to 2560px)
      * Gameplay impact: High
      * Recommended range: 400-1000
-     * Default: 640
+     * Default: 2560 (quadrupled from original 640)
      */
-    public static final float SPAWN_ZONE_RADIUS = 640.0f;
+    public static final float SPAWN_ZONE_RADIUS = 2560.0f;
     
     /**
      * Unique identifier for the spawn area rain zone.

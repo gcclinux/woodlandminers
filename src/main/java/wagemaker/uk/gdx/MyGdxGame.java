@@ -1038,6 +1038,11 @@ public class MyGdxGame extends ApplicationAdapter {
         System.out.println("Starting multiplayer host...");
         
         try {
+            // Save current singleplayer position before switching modes
+            if (gameMenu != null) {
+                gameMenu.savePlayerPosition();
+            }
+            
             // Clear local world before starting multiplayer
             clearLocalWorld();
             
@@ -1062,8 +1067,13 @@ public class MyGdxGame extends ApplicationAdapter {
             // Set the player's game client reference for sending updates
             player.setGameClient(gameClient);
             
-            // Reset player position to spawn point (0,0) for multiplayer
-            player.setPosition(0, 0);
+            // Load multiplayer position (or use spawn if none exists)
+            if (gameMenu != null) {
+                gameMenu.loadPlayerPosition();
+            } else {
+                // Fallback to spawn point if no menu
+                player.setPosition(0, 0);
+            }
             
             // Apply the server's world seed to the host client
             this.worldSeed = gameServer.getWorldState().getWorldSeed();
@@ -1116,6 +1126,11 @@ public class MyGdxGame extends ApplicationAdapter {
         System.out.println("Connecting to server at " + serverAddress + ":" + port);
         
         try {
+            // Save current singleplayer position before switching modes
+            if (gameMenu != null) {
+                gameMenu.savePlayerPosition();
+            }
+            
             // Clear local world before joining multiplayer
             clearLocalWorld();
             
@@ -1133,8 +1148,13 @@ public class MyGdxGame extends ApplicationAdapter {
             // Set the player's game client reference for sending updates
             player.setGameClient(gameClient);
             
-            // Reset player position to spawn point (0,0) for multiplayer
-            player.setPosition(0, 0);
+            // Load multiplayer position (or use spawn if none exists)
+            if (gameMenu != null) {
+                gameMenu.loadPlayerPosition();
+            } else {
+                // Fallback to spawn point if no menu
+                player.setPosition(0, 0);
+            }
             
             System.out.println("Connected to multiplayer server successfully");
             
@@ -1874,6 +1894,11 @@ public class MyGdxGame extends ApplicationAdapter {
         
         System.out.println("Disconnecting from multiplayer...");
         
+        // Save current multiplayer position before disconnecting
+        if (gameMenu != null) {
+            gameMenu.savePlayerPosition();
+        }
+        
         // Disconnect client
         if (gameClient != null) {
             try {
@@ -1931,6 +1956,11 @@ public class MyGdxGame extends ApplicationAdapter {
         // Reinitialize rain zones for singleplayer
         if (rainSystem != null) {
             rainSystem.getZoneManager().initializeDefaultZones();
+        }
+        
+        // Load singleplayer position
+        if (gameMenu != null) {
+            gameMenu.loadPlayerPosition();
         }
         
         // Display notification

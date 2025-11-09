@@ -25,7 +25,7 @@ public class GameMenu {
     private BitmapFont font;
     private BitmapFont playerNameFont; // Custom font for player name
     private String[] singleplayerMenuItems = {"Player Name", "Multiplayer", "Save", "Exit"};
-    private String[] multiplayerMenuItems = {"Player Name", "Disconnect", "Exit"};
+    private String[] multiplayerMenuItems = {"Player Name", "Save", "Disconnect", "Exit"};
     private int selectedIndex = 0;
     private float menuX, menuY;
     private Player player;
@@ -176,10 +176,50 @@ public class GameMenu {
             // Read the JSON file
             String jsonContent = new String(Files.readAllBytes(Paths.get(saveFile.getAbsolutePath())));
             
-            // Simple JSON parsing (extract x, y, health, and name values)
-            float x = parseJsonFloat(jsonContent, "\"x\":");
-            float y = parseJsonFloat(jsonContent, "\"y\":");
-            float health = parseJsonFloat(jsonContent, "\"playerHealth\":");
+            // Determine which position to load based on current game mode
+            boolean isMultiplayer = (gameInstance != null && 
+                                    gameInstance.getGameMode() != wagemaker.uk.gdx.MyGdxGame.GameMode.SINGLEPLAYER);
+            
+            float x, y, health;
+            
+            if (isMultiplayer) {
+                // Load multiplayer position
+                try {
+                    x = parseJsonFloat(jsonContent, "\"multiplayerX\":");
+                    y = parseJsonFloat(jsonContent, "\"multiplayerY\":");
+                    health = parseJsonFloat(jsonContent, "\"multiplayerHealth\":");
+                    System.out.println("Loading multiplayer position");
+                } catch (Exception e) {
+                    // Fallback to spawn if multiplayer position doesn't exist
+                    System.out.println("No multiplayer position found, using spawn (0, 0)");
+                    x = 0;
+                    y = 0;
+                    health = 100.0f;
+                }
+            } else {
+                // Load singleplayer position
+                try {
+                    x = parseJsonFloat(jsonContent, "\"singleplayerX\":");
+                    y = parseJsonFloat(jsonContent, "\"singleplayerY\":");
+                    health = parseJsonFloat(jsonContent, "\"singleplayerHealth\":");
+                    System.out.println("Loading singleplayer position");
+                } catch (Exception e) {
+                    // Fallback to old format for backwards compatibility
+                    try {
+                        x = parseJsonFloat(jsonContent, "\"x\":");
+                        y = parseJsonFloat(jsonContent, "\"y\":");
+                        health = parseJsonFloat(jsonContent, "\"playerHealth\":");
+                        System.out.println("Loading position from legacy format");
+                    } catch (Exception e2) {
+                        System.out.println("No singleplayer position found, using default (0, 0)");
+                        x = 0;
+                        y = 0;
+                        health = 100.0f;
+                    }
+                }
+            }
+            
+            // Load player name (shared between modes)
             String loadedName = parseJsonString(jsonContent, "\"playerName\":");
             
             // Set player position and health
@@ -503,7 +543,7 @@ public class GameMenu {
         multiplayerMenu.open();
     }
     
-    private void savePlayerPosition() {
+    public void savePlayerPosition() {
         if (player == null) {
             System.out.println("Cannot save: Player reference not set");
             return;
@@ -518,27 +558,81 @@ public class GameMenu {
             
             File saveFile = new File(configDir, "woodlanders.json");
             
-            // Read existing lastServer value if file exists
+            // Read existing values if file exists
             String lastServer = null;
+            Float singleplayerX = null, singleplayerY = null, singleplayerHealth = null;
+            Float multiplayerX = null, multiplayerY = null, multiplayerHealth = null;
+            
             if (saveFile.exists()) {
                 try {
                     String existingContent = new String(Files.readAllBytes(Paths.get(saveFile.getAbsolutePath())));
                     lastServer = parseJsonString(existingContent, "\"lastServer\":");
+                    
+                    // Try to read existing positions
+                    try {
+                        singleplayerX = parseJsonFloat(existingContent, "\"singleplayerX\":");
+                        singleplayerY = parseJsonFloat(existingContent, "\"singleplayerY\":");
+                        singleplayerHealth = parseJsonFloat(existingContent, "\"singleplayerHealth\":");
+                    } catch (Exception e) {
+                        // Singleplayer position doesn't exist yet
+                    }
+                    
+                    try {
+                        multiplayerX = parseJsonFloat(existingContent, "\"multiplayerX\":");
+                        multiplayerY = parseJsonFloat(existingContent, "\"multiplayerY\":");
+                        multiplayerHealth = parseJsonFloat(existingContent, "\"multiplayerHealth\":");
+                    } catch (Exception e) {
+                        // Multiplayer position doesn't exist yet
+                    }
                 } catch (Exception e) {
-                    // If we can't read the existing file, just continue without lastServer
-                    System.out.println("Could not read existing lastServer value: " + e.getMessage());
+                    System.out.println("Could not read existing save data: " + e.getMessage());
                 }
             }
             
-            // Create JSON content with player position, health, name, and lastServer
+            // Determine which position to update based on current game mode
+            boolean isMultiplayer = (gameInstance != null && 
+                                    gameInstance.getGameMode() != wagemaker.uk.gdx.MyGdxGame.GameMode.SINGLEPLAYER);
+            
+            if (isMultiplayer) {
+                // Update multiplayer position
+                multiplayerX = player.getX();
+                multiplayerY = player.getY();
+                multiplayerHealth = player.getHealth();
+                System.out.println("Saving multiplayer position");
+            } else {
+                // Update singleplayer position
+                singleplayerX = player.getX();
+                singleplayerY = player.getY();
+                singleplayerHealth = player.getHealth();
+                System.out.println("Saving singleplayer position");
+            }
+            
+            // Create JSON content with separate positions for singleplayer and multiplayer
             StringBuilder jsonBuilder = new StringBuilder();
             jsonBuilder.append("{\n");
-            jsonBuilder.append("  \"playerPosition\": {\n");
-            jsonBuilder.append(String.format("    \"x\": %.2f,\n", player.getX()));
-            jsonBuilder.append(String.format("    \"y\": %.2f\n", player.getY()));
-            jsonBuilder.append("  },\n");
-            jsonBuilder.append(String.format("  \"playerHealth\": %.1f,\n", player.getHealth()));
             jsonBuilder.append(String.format("  \"playerName\": \"%s\",\n", playerName));
+            
+            // Singleplayer position
+            if (singleplayerX != null && singleplayerY != null && singleplayerHealth != null) {
+                jsonBuilder.append("  \"singleplayerPosition\": {\n");
+                jsonBuilder.append(String.format("    \"x\": %.2f,\n", singleplayerX));
+                jsonBuilder.append(String.format("    \"y\": %.2f\n", singleplayerY));
+                jsonBuilder.append("  },\n");
+                jsonBuilder.append(String.format("  \"singleplayerX\": %.2f,\n", singleplayerX));
+                jsonBuilder.append(String.format("  \"singleplayerY\": %.2f,\n", singleplayerY));
+                jsonBuilder.append(String.format("  \"singleplayerHealth\": %.1f,\n", singleplayerHealth));
+            }
+            
+            // Multiplayer position
+            if (multiplayerX != null && multiplayerY != null && multiplayerHealth != null) {
+                jsonBuilder.append("  \"multiplayerPosition\": {\n");
+                jsonBuilder.append(String.format("    \"x\": %.2f,\n", multiplayerX));
+                jsonBuilder.append(String.format("    \"y\": %.2f\n", multiplayerY));
+                jsonBuilder.append("  },\n");
+                jsonBuilder.append(String.format("  \"multiplayerX\": %.2f,\n", multiplayerX));
+                jsonBuilder.append(String.format("  \"multiplayerY\": %.2f,\n", multiplayerY));
+                jsonBuilder.append(String.format("  \"multiplayerHealth\": %.1f,\n", multiplayerHealth));
+            }
             
             // Include lastServer if it exists
             if (lastServer != null && !lastServer.isEmpty()) {
@@ -557,6 +651,7 @@ public class GameMenu {
             System.out.println("Player position saved: (" + player.getX() + ", " + player.getY() + ")");
             System.out.println("Player health saved: " + player.getHealth());
             System.out.println("Player name saved: " + playerName);
+            System.out.println("Mode: " + (isMultiplayer ? "Multiplayer" : "Singleplayer"));
             if (lastServer != null) {
                 System.out.println("Last server preserved: " + lastServer);
             }

@@ -59,6 +59,10 @@ public class DefaultMessageHandler implements MessageHandler {
                     handleTreeDestroyed((TreeDestroyedMessage) message);
                     break;
                     
+                case TREE_REMOVAL:
+                    handleTreeRemoval((TreeRemovalMessage) message);
+                    break;
+                    
                 case ITEM_SPAWN:
                     handleItemSpawn((ItemSpawnMessage) message);
                     break;
@@ -191,6 +195,14 @@ public class DefaultMessageHandler implements MessageHandler {
     protected void handleTreeDestroyed(TreeDestroyedMessage message) {
         System.out.println("Tree destroyed: " + message.getTreeId() + " at (" + 
                          message.getX() + ", " + message.getY() + ")");
+    }
+    
+    /**
+     * Handles TREE_REMOVAL message.
+     * Override this method to remove ghost trees from game world.
+     */
+    protected void handleTreeRemoval(TreeRemovalMessage message) {
+        System.out.println("Tree removal: " + message.getTreeId() + " - " + message.getReason());
     }
     
     /**

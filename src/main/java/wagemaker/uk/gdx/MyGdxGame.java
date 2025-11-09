@@ -1021,6 +1021,9 @@ public class MyGdxGame extends ApplicationAdapter {
         System.out.println("Starting multiplayer host...");
         
         try {
+            // Clear local world before starting multiplayer
+            clearLocalWorld();
+            
             // Create and start the game server
             gameServer = new GameServer();
             gameServer.start();
@@ -1096,6 +1099,9 @@ public class MyGdxGame extends ApplicationAdapter {
         System.out.println("Connecting to server at " + serverAddress + ":" + port);
         
         try {
+            // Clear local world before joining multiplayer
+            clearLocalWorld();
+            
             // Create and connect the game client
             gameClient = new GameClient();
             gameClient.setMessageHandler(new GameMessageHandler(this));
@@ -1147,6 +1153,10 @@ public class MyGdxGame extends ApplicationAdapter {
         }
         
         System.out.println("Synchronizing world state...");
+        System.out.println("  World seed: " + (state.getWorldSeed() != 0 ? state.getWorldSeed() : "not set"));
+        System.out.println("  Trees to sync: " + (state.getTrees() != null ? state.getTrees().size() : 0));
+        System.out.println("  Players to sync: " + (state.getPlayers() != null ? state.getPlayers().size() : 0));
+        System.out.println("  Items to sync: " + (state.getItems() != null ? state.getItems().size() : 0));
         
         // Apply world seed for deterministic world generation
         if (state.getWorldSeed() != 0) {
@@ -1196,6 +1206,109 @@ public class MyGdxGame extends ApplicationAdapter {
         }
         
         System.out.println("World state synchronized");
+        System.out.println("  Local trees after sync: " + getTotalTreeCount());
+    }
+    
+    /**
+     * Helper method to get the total count of all trees across all tree maps.
+     * Used for diagnostic logging and monitoring.
+     * 
+     * @return The total number of trees in all tree collections
+     */
+    private int getTotalTreeCount() {
+        return trees.size() + appleTrees.size() + coconutTrees.size() + 
+               bambooTrees.size() + bananaTrees.size();
+    }
+    
+    /**
+     * Clears all locally generated trees and items.
+     * Called when transitioning to multiplayer mode to ensure the client
+     * starts with a clean slate before receiving the server's authoritative world state.
+     * 
+     * This prevents ghost trees (trees that exist on the client but not on the server)
+     * by removing all entities that were generated during single-player mode.
+     */
+    private void clearLocalWorld() {
+        long startTime = System.currentTimeMillis();
+        System.out.println("Clearing local world state for multiplayer...");
+        
+        try {
+            // Dispose and clear all tree maps
+            for (SmallTree tree : trees.values()) {
+                try {
+                    tree.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing small tree: " + e.getMessage());
+                }
+            }
+            trees.clear();
+            
+            for (AppleTree tree : appleTrees.values()) {
+                try {
+                    tree.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing apple tree: " + e.getMessage());
+                }
+            }
+            appleTrees.clear();
+            
+            for (CoconutTree tree : coconutTrees.values()) {
+                try {
+                    tree.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing coconut tree: " + e.getMessage());
+                }
+            }
+            coconutTrees.clear();
+            
+            for (BambooTree tree : bambooTrees.values()) {
+                try {
+                    tree.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing bamboo tree: " + e.getMessage());
+                }
+            }
+            bambooTrees.clear();
+            
+            for (BananaTree tree : bananaTrees.values()) {
+                try {
+                    tree.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing banana tree: " + e.getMessage());
+                }
+            }
+            bananaTrees.clear();
+            
+            // Dispose and clear all item maps
+            for (Apple apple : apples.values()) {
+                try {
+                    apple.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing apple: " + e.getMessage());
+                }
+            }
+            apples.clear();
+            
+            for (Banana banana : bananas.values()) {
+                try {
+                    banana.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing banana: " + e.getMessage());
+                }
+            }
+            bananas.clear();
+            
+            // Clear cleared positions map
+            clearedPositions.clear();
+            
+            long duration = System.currentTimeMillis() - startTime;
+            System.out.println("Local world cleared successfully in " + duration + "ms");
+            
+        } catch (Exception e) {
+            System.err.println("Error clearing local world: " + e.getMessage());
+            e.printStackTrace();
+            // Continue anyway - server state will override
+        }
     }
     
     /**
@@ -1314,42 +1427,48 @@ public class MyGdxGame extends ApplicationAdapter {
      * Actually removes a tree from the game world (called on main thread).
      * 
      * @param treeId The tree ID to remove
+     * @return true if the tree was found and removed, false otherwise
      */
-    private void removeTreeImmediate(String treeId) {
+    private boolean removeTreeImmediate(String treeId) {
         // Try to remove from all tree maps
         SmallTree smallTree = trees.remove(treeId);
         if (smallTree != null) {
             smallTree.dispose();
             clearedPositions.put(treeId, true);
-            return;
+            return true;
         }
         
         AppleTree appleTree = appleTrees.remove(treeId);
         if (appleTree != null) {
             appleTree.dispose();
             clearedPositions.put(treeId, true);
-            return;
+            return true;
         }
         
         CoconutTree coconutTree = coconutTrees.remove(treeId);
         if (coconutTree != null) {
             coconutTree.dispose();
             clearedPositions.put(treeId, true);
-            return;
+            return true;
         }
         
         BambooTree bambooTree = bambooTrees.remove(treeId);
         if (bambooTree != null) {
             bambooTree.dispose();
             clearedPositions.put(treeId, true);
-            return;
+            return true;
         }
         
         BananaTree bananaTree = bananaTrees.remove(treeId);
         if (bananaTree != null) {
             bananaTree.dispose();
             clearedPositions.put(treeId, true);
+            return true;
         }
+        
+        // Tree not found in any map
+        System.out.println("Attempted to remove non-existent tree: " + treeId);
+        return false;
     }
     
     /**

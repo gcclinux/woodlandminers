@@ -14,10 +14,10 @@ import wagemaker.uk.network.PongMessage;
 import wagemaker.uk.network.PositionCorrectionMessage;
 import wagemaker.uk.network.TreeDestroyedMessage;
 import wagemaker.uk.network.TreeHealthUpdateMessage;
+import wagemaker.uk.network.TreeRemovalMessage;
 import wagemaker.uk.network.TreeState;
 import wagemaker.uk.network.WorldState;
 import wagemaker.uk.network.WorldStateMessage;
-import wagemaker.uk.network.WorldStateUpdate;
 import wagemaker.uk.network.WorldStateUpdateMessage;
 import wagemaker.uk.player.RemotePlayer;
 
@@ -175,6 +175,13 @@ public class GameMessageHandler extends DefaultMessageHandler {
     
     @Override
     protected void handleTreeDestroyed(TreeDestroyedMessage message) {
+        game.removeTree(message.getTreeId());
+    }
+    
+    @Override
+    protected void handleTreeRemoval(TreeRemovalMessage message) {
+        System.out.println("Ghost tree removal requested: " + message.getTreeId());
+        System.out.println("  Reason: " + message.getReason());
         game.removeTree(message.getTreeId());
     }
     

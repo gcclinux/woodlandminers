@@ -1,6 +1,10 @@
 package wagemaker.uk.network;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.HashMap;
@@ -23,6 +27,7 @@ public class ClientConnection implements Runnable {
     private static final float PICKUP_RANGE = 50.0f; // pixels
     private static final long PLAYER_ATTACK_COOLDOWN_MS = 500; // 500 milliseconds
     private static final float PLAYER_DAMAGE = 10.0f; // damage per attack
+    private static final int MAX_GHOST_TREE_ATTACKS = 10; // Maximum ghost tree attacks before disconnect
     
     private Socket socket;
     private ObjectInputStream input;
@@ -36,6 +41,7 @@ public class ClientConnection implements Runnable {
     private int messageCount;
     private boolean running;
     private Map<String, Long> playerAttackCooldowns;
+    private Map<String, Integer> ghostTreeAttempts;
     
     /**
      * Creates a new ClientConnection.
@@ -53,6 +59,7 @@ public class ClientConnection implements Runnable {
         this.lastMessageTime = System.currentTimeMillis();
         this.messageCount = 0;
         this.playerAttackCooldowns = new HashMap<>();
+        this.ghostTreeAttempts = new HashMap<>();
         
         // Create output stream first (important for ObjectStream protocol)
         this.output = new ObjectOutputStream(socket.getOutputStream());
@@ -313,91 +320,24 @@ public class ClientConnection implements Runnable {
         // Target is not a player, continue with existing tree attack logic
         TreeState tree = server.getWorldState().getTrees().get(targetId);
         
-        // If tree doesn't exist in server state, we need to create it from the targetId
-        // The targetId format is "x,y" which tells us the tree's position
+        // If tree doesn't exist in server state, it's a ghost tree on the client
         if (tree == null) {
-            // Parse position from targetId (format: "x,y")
-            try {
-                String[] parts = targetId.split(",");
-                if (parts.length != 2) {
-                    System.err.println("Invalid tree ID format from " + clientId + ": " + targetId);
-                    logSecurityViolation("Invalid tree ID format: " + targetId);
-                    return;
-                }
-                
-                float treeX = Float.parseFloat(parts[0]);
-                float treeY = Float.parseFloat(parts[1]);
-                
-                // Quantize tree positions to nearest pixel
-                treeX = quantizePosition(treeX);
-                treeY = quantizePosition(treeY);
-                
-                // Validate tree position
-                if (!isValidPosition(treeX, treeY)) {
-                    System.err.println("Invalid tree position for " + targetId);
-                    return;
-                }
-                
-                // Check attack range
-                float dx = treeX - playerState.getX();
-                float dy = treeY - playerState.getY();
-                float distance = (float) Math.sqrt(dx * dx + dy * dy);
-                
-                if (distance > ATTACK_RANGE) {
-                    System.out.println("Attack out of range from " + clientId + ": distance=" + distance);
-                    logSecurityViolation("Attack range check failed: distance=" + distance);
-                    return;
-                }
-                
-                // Determine tree type using the same deterministic generation as clients
-                long worldSeed = server.getWorldState().getWorldSeed();
-                java.util.Random random = new java.util.Random(worldSeed + (long)treeX * 31L + (long)treeY * 17L);
-                
-                // Skip to the tree type determination (same logic as client)
-                if (random.nextFloat() < 0.02f) {
-                    float treeTypeRoll = random.nextFloat();
-                    TreeType treeType;
-                    
-                    if (treeTypeRoll < 0.2f) {
-                        treeType = TreeType.SMALL;
-                    } else if (treeTypeRoll < 0.4f) {
-                        treeType = TreeType.APPLE;
-                    } else if (treeTypeRoll < 0.6f) {
-                        treeType = TreeType.COCONUT;
-                    } else if (treeTypeRoll < 0.8f) {
-                        treeType = TreeType.BAMBOO;
-                    } else {
-                        treeType = TreeType.BANANA;
-                    }
-                    
-                    // Create tree state with full health (100)
-                    tree = new TreeState(targetId, treeType, treeX, treeY, 100.0f, true);
-                    server.getWorldState().addOrUpdateTree(tree);
-                    
-                    System.out.println("Created tree state for " + targetId + " (type: " + treeType + ")");
-                    
-                    // CRITICAL FIX: Broadcast the newly created tree to ALL clients
-                    // This ensures all players see the same trees, even if they weren't in the initial spawn area
-                    Map<String, TreeState> newTreeMap = new HashMap<>();
-                    newTreeMap.put(targetId, tree);
-                    WorldStateUpdateMessage updateMsg = new WorldStateUpdateMessage("server", 
-                        new HashMap<>(), // no player updates
-                        newTreeMap,      // tree update
-                        new HashMap<>()); // no item updates
-                    server.broadcastToAll(updateMsg);
-                    
-                } else {
-                    // Tree doesn't exist at this position according to world generation
-                    System.err.println("No tree exists at position " + targetId);
-                    logSecurityViolation("Attack on non-existent tree: " + targetId);
-                    return;
-                }
-                
-            } catch (NumberFormatException e) {
-                System.err.println("Failed to parse tree position from " + targetId);
-                logSecurityViolation("Invalid tree ID format: " + targetId);
+            // Log the ghost tree attempt and check if threshold exceeded
+            boolean shouldContinue = logGhostTreeAttempt(targetId);
+            
+            if (!shouldContinue) {
+                // Client exceeded ghost tree attack limit, disconnect them
+                running = false;
                 return;
             }
+            
+            // Send tree removal message to client to remove the ghost tree
+            TreeRemovalMessage removalMsg = new TreeRemovalMessage("server", targetId, 
+                "Tree does not exist in server world state");
+            sendMessage(removalMsg);
+            
+            System.out.println("[GHOST_TREE] Sent TreeRemovalMessage to client " + clientId + " for tree " + targetId);
+            return;
         }
         
         // Check if tree was already destroyed
@@ -785,6 +725,33 @@ public class ClientConnection implements Runnable {
     private void logSecurityViolation(String violation) {
         System.err.println("[SECURITY] Client " + clientId + " - " + violation + 
                          " from " + socket.getInetAddress());
+    }
+    
+    /**
+     * Logs a ghost tree attack attempt and tracks repeated attempts.
+     * If the client exceeds the maximum allowed ghost tree attacks, the connection is terminated.
+     * @param treeId The position key of the ghost tree
+     * @return true if the connection should continue, false if it should be terminated
+     */
+    private boolean logGhostTreeAttempt(String treeId) {
+        int count = ghostTreeAttempts.getOrDefault(treeId, 0) + 1;
+        ghostTreeAttempts.put(treeId, count);
+        
+        System.err.println("[GHOST_TREE] Client " + clientId + 
+                          " attacked non-existent tree " + treeId + 
+                          " (attempt #" + count + ")");
+        
+        // Calculate total ghost tree attacks across all positions
+        int totalAttempts = ghostTreeAttempts.values().stream().mapToInt(Integer::intValue).sum();
+        
+        if (totalAttempts > MAX_GHOST_TREE_ATTACKS) {
+            System.err.println("[SECURITY] Client " + clientId + 
+                             " exceeded ghost tree attack limit (" + totalAttempts + " total attempts)");
+            logSecurityViolation("Exceeded ghost tree attack limit: " + totalAttempts + " attempts");
+            return false; // Signal to terminate connection
+        }
+        
+        return true; // Connection should continue
     }
     
     /**

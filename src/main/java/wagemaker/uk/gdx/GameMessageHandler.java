@@ -65,8 +65,14 @@ public class GameMessageHandler extends DefaultMessageHandler {
         worldState.setTrees(message.getTrees());
         worldState.setItems(message.getItems());
         worldState.setClearedPositions(message.getClearedPositions());
+        worldState.setRainZones(message.getRainZones());
         
         game.syncWorldState(worldState);
+        
+        // Sync rain zones to the rain system
+        if (message.getRainZones() != null && game.rainSystem != null) {
+            game.rainSystem.syncRainZones(message.getRainZones());
+        }
     }
     
     @Override

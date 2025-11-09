@@ -34,6 +34,7 @@ import wagemaker.uk.trees.Cactus;
 import wagemaker.uk.trees.CoconutTree;
 import wagemaker.uk.trees.SmallTree;
 import wagemaker.uk.ui.GameMenu;
+import wagemaker.uk.weather.RainSystem;
 
 /**
  * Main game class for Woodlanders multiplayer game.
@@ -162,6 +163,7 @@ public class MyGdxGame extends ApplicationAdapter {
     Random random;
     long worldSeed; // World seed for deterministic generation
     GameMenu gameMenu;
+    RainSystem rainSystem; // Weather system for localized rain effects
     
     // Multiplayer fields
     private GameMode gameMode;
@@ -266,6 +268,15 @@ public class MyGdxGame extends ApplicationAdapter {
         grassTexture = createRealisticGrassTexture();
         grassTexture.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat);
 
+        // Initialize rain system
+        rainSystem = new RainSystem(shapeRenderer);
+        rainSystem.initialize();
+        
+        // Initialize default rain zones for single-player mode
+        // In multiplayer mode, rain zones will be synced from server
+        if (gameMode == GameMode.SINGLEPLAYER) {
+            rainSystem.getZoneManager().initializeDefaultZones();
+        }
 
     }
 
@@ -356,6 +367,11 @@ public class MyGdxGame extends ApplicationAdapter {
         if (!gameMenu.isAnyMenuOpen()) {
             // update player and camera
             player.update(deltaTime);
+            
+            // update rain system with player position
+            float playerCenterX = player.getX() + 50; // Player sprite is 100x100, center at +50
+            float playerCenterY = player.getY() + 50;
+            rainSystem.update(deltaTime, playerCenterX, playerCenterY, camera);
         
         // update trees
         for (SmallTree tree : trees.values()) {
@@ -413,6 +429,9 @@ public class MyGdxGame extends ApplicationAdapter {
         drawAppleTrees();
         drawBananaTrees();
         batch.end();
+        
+        // Render rain effects after batch.end() but before UI
+        rainSystem.render(camera);
         
         // draw player name tag above player
         gameMenu.renderPlayerNameTag(batch);
@@ -2102,6 +2121,11 @@ public class MyGdxGame extends ApplicationAdapter {
             cactus.dispose();
         }
         gameMenu.dispose();
+        
+        // Dispose rain system
+        if (rainSystem != null) {
+            rainSystem.dispose();
+        }
         
         // Clean up multiplayer resources
         if (gameClient != null) {

@@ -1,8 +1,13 @@
 package wagemaker.uk.network;
 
+import wagemaker.uk.weather.RainConfig;
+import wagemaker.uk.weather.RainZone;
+
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,6 +24,7 @@ public class WorldState implements Serializable {
     private Map<String, TreeState> trees;
     private Map<String, ItemState> items;
     private Set<String> clearedPositions;
+    private List<RainZone> rainZones;
     private long lastUpdateTimestamp;
     
     public WorldState() {
@@ -26,6 +32,7 @@ public class WorldState implements Serializable {
         this.trees = new ConcurrentHashMap<>();
         this.items = new ConcurrentHashMap<>();
         this.clearedPositions = ConcurrentHashMap.newKeySet();
+        this.rainZones = new ArrayList<>();
         this.lastUpdateTimestamp = System.currentTimeMillis();
     }
     
@@ -34,6 +41,26 @@ public class WorldState implements Serializable {
         this.worldSeed = worldSeed;
         // Generate initial trees around spawn point
         generateInitialTrees();
+        // Initialize rain zones
+        initializeRainZones();
+    }
+    
+    /**
+     * Initializes default rain zones for the world.
+     * Creates a rain zone at the spawn area using configuration values.
+     */
+    private void initializeRainZones() {
+        this.rainZones = new ArrayList<>();
+        // Add spawn area rain zone using configuration constants
+        RainZone spawnRain = new RainZone(
+            RainConfig.SPAWN_ZONE_ID,
+            RainConfig.SPAWN_ZONE_CENTER_X,
+            RainConfig.SPAWN_ZONE_CENTER_Y,
+            RainConfig.SPAWN_ZONE_RADIUS,
+            RainConfig.DEFAULT_FADE_DISTANCE,
+            RainConfig.DEFAULT_INTENSITY
+        );
+        this.rainZones.add(spawnRain);
     }
     
     /**
@@ -172,6 +199,22 @@ public class WorldState implements Serializable {
         
         // Copy cleared positions
         snapshot.clearedPositions.addAll(this.clearedPositions);
+        
+        // Deep copy rain zones
+        if (this.rainZones != null) {
+            snapshot.rainZones = new ArrayList<>();
+            for (RainZone zone : this.rainZones) {
+                RainZone copy = new RainZone(
+                    zone.getZoneId(),
+                    zone.getCenterX(),
+                    zone.getCenterY(),
+                    zone.getRadius(),
+                    zone.getFadeDistance(),
+                    zone.getIntensity()
+                );
+                snapshot.rainZones.add(copy);
+            }
+        }
         
         snapshot.lastUpdateTimestamp = this.lastUpdateTimestamp;
         
@@ -316,6 +359,14 @@ public class WorldState implements Serializable {
     
     public void setLastUpdateTimestamp(long lastUpdateTimestamp) {
         this.lastUpdateTimestamp = lastUpdateTimestamp;
+    }
+    
+    public List<RainZone> getRainZones() {
+        return rainZones;
+    }
+    
+    public void setRainZones(List<RainZone> rainZones) {
+        this.rainZones = rainZones;
     }
     
     // Convenience methods for managing state

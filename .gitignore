@@ -4,3 +4,5 @@
 /*.iml
 /.vscode
 out/
+/gradlew
+/server.log

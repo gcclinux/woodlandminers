@@ -94,7 +94,8 @@ public class ClientConnection implements Runnable {
                 snapshot.getPlayers(),
                 snapshot.getTrees(),
                 snapshot.getItems(),
-                snapshot.getClearedPositions()));
+                snapshot.getClearedPositions(),
+                snapshot.getRainZones()));
             
             // Add player to world state
             server.getWorldState().addOrUpdatePlayer(playerState);

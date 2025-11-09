@@ -1,5 +1,8 @@
 package wagemaker.uk.network;
 
+import wagemaker.uk.weather.RainZone;
+
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -15,6 +18,7 @@ public class WorldStateMessage extends NetworkMessage {
     private Map<String, TreeState> trees;
     private Map<String, ItemState> items;
     private Set<String> clearedPositions;
+    private List<RainZone> rainZones;
     
     public WorldStateMessage() {
         super();
@@ -24,13 +28,15 @@ public class WorldStateMessage extends NetworkMessage {
                             Map<String, PlayerState> players,
                             Map<String, TreeState> trees,
                             Map<String, ItemState> items,
-                            Set<String> clearedPositions) {
+                            Set<String> clearedPositions,
+                            List<RainZone> rainZones) {
         super(senderId);
         this.worldSeed = worldSeed;
         this.players = players;
         this.trees = trees;
         this.items = items;
         this.clearedPositions = clearedPositions;
+        this.rainZones = rainZones;
     }
     
     @Override
@@ -56,5 +62,9 @@ public class WorldStateMessage extends NetworkMessage {
     
     public Set<String> getClearedPositions() {
         return clearedPositions;
+    }
+    
+    public List<RainZone> getRainZones() {
+        return rainZones;
     }
 }

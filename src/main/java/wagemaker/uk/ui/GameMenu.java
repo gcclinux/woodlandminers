@@ -183,38 +183,55 @@ public class GameMenu {
             float x, y, health;
             
             if (isMultiplayer) {
-                // Load multiplayer position
+                // Load multiplayer position from object format
                 try {
-                    x = parseJsonFloat(jsonContent, "\"multiplayerX\":");
-                    y = parseJsonFloat(jsonContent, "\"multiplayerY\":");
+                    x = parseJsonObjectFloat(jsonContent, "\"multiplayerPosition\"", "x");
+                    y = parseJsonObjectFloat(jsonContent, "\"multiplayerPosition\"", "y");
                     health = parseJsonFloat(jsonContent, "\"multiplayerHealth\":");
-                    System.out.println("Loading multiplayer position");
+                    System.out.println("Loading multiplayer position from object format");
                 } catch (Exception e) {
-                    // Fallback to spawn if multiplayer position doesn't exist
-                    System.out.println("No multiplayer position found, using spawn (0, 0)");
-                    x = 0;
-                    y = 0;
-                    health = 100.0f;
-                }
-            } else {
-                // Load singleplayer position
-                try {
-                    x = parseJsonFloat(jsonContent, "\"singleplayerX\":");
-                    y = parseJsonFloat(jsonContent, "\"singleplayerY\":");
-                    health = parseJsonFloat(jsonContent, "\"singleplayerHealth\":");
-                    System.out.println("Loading singleplayer position");
-                } catch (Exception e) {
-                    // Fallback to old format for backwards compatibility
+
+                    // Fallback to flat format for backwards compatibility
                     try {
-                        x = parseJsonFloat(jsonContent, "\"x\":");
-                        y = parseJsonFloat(jsonContent, "\"y\":");
-                        health = parseJsonFloat(jsonContent, "\"playerHealth\":");
-                        System.out.println("Loading position from legacy format");
+                        x = parseJsonFloat(jsonContent, "\"multiplayerX\":");
+                        y = parseJsonFloat(jsonContent, "\"multiplayerY\":");
+                        health = parseJsonFloat(jsonContent, "\"multiplayerHealth\":");
+                        System.out.println("Loading multiplayer position from legacy flat format");
                     } catch (Exception e2) {
-                        System.out.println("No singleplayer position found, using default (0, 0)");
+                        // Fallback to spawn if multiplayer position doesn't exist
+                        System.out.println("No multiplayer position found, using spawn (0, 0)");
                         x = 0;
                         y = 0;
                         health = 100.0f;
+                    }
+                }
+            } else {
+                // Load singleplayer position from object format
+                try {
+                    x = parseJsonObjectFloat(jsonContent, "\"singleplayerPosition\"", "x");
+                    y = parseJsonObjectFloat(jsonContent, "\"singleplayerPosition\"", "y");
+                    health = parseJsonFloat(jsonContent, "\"singleplayerHealth\":");
+                    System.out.println("Loading singleplayer position from object format");
+                } catch (Exception e) {
+                    // Fallback to flat format for backwards compatibility
+                    try {
+                        x = parseJsonFloat(jsonContent, "\"singleplayerX\":");
+                        y = parseJsonFloat(jsonContent, "\"singleplayerY\":");
+                        health = parseJsonFloat(jsonContent, "\"singleplayerHealth\":");
+                        System.out.println("Loading singleplayer position from legacy flat format");
+                    } catch (Exception e2) {
+                        // Fallback to old format for backwards compatibility
+                        try {
+                            x = parseJsonFloat(jsonContent, "\"x\":");
+                            y = parseJsonFloat(jsonContent, "\"y\":");
+                            health = parseJsonFloat(jsonContent, "\"playerHealth\":");
+                            System.out.println("Loading position from legacy format");
+                        } catch (Exception e3) {
+                            System.out.println("No singleplayer position found, using default (0, 0)");
+                            x = 0;
+                            y = 0;
+                            health = 100.0f;
+                        }
                     }
                 }
             }
@@ -312,6 +329,33 @@ public class GameMenu {
         }
         
         return null;
+    }
+    
+    private float parseJsonObjectFloat(String json, String objectKey, String propertyKey) {
+        // Find the object
+        int objectIndex = json.indexOf(objectKey);
+        if (objectIndex == -1) {
+            throw new RuntimeException("Object not found: " + objectKey);
+        }
+        
+        // Find the opening brace of the object
+        int braceStart = json.indexOf("{", objectIndex);
+        if (braceStart == -1) {
+            throw new RuntimeException("Object opening brace not found for: " + objectKey);
+        }
+        
+        // Find the closing brace of the object
+        int braceEnd = json.indexOf("}", braceStart);
+        if (braceEnd == -1) {
+            throw new RuntimeException("Object closing brace not found for: " + objectKey);
+        }
+        
+        // Extract the object content
+        String objectContent = json.substring(braceStart + 1, braceEnd);
+        
+        // Parse the property within the object
+        String propertyPattern = "\"" + propertyKey + "\":";
+        return parseJsonFloat(objectContent, propertyPattern);
     }
 
     public void update() {
@@ -568,21 +612,35 @@ public class GameMenu {
                     String existingContent = new String(Files.readAllBytes(Paths.get(saveFile.getAbsolutePath())));
                     lastServer = parseJsonString(existingContent, "\"lastServer\":");
                     
-                    // Try to read existing positions
+                    // Try to read existing positions from object format first
                     try {
-                        singleplayerX = parseJsonFloat(existingContent, "\"singleplayerX\":");
-                        singleplayerY = parseJsonFloat(existingContent, "\"singleplayerY\":");
+                        singleplayerX = parseJsonObjectFloat(existingContent, "\"singleplayerPosition\"", "x");
+                        singleplayerY = parseJsonObjectFloat(existingContent, "\"singleplayerPosition\"", "y");
                         singleplayerHealth = parseJsonFloat(existingContent, "\"singleplayerHealth\":");
                     } catch (Exception e) {
-                        // Singleplayer position doesn't exist yet
+                        // Fallback to flat format for backwards compatibility
+                        try {
+                            singleplayerX = parseJsonFloat(existingContent, "\"singleplayerX\":");
+                            singleplayerY = parseJsonFloat(existingContent, "\"singleplayerY\":");
+                            singleplayerHealth = parseJsonFloat(existingContent, "\"singleplayerHealth\":");
+                        } catch (Exception e2) {
+                            // Singleplayer position doesn't exist yet
+                        }
                     }
                     
                     try {
-                        multiplayerX = parseJsonFloat(existingContent, "\"multiplayerX\":");
-                        multiplayerY = parseJsonFloat(existingContent, "\"multiplayerY\":");
+                        multiplayerX = parseJsonObjectFloat(existingContent, "\"multiplayerPosition\"", "x");
+                        multiplayerY = parseJsonObjectFloat(existingContent, "\"multiplayerPosition\"", "y");
                         multiplayerHealth = parseJsonFloat(existingContent, "\"multiplayerHealth\":");
                     } catch (Exception e) {
-                        // Multiplayer position doesn't exist yet
+                        // Fallback to flat format for backwards compatibility
+                        try {
+                            multiplayerX = parseJsonFloat(existingContent, "\"multiplayerX\":");
+                            multiplayerY = parseJsonFloat(existingContent, "\"multiplayerY\":");
+                            multiplayerHealth = parseJsonFloat(existingContent, "\"multiplayerHealth\":");
+                        } catch (Exception e2) {
+                            // Multiplayer position doesn't exist yet
+                        }
                     }
                 } catch (Exception e) {
                     System.out.println("Could not read existing save data: " + e.getMessage());
@@ -618,8 +676,6 @@ public class GameMenu {
                 jsonBuilder.append(String.format("    \"x\": %.2f,\n", singleplayerX));
                 jsonBuilder.append(String.format("    \"y\": %.2f\n", singleplayerY));
                 jsonBuilder.append("  },\n");
-                jsonBuilder.append(String.format("  \"singleplayerX\": %.2f,\n", singleplayerX));
-                jsonBuilder.append(String.format("  \"singleplayerY\": %.2f,\n", singleplayerY));
                 jsonBuilder.append(String.format("  \"singleplayerHealth\": %.1f,\n", singleplayerHealth));
             }
             
@@ -629,8 +685,6 @@ public class GameMenu {
                 jsonBuilder.append(String.format("    \"x\": %.2f,\n", multiplayerX));
                 jsonBuilder.append(String.format("    \"y\": %.2f\n", multiplayerY));
                 jsonBuilder.append("  },\n");
-                jsonBuilder.append(String.format("  \"multiplayerX\": %.2f,\n", multiplayerX));
-                jsonBuilder.append(String.format("  \"multiplayerY\": %.2f,\n", multiplayerY));
                 jsonBuilder.append(String.format("  \"multiplayerHealth\": %.1f,\n", multiplayerHealth));
             }
             

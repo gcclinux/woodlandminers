@@ -42,6 +42,7 @@ public class ClientConnection implements Runnable {
     private boolean running;
     private Map<String, Long> playerAttackCooldowns;
     private Map<String, Integer> ghostTreeAttempts;
+    private boolean isFirstPositionUpdate = true;
     
     /**
      * Creates a new ClientConnection.
@@ -250,23 +251,29 @@ public class ClientConnection implements Runnable {
             return;
         }
         
-        // Validate position (speed check)
-        float dx = message.getX() - playerState.getX();
-        float dy = message.getY() - playerState.getY();
-        float distance = (float) Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance > MAX_DISTANCE_PER_UPDATE) {
-            // Possible cheating or desync, send correction
-            System.out.println("Invalid movement from " + clientId + ", distance: " + distance + 
-                             " (max: " + MAX_DISTANCE_PER_UPDATE + ")");
-            logSecurityViolation("Speed check failed: distance=" + distance);
+        // Validate position (speed check) - skip for first position update to allow saved position loading
+        if (!isFirstPositionUpdate) {
+            float dx = message.getX() - playerState.getX();
+            float dy = message.getY() - playerState.getY();
+            float distance = (float) Math.sqrt(dx * dx + dy * dy);
             
-            // Send position correction to client
-            String reason = "Speed check failed: moved " + String.format("%.1f", distance) + " pixels";
-            sendMessage(new PositionCorrectionMessage("server", clientId,
-                playerState.getX(), playerState.getY(), 
-                playerState.getDirection(), reason));
-            return;
+            if (distance > MAX_DISTANCE_PER_UPDATE) {
+                // Possible cheating or desync, send correction
+                System.out.println("Invalid movement from " + clientId + ", distance: " + distance + 
+                                 " (max: " + MAX_DISTANCE_PER_UPDATE + ")");
+                logSecurityViolation("Speed check failed: distance=" + distance);
+                
+                // Send position correction to client
+                String reason = "Speed check failed: moved " + String.format("%.1f", distance) + " pixels";
+                sendMessage(new PositionCorrectionMessage("server", clientId,
+                    playerState.getX(), playerState.getY(), 
+                    playerState.getDirection(), reason));
+                return;
+            }
+        } else {
+            // First position update - allow client to spawn at their saved position
+            System.out.println("First position update from " + clientId + ": (" + message.getX() + ", " + message.getY() + ")");
+            isFirstPositionUpdate = false;
         }
         
         // Update player state

@@ -33,15 +33,11 @@ The new save file format includes separate position data:
     "x": 123.45,
     "y": 678.90
   },
-  "singleplayerX": 123.45,
-  "singleplayerY": 678.90,
   "singleplayerHealth": 100.0,
   "multiplayerPosition": {
     "x": 0.00,
     "y": 0.00
   },
-  "multiplayerX": 0.00,
-  "multiplayerY": 0.00,
   "multiplayerHealth": 100.0,
   "lastServer": "localhost:25565",
   "savedAt": "Sun Nov 09 12:34:56 UTC 2025"
@@ -51,7 +47,8 @@ The new save file format includes separate position data:
 ## Backwards Compatibility
 
 The system maintains backwards compatibility with old save files:
-- If loading a singleplayer position and the new format doesn't exist, it falls back to the old `x`, `y`, and `playerHealth` fields
+- If loading a position and the object format doesn't exist, it falls back to the flat format (`singleplayerX`, `singleplayerY`, etc.)
+- For singleplayer, it also falls back to the original format (`x`, `y`, and `playerHealth` fields)
 - If no position data exists for a mode, the player spawns at the default position (0, 0)
 
 ## Benefits
@@ -75,6 +72,6 @@ The system maintains backwards compatibility with old save files:
   - `disconnectFromMultiplayer()` now saves multiplayer position and loads singleplayer position
 
 ### Position Tracking
-- Positions are tracked using flat fields (`singleplayerX`, `singleplayerY`, etc.) for easy parsing
-- Nested objects (`singleplayerPosition`, `multiplayerPosition`) are included for better organization
-- Health is also tracked separately for each mode
+- Positions are now stored using nested objects (`singleplayerPosition`, `multiplayerPosition`) for better organization
+- The old flat format (`singleplayerX`, `singleplayerY`, etc.) is supported for backwards compatibility but no longer written to new saves
+- Health is tracked separately for each mode using flat fields (`singleplayerHealth`, `multiplayerHealth`)

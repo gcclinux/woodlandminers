@@ -171,7 +171,8 @@ public class GameServer {
             if (isPrivateAddress(hostAddress)) {
                 // Try to get public IP from external service
                 try {
-                    URL whatismyip = new URL("http://checkip.amazonaws.com");
+                    URI uri = new URI("http://checkip.amazonaws.com");
+                    URL whatismyip = uri.toURL();
                     BufferedReader in = new BufferedReader(new InputStreamReader(whatismyip.openStream()));
                     String ip = in.readLine();
                     in.close();

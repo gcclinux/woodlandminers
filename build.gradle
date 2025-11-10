@@ -56,6 +56,7 @@ run {
 // Client JAR task (full game with rendering)
 jar {
     archiveBaseName = 'woodlanders-client'
+    archiveVersion = ''
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     manifest {
         attributes 'Main-Class': application.mainClass
@@ -66,6 +67,7 @@ jar {
 // Server JAR task for dedicated server (headless, no rendering)
 task serverJar(type: Jar) {
     archiveBaseName = 'woodlanders-server'
+    archiveVersion = ''
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     
     manifest {

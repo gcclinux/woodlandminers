@@ -33,6 +33,7 @@ import wagemaker.uk.trees.BananaTree;
 import wagemaker.uk.trees.Cactus;
 import wagemaker.uk.trees.CoconutTree;
 import wagemaker.uk.trees.SmallTree;
+import wagemaker.uk.ui.Compass;
 import wagemaker.uk.ui.GameMenu;
 import wagemaker.uk.weather.RainSystem;
 
@@ -172,6 +173,9 @@ public class MyGdxGame extends ApplicationAdapter {
     private Map<String, RemotePlayer> remotePlayers;  // Other players in multiplayer
     private wagemaker.uk.ui.ConnectionQualityIndicator connectionQualityIndicator;
     
+    // UI components
+    private Compass compass;
+    
     // Notification system
     private String currentNotification;
     private float notificationTimer;
@@ -263,6 +267,9 @@ public class MyGdxGame extends ApplicationAdapter {
         
         // Initialize connection quality indicator (will be set when connecting)
         connectionQualityIndicator = new wagemaker.uk.ui.ConnectionQualityIndicator(null, gameMenu.getFont());
+        
+        // Initialize compass
+        compass = new Compass();
 
         // create realistic grass texture
         grassTexture = createRealisticGrassTexture();
@@ -450,6 +457,14 @@ public class MyGdxGame extends ApplicationAdapter {
             float screenY = camera.position.y + viewport.getWorldHeight() / 2 - 20;
             connectionQualityIndicator.render(batch, shapeRenderer, screenX, screenY);
         }
+        
+        // update and render compass (only when menu is not open)
+        if (!gameMenu.isAnyMenuOpen()) {
+            compass.update(player.getX(), player.getY(), 0.0f, 0.0f);
+        }
+        batch.begin();
+        compass.render(batch, camera, viewport);
+        batch.end();
         
         // draw menu on top
         gameMenu.render(batch, shapeRenderer, camera.position.x, camera.position.y, viewport.getWorldWidth(), viewport.getWorldHeight());
@@ -2227,6 +2242,11 @@ public class MyGdxGame extends ApplicationAdapter {
             cactus.dispose();
         }
         gameMenu.dispose();
+        
+        // Dispose compass
+        if (compass != null) {
+            compass.dispose();
+        }
         
         // Dispose rain system
         if (rainSystem != null) {

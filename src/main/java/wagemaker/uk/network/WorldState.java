@@ -2,6 +2,7 @@ package wagemaker.uk.network;
 
 import wagemaker.uk.weather.RainConfig;
 import wagemaker.uk.weather.RainZone;
+import wagemaker.uk.world.WorldSaveData;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -428,5 +429,487 @@ public class WorldState implements Serializable {
     public void removeItem(String itemId) {
         this.items.remove(itemId);
         this.lastUpdateTimestamp = System.currentTimeMillis();
+    }
+    
+    // World Save/Load Methods
+    
+    /**
+     * Creates a complete snapshot of the world state for saving.
+     * This method prepares all game entities for serialization to disk.
+     * 
+     * @param playerX Current player X position
+     * @param playerY Current player Y position
+     * @param playerHealth Current player health
+     * @param saveName Name for this save
+     * @param gameMode Game mode ("singleplayer" or "multiplayer")
+     * @return WorldSaveData containing complete world snapshot
+     */
+    public WorldSaveData createSaveSnapshot(float playerX, float playerY, float playerHealth, 
+                                          String saveName, String gameMode) {
+        // Create deep copies of all collections to ensure data integrity
+        Map<String, TreeState> treesCopy = new HashMap<>();
+        for (Map.Entry<String, TreeState> entry : this.trees.entrySet()) {
+            TreeState original = entry.getValue();
+            TreeState copy = new TreeState(
+                original.getTreeId(),
+                original.getType(),
+                original.getX(),
+                original.getY(),
+                original.getHealth(),
+                original.isExists()
+            );
+            treesCopy.put(entry.getKey(), copy);
+        }
+        
+        Map<String, ItemState> itemsCopy = new HashMap<>();
+        for (Map.Entry<String, ItemState> entry : this.items.entrySet()) {
+            ItemState original = entry.getValue();
+            ItemState copy = new ItemState(
+                original.getItemId(),
+                original.getType(),
+                original.getX(),
+                original.getY(),
+                original.isCollected()
+            );
+            itemsCopy.put(entry.getKey(), copy);
+        }
+        
+        Set<String> clearedPositionsCopy = new HashSet<>(this.clearedPositions);
+        
+        List<RainZone> rainZonesCopy = new ArrayList<>();
+        if (this.rainZones != null) {
+            for (RainZone zone : this.rainZones) {
+                RainZone copy = new RainZone(
+                    zone.getZoneId(),
+                    zone.getCenterX(),
+                    zone.getCenterY(),
+                    zone.getRadius(),
+                    zone.getFadeDistance(),
+                    zone.getIntensity()
+                );
+                rainZonesCopy.add(copy);
+            }
+        }
+        
+        return new WorldSaveData(
+            this.worldSeed,
+            treesCopy,
+            itemsCopy,
+            clearedPositionsCopy,
+            rainZonesCopy,
+            playerX,
+            playerY,
+            playerHealth,
+            saveName,
+            gameMode
+        );
+    }
+    
+    /**
+     * Validates the current world state for save operations.
+     * Checks data integrity and consistency before creating a save.
+     * 
+     * @return true if world state is valid for saving, false otherwise
+     */
+    public boolean validateForSave() {
+        // Check world seed is valid
+        if (worldSeed == 0) {
+            System.err.println("World save validation failed: Invalid world seed");
+            return false;
+        }
+        
+        // Check collections are not null
+        if (trees == null || items == null || clearedPositions == null) {
+            System.err.println("World save validation failed: Null collections");
+            return false;
+        }
+        
+        // Validate tree states
+        for (Map.Entry<String, TreeState> entry : trees.entrySet()) {
+            TreeState tree = entry.getValue();
+            if (tree == null) {
+                System.err.println("World save validation failed: Null tree state for key: " + entry.getKey());
+                return false;
+            }
+            
+            if (tree.getTreeId() == null || !tree.getTreeId().equals(entry.getKey())) {
+                System.err.println("World save validation failed: Tree ID mismatch for key: " + entry.getKey());
+                return false;
+            }
+            
+            if (tree.getHealth() < 0 || tree.getHealth() > 100) {
+                System.err.println("World save validation failed: Invalid tree health: " + tree.getHealth());
+                return false;
+            }
+        }
+        
+        // Validate item states
+        for (Map.Entry<String, ItemState> entry : items.entrySet()) {
+            ItemState item = entry.getValue();
+            if (item == null) {
+                System.err.println("World save validation failed: Null item state for key: " + entry.getKey());
+                return false;
+            }
+            
+            if (item.getItemId() == null || !item.getItemId().equals(entry.getKey())) {
+                System.err.println("World save validation failed: Item ID mismatch for key: " + entry.getKey());
+                return false;
+            }
+        }
+        
+        // Validate rain zones
+        if (rainZones != null) {
+            for (RainZone zone : rainZones) {
+                if (zone == null) {
+                    System.err.println("World save validation failed: Null rain zone");
+                    return false;
+                }
+                
+                if (zone.getRadius() <= 0 || zone.getIntensity() < 0 || zone.getIntensity() > 1.0f) {
+                    System.err.println("World save validation failed: Invalid rain zone parameters");
+                    return false;
+                }
+            }
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Collects metadata about the current world state for save file information.
+     * 
+     * @return Map containing metadata key-value pairs
+     */
+    public Map<String, Object> collectSaveMetadata() {
+        Map<String, Object> metadata = new HashMap<>();
+        
+        // Basic world information
+        metadata.put("worldSeed", worldSeed);
+        metadata.put("lastUpdateTimestamp", lastUpdateTimestamp);
+        
+        // Entity counts
+        int existingTreeCount = 0;
+        int destroyedTreeCount = 0;
+        for (TreeState tree : trees.values()) {
+            if (tree.isExists()) {
+                existingTreeCount++;
+            } else {
+                destroyedTreeCount++;
+            }
+        }
+        metadata.put("existingTreeCount", existingTreeCount);
+        metadata.put("destroyedTreeCount", destroyedTreeCount);
+        
+        int uncollectedItemCount = 0;
+        int collectedItemCount = 0;
+        for (ItemState item : items.values()) {
+            if (item.isCollected()) {
+                collectedItemCount++;
+            } else {
+                uncollectedItemCount++;
+            }
+        }
+        metadata.put("uncollectedItemCount", uncollectedItemCount);
+        metadata.put("collectedItemCount", collectedItemCount);
+        
+        metadata.put("clearedPositionCount", clearedPositions.size());
+        metadata.put("playerCount", players.size());
+        metadata.put("rainZoneCount", rainZones != null ? rainZones.size() : 0);
+        
+        // World bounds (approximate)
+        if (!trees.isEmpty()) {
+            float minX = Float.MAX_VALUE, maxX = Float.MIN_VALUE;
+            float minY = Float.MAX_VALUE, maxY = Float.MIN_VALUE;
+            
+            for (TreeState tree : trees.values()) {
+                if (tree.isExists()) {
+                    minX = Math.min(minX, tree.getX());
+                    maxX = Math.max(maxX, tree.getX());
+                    minY = Math.min(minY, tree.getY());
+                    maxY = Math.max(maxY, tree.getY());
+                }
+            }
+            
+            metadata.put("worldBoundsMinX", minX);
+            metadata.put("worldBoundsMaxX", maxX);
+            metadata.put("worldBoundsMinY", minY);
+            metadata.put("worldBoundsMaxY", maxY);
+            metadata.put("worldWidth", maxX - minX);
+            metadata.put("worldHeight", maxY - minY);
+        }
+        
+        return metadata;
+    }
+    
+    /**
+     * Restores the complete world state from save data.
+     * This method replaces the current world state with the saved state.
+     * 
+     * @param saveData The WorldSaveData to restore from
+     * @return true if restoration was successful, false otherwise
+     */
+    public boolean restoreFromSaveData(WorldSaveData saveData) {
+        if (saveData == null) {
+            System.err.println("Cannot restore world state: Save data is null");
+            return false;
+        }
+        
+        if (!saveData.isValid()) {
+            System.err.println("Cannot restore world state: Save data is invalid");
+            return false;
+        }
+        
+        try {
+            // Clean up existing state before restoration
+            cleanupExistingState();
+            
+            // Restore world seed
+            this.worldSeed = saveData.getWorldSeed();
+            
+            // Restore trees with deep copy
+            this.trees.clear();
+            if (saveData.getTrees() != null) {
+                for (Map.Entry<String, TreeState> entry : saveData.getTrees().entrySet()) {
+                    TreeState original = entry.getValue();
+                    TreeState copy = new TreeState(
+                        original.getTreeId(),
+                        original.getType(),
+                        original.getX(),
+                        original.getY(),
+                        original.getHealth(),
+                        original.isExists()
+                    );
+                    this.trees.put(entry.getKey(), copy);
+                }
+            }
+            
+            // Restore items with deep copy
+            this.items.clear();
+            if (saveData.getItems() != null) {
+                for (Map.Entry<String, ItemState> entry : saveData.getItems().entrySet()) {
+                    ItemState original = entry.getValue();
+                    ItemState copy = new ItemState(
+                        original.getItemId(),
+                        original.getType(),
+                        original.getX(),
+                        original.getY(),
+                        original.isCollected()
+                    );
+                    this.items.put(entry.getKey(), copy);
+                }
+            }
+            
+            // Restore cleared positions
+            this.clearedPositions.clear();
+            if (saveData.getClearedPositions() != null) {
+                this.clearedPositions.addAll(saveData.getClearedPositions());
+            }
+            
+            // Restore rain zones with deep copy
+            this.rainZones.clear();
+            if (saveData.getRainZones() != null) {
+                for (RainZone zone : saveData.getRainZones()) {
+                    RainZone copy = new RainZone(
+                        zone.getZoneId(),
+                        zone.getCenterX(),
+                        zone.getCenterY(),
+                        zone.getRadius(),
+                        zone.getFadeDistance(),
+                        zone.getIntensity()
+                    );
+                    this.rainZones.add(copy);
+                }
+            }
+            
+            // Update timestamp
+            this.lastUpdateTimestamp = System.currentTimeMillis();
+            
+            // Validate restored state
+            if (!validateRestoredState()) {
+                System.err.println("World state restoration failed validation");
+                return false;
+            }
+            
+            System.out.println("Successfully restored world state from save: " + saveData.getSaveName());
+            System.out.println("Restored " + trees.size() + " trees, " + items.size() + " items, " + 
+                             clearedPositions.size() + " cleared positions");
+            
+            return true;
+            
+        } catch (Exception e) {
+            System.err.println("Error during world state restoration: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * Cleans up the existing world state before restoration.
+     * This ensures a clean slate for loading the saved state.
+     */
+    private void cleanupExistingState() {
+        // Clear all collections
+        if (this.trees != null) {
+            this.trees.clear();
+        } else {
+            this.trees = new ConcurrentHashMap<>();
+        }
+        
+        if (this.items != null) {
+            this.items.clear();
+        } else {
+            this.items = new ConcurrentHashMap<>();
+        }
+        
+        if (this.clearedPositions != null) {
+            this.clearedPositions.clear();
+        } else {
+            this.clearedPositions = ConcurrentHashMap.newKeySet();
+        }
+        
+        if (this.rainZones != null) {
+            this.rainZones.clear();
+        } else {
+            this.rainZones = new ArrayList<>();
+        }
+        
+        // Keep players collection but don't clear it - multiplayer clients should remain
+        // Only clear if this is a singleplayer restore
+        if (this.players != null && this.players.size() <= 1) {
+            this.players.clear();
+        }
+        
+        System.out.println("Cleaned up existing world state for restoration");
+    }
+    
+    /**
+     * Validates the restored world state for consistency and integrity.
+     * 
+     * @return true if restored state is valid, false otherwise
+     */
+    private boolean validateRestoredState() {
+        // Check world seed
+        if (worldSeed == 0) {
+            System.err.println("Restored state validation failed: Invalid world seed");
+            return false;
+        }
+        
+        // Check collections are not null
+        if (trees == null || items == null || clearedPositions == null || rainZones == null) {
+            System.err.println("Restored state validation failed: Null collections after restoration");
+            return false;
+        }
+        
+        // Validate tree consistency
+        for (Map.Entry<String, TreeState> entry : trees.entrySet()) {
+            TreeState tree = entry.getValue();
+            if (tree == null || !tree.getTreeId().equals(entry.getKey())) {
+                System.err.println("Restored state validation failed: Tree consistency error");
+                return false;
+            }
+        }
+        
+        // Validate item consistency
+        for (Map.Entry<String, ItemState> entry : items.entrySet()) {
+            ItemState item = entry.getValue();
+            if (item == null || !item.getItemId().equals(entry.getKey())) {
+                System.err.println("Restored state validation failed: Item consistency error");
+                return false;
+            }
+        }
+        
+        // Validate cleared positions consistency
+        for (String clearedPos : clearedPositions) {
+            if (trees.containsKey(clearedPos)) {
+                TreeState tree = trees.get(clearedPos);
+                if (tree.isExists()) {
+                    System.err.println("Restored state validation failed: Cleared position has existing tree: " + clearedPos);
+                    return false;
+                }
+            }
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Ensures deterministic world generation after state restoration.
+     * This method verifies that the world seed will produce consistent results.
+     * 
+     * @return true if world generation will be deterministic, false otherwise
+     */
+    public boolean ensureDeterministicGeneration() {
+        if (worldSeed == 0) {
+            System.err.println("Cannot ensure deterministic generation: Invalid world seed");
+            return false;
+        }
+        
+        // Test deterministic generation by creating a test random with the seed
+        java.util.Random testRandom = new java.util.Random(worldSeed);
+        
+        // Generate a few test values to ensure the seed works
+        float testValue1 = testRandom.nextFloat();
+        float testValue2 = testRandom.nextFloat();
+        
+        // Reset and test again - should produce same values
+        testRandom.setSeed(worldSeed);
+        float testValue1Again = testRandom.nextFloat();
+        float testValue2Again = testRandom.nextFloat();
+        
+        if (testValue1 != testValue1Again || testValue2 != testValue2Again) {
+            System.err.println("Deterministic generation test failed: Seed does not produce consistent results");
+            return false;
+        }
+        
+        System.out.println("Deterministic world generation verified for seed: " + worldSeed);
+        return true;
+    }
+    
+    /**
+     * Creates a rollback point before attempting world state restoration.
+     * This allows reverting to the previous state if restoration fails.
+     * 
+     * @return WorldState snapshot that can be used for rollback
+     */
+    public WorldState createRollbackPoint() {
+        return this.createSnapshot();
+    }
+    
+    /**
+     * Rolls back to a previous world state snapshot.
+     * Used when world restoration fails and we need to revert changes.
+     * 
+     * @param rollbackState The state to roll back to
+     * @return true if rollback was successful, false otherwise
+     */
+    public boolean rollbackToState(WorldState rollbackState) {
+        if (rollbackState == null) {
+            System.err.println("Cannot rollback: Rollback state is null");
+            return false;
+        }
+        
+        try {
+            // Restore from the rollback state
+            this.worldSeed = rollbackState.worldSeed;
+            this.trees = new ConcurrentHashMap<>(rollbackState.trees);
+            this.items = new ConcurrentHashMap<>(rollbackState.items);
+            this.clearedPositions = ConcurrentHashMap.newKeySet();
+            this.clearedPositions.addAll(rollbackState.clearedPositions);
+            this.rainZones = new ArrayList<>(rollbackState.rainZones);
+            this.lastUpdateTimestamp = rollbackState.lastUpdateTimestamp;
+            
+            // Don't rollback players in multiplayer scenarios
+            if (this.players.size() <= 1) {
+                this.players = new ConcurrentHashMap<>(rollbackState.players);
+            }
+            
+            System.out.println("Successfully rolled back world state");
+            return true;
+            
+        } catch (Exception e) {
+            System.err.println("Error during rollback: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
 }

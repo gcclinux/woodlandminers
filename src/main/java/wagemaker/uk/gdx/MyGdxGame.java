@@ -2,6 +2,7 @@ package wagemaker.uk.gdx;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -38,6 +39,8 @@ import wagemaker.uk.trees.SmallTree;
 import wagemaker.uk.ui.Compass;
 import wagemaker.uk.ui.GameMenu;
 import wagemaker.uk.weather.RainSystem;
+import wagemaker.uk.world.WorldSaveData;
+import wagemaker.uk.world.WorldSaveManager;
 
 /**
  * Main game class for Woodlanders multiplayer game.
@@ -198,6 +201,11 @@ public class MyGdxGame extends ApplicationAdapter {
     // Queue for operations that must execute on the render thread (e.g., OpenGL operations)
     private java.util.concurrent.ConcurrentLinkedQueue<Runnable> pendingDeferredOperations;
     
+    // World loading state management
+    private WorldSaveData pendingWorldLoad;
+    private WorldState previousWorldState;
+    private boolean worldLoadInProgress;
+    
     // Camera dimensions for infinite world
     static final int CAMERA_WIDTH = 1280;
     static final int CAMERA_HEIGHT = 1024;
@@ -241,6 +249,11 @@ public class MyGdxGame extends ApplicationAdapter {
         
         // Initialize deferred operations queue
         pendingDeferredOperations = new java.util.concurrent.ConcurrentLinkedQueue<>();
+        
+        // Initialize world loading state
+        pendingWorldLoad = null;
+        previousWorldState = null;
+        worldLoadInProgress = false;
 
         // create single cactus near player spawn (128px away)
         cactus = new Cactus(128, 128);
@@ -314,6 +327,9 @@ public class MyGdxGame extends ApplicationAdapter {
         processPendingItemSpawns();
         processPendingTreeRemovals();
         processPendingTreeCreations();
+        
+        // Process pending world load operations on main thread (for OpenGL context)
+        processPendingWorldLoad();
 
         gameMenu.update();
         
@@ -324,6 +340,9 @@ public class MyGdxGame extends ApplicationAdapter {
         } else if (gameMenu.getErrorDialog().isCancelled()) {
             gameMenu.getErrorDialog().reset();
             cancelConnection();
+        } else if (gameMenu.getErrorDialog().isOkSelected()) {
+            gameMenu.getErrorDialog().reset();
+            // For success messages, just close the dialog - no additional action needed
         }
         
         // Handle multiplayer menu selections - delegated to GameMenu
@@ -2113,6 +2132,736 @@ public class MyGdxGame extends ApplicationAdapter {
             screenY);
         
         batch.end();
+    }
+    
+    /**
+     * Extracts the current world state for saving.
+     * Creates a complete snapshot of all game entities including trees, items, 
+     * cleared positions, and rain zones.
+     * 
+     * @return WorldState containing complete current game state
+     */
+    public WorldState extractCurrentWorldState() {
+        WorldState worldState = new WorldState(worldSeed);
+        
+        // Extract tree states
+        Map<String, TreeState> treeStates = new HashMap<>();
+        
+        // Add small trees
+        for (Map.Entry<String, SmallTree> entry : trees.entrySet()) {
+            SmallTree tree = entry.getValue();
+            TreeState treeState = new TreeState(
+                entry.getKey(),
+                TreeType.SMALL,
+                tree.getX(),
+                tree.getY(),
+                tree.getHealth(),
+                true
+            );
+            treeStates.put(entry.getKey(), treeState);
+        }
+        
+        // Add apple trees
+        for (Map.Entry<String, AppleTree> entry : appleTrees.entrySet()) {
+            AppleTree tree = entry.getValue();
+            TreeState treeState = new TreeState(
+                entry.getKey(),
+                TreeType.APPLE,
+                tree.getX(),
+                tree.getY(),
+                tree.getHealth(),
+                true
+            );
+            treeStates.put(entry.getKey(), treeState);
+        }
+        
+        // Add coconut trees
+        for (Map.Entry<String, CoconutTree> entry : coconutTrees.entrySet()) {
+            CoconutTree tree = entry.getValue();
+            TreeState treeState = new TreeState(
+                entry.getKey(),
+                TreeType.COCONUT,
+                tree.getX(),
+                tree.getY(),
+                tree.getHealth(),
+                true
+            );
+            treeStates.put(entry.getKey(), treeState);
+        }
+        
+        // Add bamboo trees
+        for (Map.Entry<String, BambooTree> entry : bambooTrees.entrySet()) {
+            BambooTree tree = entry.getValue();
+            TreeState treeState = new TreeState(
+                entry.getKey(),
+                TreeType.BAMBOO,
+                tree.getX(),
+                tree.getY(),
+                tree.getHealth(),
+                true
+            );
+            treeStates.put(entry.getKey(), treeState);
+        }
+        
+        // Add banana trees
+        for (Map.Entry<String, BananaTree> entry : bananaTrees.entrySet()) {
+            BananaTree tree = entry.getValue();
+            TreeState treeState = new TreeState(
+                entry.getKey(),
+                TreeType.BANANA,
+                tree.getX(),
+                tree.getY(),
+                tree.getHealth(),
+                true
+            );
+            treeStates.put(entry.getKey(), treeState);
+        }
+        
+        worldState.setTrees(treeStates);
+        
+        // Extract item states
+        Map<String, ItemState> itemStates = new HashMap<>();
+        
+        // Add apples
+        for (Map.Entry<String, Apple> entry : apples.entrySet()) {
+            Apple apple = entry.getValue();
+            ItemState itemState = new ItemState(
+                entry.getKey(),
+                ItemType.APPLE,
+                apple.getX(),
+                apple.getY(),
+                false
+            );
+            itemStates.put(entry.getKey(), itemState);
+        }
+        
+        // Add bananas
+        for (Map.Entry<String, Banana> entry : bananas.entrySet()) {
+            Banana banana = entry.getValue();
+            ItemState itemState = new ItemState(
+                entry.getKey(),
+                ItemType.BANANA,
+                banana.getX(),
+                banana.getY(),
+                false
+            );
+            itemStates.put(entry.getKey(), itemState);
+        }
+        
+        worldState.setItems(itemStates);
+        
+        // Extract cleared positions
+        worldState.setClearedPositions(new HashSet<>(clearedPositions.keySet()));
+        
+        // Extract rain zones
+        if (rainSystem != null && rainSystem.getZoneManager() != null) {
+            worldState.setRainZones(rainSystem.getZoneManager().getRainZones());
+        }
+        
+        return worldState;
+    }
+    
+    /**
+     * Restores the world state from WorldSaveData.
+     * This method safely restores all game entities while ensuring proper cleanup
+     * of existing state and thread-safe operations.
+     * 
+     * @param saveData The world save data to restore from
+     * @return true if restoration was successful, false otherwise
+     */
+    public boolean restoreWorldState(WorldSaveData saveData) {
+        if (saveData == null) {
+            System.err.println("Cannot restore world state: save data is null");
+            return false;
+        }
+        
+        try {
+            System.out.println("Restoring world state from save: " + saveData.getSaveName());
+            
+            // Clean up existing world state first
+            cleanupExistingWorldState();
+            
+            // Restore world seed
+            this.worldSeed = saveData.getWorldSeed();
+            System.out.println("Restored world seed: " + worldSeed);
+            
+            // Restore trees
+            if (saveData.getTrees() != null) {
+                restoreTreesFromSave(saveData.getTrees());
+                System.out.println("Restored " + saveData.getTrees().size() + " trees");
+            }
+            
+            // Restore items
+            if (saveData.getItems() != null) {
+                restoreItemsFromSave(saveData.getItems());
+                System.out.println("Restored " + saveData.getItems().size() + " items");
+            }
+            
+            // Restore cleared positions
+            if (saveData.getClearedPositions() != null) {
+                clearedPositions.clear();
+                for (String position : saveData.getClearedPositions()) {
+                    clearedPositions.put(position, true);
+                }
+                System.out.println("Restored " + saveData.getClearedPositions().size() + " cleared positions");
+            }
+            
+            // Restore rain zones
+            if (saveData.getRainZones() != null && rainSystem != null) {
+                rainSystem.getZoneManager().setRainZones(saveData.getRainZones());
+                System.out.println("Restored " + saveData.getRainZones().size() + " rain zones");
+            }
+            
+            // Restore player position and health from world save
+            // Note: This will be overridden by the existing player position save system
+            // if a separate player position save exists
+            if (player != null) {
+                player.setPosition(saveData.getPlayerX(), saveData.getPlayerY());
+                player.setHealth(saveData.getPlayerHealth());
+                System.out.println("Restored player position from world save: (" + saveData.getPlayerX() + ", " + saveData.getPlayerY() + ")");
+                System.out.println("Restored player health from world save: " + saveData.getPlayerHealth());
+                System.out.println("Note: Position may be overridden by existing player position save system");
+            }
+            
+            System.out.println("World state restoration completed successfully");
+            return true;
+            
+        } catch (Exception e) {
+            System.err.println("Error restoring world state: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * Cleans up existing world state before loading a new one.
+     * Ensures proper disposal of resources and prevents memory leaks.
+     */
+    private void cleanupExistingWorldState() {
+        System.out.println("Cleaning up existing world state...");
+        
+        try {
+            // Dispose and clear all tree maps
+            for (SmallTree tree : trees.values()) {
+                try {
+                    tree.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing small tree: " + e.getMessage());
+                }
+            }
+            trees.clear();
+            
+            for (AppleTree tree : appleTrees.values()) {
+                try {
+                    tree.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing apple tree: " + e.getMessage());
+                }
+            }
+            appleTrees.clear();
+            
+            for (CoconutTree tree : coconutTrees.values()) {
+                try {
+                    tree.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing coconut tree: " + e.getMessage());
+                }
+            }
+            coconutTrees.clear();
+            
+            for (BambooTree tree : bambooTrees.values()) {
+                try {
+                    tree.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing bamboo tree: " + e.getMessage());
+                }
+            }
+            bambooTrees.clear();
+            
+            for (BananaTree tree : bananaTrees.values()) {
+                try {
+                    tree.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing banana tree: " + e.getMessage());
+                }
+            }
+            bananaTrees.clear();
+            
+            // Dispose and clear all item maps
+            for (Apple apple : apples.values()) {
+                try {
+                    apple.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing apple: " + e.getMessage());
+                }
+            }
+            apples.clear();
+            
+            for (Banana banana : bananas.values()) {
+                try {
+                    banana.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing banana: " + e.getMessage());
+                }
+            }
+            bananas.clear();
+            
+            // Clear cleared positions
+            clearedPositions.clear();
+            
+            System.out.println("Existing world state cleaned up successfully");
+            
+        } catch (Exception e) {
+            System.err.println("Error during world state cleanup: " + e.getMessage());
+            e.printStackTrace();
+            // Continue anyway - restoration will override
+        }
+    }
+    
+    /**
+     * Restores trees from save data.
+     * Creates tree instances based on the saved tree states.
+     */
+    private void restoreTreesFromSave(Map<String, TreeState> savedTrees) {
+        for (Map.Entry<String, TreeState> entry : savedTrees.entrySet()) {
+            String treeId = entry.getKey();
+            TreeState treeState = entry.getValue();
+            
+            if (!treeState.isExists()) {
+                // Tree was destroyed, add to cleared positions
+                clearedPositions.put(treeId, true);
+                continue;
+            }
+            
+            try {
+                switch (treeState.getType()) {
+                    case SMALL:
+                        SmallTree smallTree = new SmallTree(treeState.getX(), treeState.getY());
+                        smallTree.setHealth(treeState.getHealth());
+                        trees.put(treeId, smallTree);
+                        break;
+                        
+                    case APPLE:
+                        AppleTree appleTree = new AppleTree(treeState.getX(), treeState.getY());
+                        appleTree.setHealth(treeState.getHealth());
+                        appleTrees.put(treeId, appleTree);
+                        break;
+                        
+                    case COCONUT:
+                        CoconutTree coconutTree = new CoconutTree(treeState.getX(), treeState.getY());
+                        coconutTree.setHealth(treeState.getHealth());
+                        coconutTrees.put(treeId, coconutTree);
+                        break;
+                        
+                    case BAMBOO:
+                        BambooTree bambooTree = new BambooTree(treeState.getX(), treeState.getY());
+                        bambooTree.setHealth(treeState.getHealth());
+                        bambooTrees.put(treeId, bambooTree);
+                        break;
+                        
+                    case BANANA:
+                        BananaTree bananaTree = new BananaTree(treeState.getX(), treeState.getY());
+                        bananaTree.setHealth(treeState.getHealth());
+                        bananaTrees.put(treeId, bananaTree);
+                        break;
+                }
+            } catch (Exception e) {
+                System.err.println("Error restoring tree " + treeId + ": " + e.getMessage());
+            }
+        }
+    }
+    
+    /**
+     * Restores items from save data.
+     * Creates item instances based on the saved item states.
+     */
+    private void restoreItemsFromSave(Map<String, ItemState> savedItems) {
+        for (Map.Entry<String, ItemState> entry : savedItems.entrySet()) {
+            String itemId = entry.getKey();
+            ItemState itemState = entry.getValue();
+            
+            if (itemState.isCollected()) {
+                // Item was collected, don't restore it
+                continue;
+            }
+            
+            try {
+                switch (itemState.getType()) {
+                    case APPLE:
+                        Apple apple = new Apple(itemState.getX(), itemState.getY());
+                        apples.put(itemId, apple);
+                        break;
+                        
+                    case BANANA:
+                        Banana banana = new Banana(itemState.getX(), itemState.getY());
+                        bananas.put(itemId, banana);
+                        break;
+                }
+            } catch (Exception e) {
+                System.err.println("Error restoring item " + itemId + ": " + e.getMessage());
+            }
+        }
+    }
+    
+    /**
+     * Safely loads a world save using the deferred operations pattern.
+     * This method ensures that world loading happens on the render thread to avoid
+     * OpenGL context issues while providing validation and rollback capabilities.
+     * 
+     * @param saveName The name of the save to load
+     * @return true if the load was initiated successfully, false otherwise
+     */
+    public boolean loadWorldSafe(String saveName) {
+        if (worldLoadInProgress) {
+            System.err.println("World load already in progress");
+            return false;
+        }
+        
+        if (saveName == null || saveName.trim().isEmpty()) {
+            System.err.println("Invalid save name provided");
+            return false;
+        }
+        
+        try {
+            // Load the save data (this is safe to do on any thread)
+            // Determine if we're in multiplayer mode for loading
+            boolean isMultiplayer = (gameMode != GameMode.SINGLEPLAYER);
+            WorldSaveData saveData = WorldSaveManager.loadWorld(saveName, isMultiplayer);
+            
+            if (saveData == null) {
+                System.err.println("Failed to load save data for: " + saveName);
+                return false;
+            }
+            
+            // Validate the save data before proceeding
+            if (!validateWorldSaveData(saveData)) {
+                System.err.println("Save data validation failed for: " + saveName);
+                return false;
+            }
+            
+            // Create backup of current world state for rollback
+            previousWorldState = extractCurrentWorldState();
+            
+            // Queue the world loading operation for the render thread
+            pendingWorldLoad = saveData;
+            worldLoadInProgress = true;
+            
+            System.out.println("World load queued for render thread: " + saveName);
+            return true;
+            
+        } catch (Exception e) {
+            System.err.println("Error initiating world load: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * Validates world save data before loading.
+     * Checks for data integrity and compatibility issues.
+     * 
+     * @param saveData The save data to validate
+     * @return true if the save data is valid, false otherwise
+     */
+    private boolean validateWorldSaveData(WorldSaveData saveData) {
+        if (saveData == null) {
+            System.err.println("Save data is null");
+            return false;
+        }
+        
+        // Check for required fields
+        if (saveData.getSaveName() == null || saveData.getSaveName().trim().isEmpty()) {
+            System.err.println("Save data missing save name");
+            return false;
+        }
+        
+        // Validate world seed
+        if (saveData.getWorldSeed() < 0) {
+            System.err.println("Invalid world seed: " + saveData.getWorldSeed());
+            return false;
+        }
+        
+        // Validate player position (reasonable bounds check)
+        float playerX = saveData.getPlayerX();
+        float playerY = saveData.getPlayerY();
+        if (Math.abs(playerX) > 1000000 || Math.abs(playerY) > 1000000) {
+            System.err.println("Player position out of reasonable bounds: (" + playerX + ", " + playerY + ")");
+            return false;
+        }
+        
+        // Validate player health
+        float playerHealth = saveData.getPlayerHealth();
+        if (playerHealth < 0 || playerHealth > 100) {
+            System.err.println("Invalid player health: " + playerHealth);
+            return false;
+        }
+        
+        // Validate tree data
+        if (saveData.getTrees() != null) {
+            for (Map.Entry<String, TreeState> entry : saveData.getTrees().entrySet()) {
+                TreeState tree = entry.getValue();
+                if (tree.getHealth() < 0 || tree.getHealth() > 100) {
+                    System.err.println("Invalid tree health for tree " + entry.getKey() + ": " + tree.getHealth());
+                    return false;
+                }
+            }
+        }
+        
+        // Validate item data
+        if (saveData.getItems() != null) {
+            for (Map.Entry<String, ItemState> entry : saveData.getItems().entrySet()) {
+                ItemState item = entry.getValue();
+                if (item.getType() == null) {
+                    System.err.println("Invalid item type for item " + entry.getKey());
+                    return false;
+                }
+            }
+        }
+        
+        System.out.println("Save data validation passed for: " + saveData.getSaveName());
+        return true;
+    }
+    
+    /**
+     * Processes pending world load on the render thread.
+     * This method is called during the render loop to safely execute world loading
+     * operations that require OpenGL context.
+     */
+    private void processPendingWorldLoad() {
+        if (!worldLoadInProgress || pendingWorldLoad == null) {
+            return;
+        }
+        
+        try {
+            System.out.println("Processing world load on render thread: " + pendingWorldLoad.getSaveName());
+            
+            // Perform the actual world state restoration
+            boolean success = restoreWorldState(pendingWorldLoad);
+            
+            if (success) {
+                System.out.println("World load completed successfully: " + pendingWorldLoad.getSaveName());
+                displayNotification("World loaded: " + pendingWorldLoad.getSaveName());
+                
+                // Clear the backup since load was successful
+                previousWorldState = null;
+            } else {
+                System.err.println("World load failed, initiating rollback");
+                rollbackWorldLoad();
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Error during world load processing: " + e.getMessage());
+            e.printStackTrace();
+            rollbackWorldLoad();
+        } finally {
+            // Clean up loading state
+            pendingWorldLoad = null;
+            worldLoadInProgress = false;
+        }
+    }
+    
+    /**
+     * Rolls back a failed world load operation.
+     * Restores the previous world state to ensure the game remains in a consistent state.
+     */
+    private void rollbackWorldLoad() {
+        if (previousWorldState == null) {
+            System.err.println("Cannot rollback: no previous world state available");
+            displayNotification("World load failed - no backup available");
+            return;
+        }
+        
+        try {
+            System.out.println("Rolling back failed world load...");
+            
+            // Create a temporary WorldSaveData from the previous state for restoration
+            WorldSaveData rollbackData = createSaveDataFromWorldState(previousWorldState);
+            
+            // Restore the previous state
+            boolean rollbackSuccess = restoreWorldState(rollbackData);
+            
+            if (rollbackSuccess) {
+                System.out.println("Rollback completed successfully");
+                displayNotification("World load failed - restored previous state");
+            } else {
+                System.err.println("Rollback failed - game state may be inconsistent");
+                displayNotification("Critical error - world state corrupted");
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Error during rollback: " + e.getMessage());
+            e.printStackTrace();
+            displayNotification("Critical error during rollback");
+        } finally {
+            // Clear the backup
+            previousWorldState = null;
+        }
+    }
+    
+    /**
+     * Creates WorldSaveData from a WorldState for rollback purposes.
+     * This is a utility method to convert WorldState back to WorldSaveData format.
+     */
+    private WorldSaveData createSaveDataFromWorldState(WorldState worldState) {
+        WorldSaveData saveData = new WorldSaveData();
+        
+        saveData.setSaveName("__rollback__");
+        saveData.setWorldSeed(worldState.getWorldSeed());
+        saveData.setTrees(worldState.getTrees());
+        saveData.setItems(worldState.getItems());
+        saveData.setClearedPositions(worldState.getClearedPositions());
+        saveData.setRainZones(worldState.getRainZones());
+        saveData.setSaveTimestamp(System.currentTimeMillis());
+        saveData.setGameMode(gameMode == GameMode.SINGLEPLAYER ? "singleplayer" : "multiplayer");
+        
+        // Use current player position and health for rollback
+        if (player != null) {
+            saveData.setPlayerX(player.getX());
+            saveData.setPlayerY(player.getY());
+            saveData.setPlayerHealth(player.getHealth());
+        }
+        
+        return saveData;
+    }
+    
+    /**
+     * Checks if a world load operation is currently in progress.
+     * 
+     * @return true if world loading is in progress, false otherwise
+     */
+    public boolean isWorldLoadInProgress() {
+        return worldLoadInProgress;
+    }
+    
+    /**
+     * Loads a world save while preserving the existing player position save functionality.
+     * This method ensures that world saves and player position saves remain separate systems.
+     * After loading the world, it updates the player position using the existing system.
+     * 
+     * @param saveName The name of the world save to load
+     * @return true if the load was initiated successfully, false otherwise
+     */
+    public boolean loadWorldPreservingPlayerPosition(String saveName) {
+        if (worldLoadInProgress) {
+            System.err.println("World load already in progress");
+            return false;
+        }
+        
+        // Save current player position before loading world (preserves existing system)
+        if (gameMenu != null) {
+            gameMenu.savePlayerPosition();
+            System.out.println("Saved current player position before world load");
+        }
+        
+        // Initiate the world load
+        boolean loadInitiated = loadWorldSafe(saveName);
+        
+        if (loadInitiated) {
+            // Schedule player position update after world load completes
+            deferOperation(() -> updatePlayerPositionAfterWorldLoad());
+        }
+        
+        return loadInitiated;
+    }
+    
+    /**
+     * Updates player position after world load completion.
+     * This method is called after a world load to ensure the player position
+     * is properly restored using the existing player position save system.
+     */
+    private void updatePlayerPositionAfterWorldLoad() {
+        if (gameMenu != null && player != null) {
+            // Load the appropriate player position based on current game mode
+            // This uses the existing loadPlayerPosition system which handles
+            // separate singleplayer/multiplayer positions
+            boolean positionLoaded = gameMenu.loadPlayerPosition();
+            
+            if (positionLoaded) {
+                System.out.println("Player position updated after world load using existing save system");
+            } else {
+                System.out.println("No saved player position found, keeping world save position");
+                // If no position save exists, the player keeps the position from the world save
+                // This maintains backward compatibility
+            }
+        }
+    }
+    
+    /**
+     * Saves the current world state while preserving player position save separation.
+     * This method ensures that world saves don't interfere with the existing
+     * player position save functionality.
+     * 
+     * @param saveName The name to save the world as
+     * @return true if the save was successful, false otherwise
+     */
+    public boolean saveWorldPreservingPlayerPosition(String saveName) {
+        if (saveName == null || saveName.trim().isEmpty()) {
+            System.err.println("Invalid save name provided");
+            return false;
+        }
+        
+        try {
+            // Extract current world state
+            WorldState currentState = extractCurrentWorldState();
+            
+            // Create save data from world state
+            WorldSaveData saveData = new WorldSaveData();
+            saveData.setSaveName(saveName);
+            saveData.setWorldSeed(currentState.getWorldSeed());
+            saveData.setTrees(currentState.getTrees());
+            saveData.setItems(currentState.getItems());
+            saveData.setClearedPositions(currentState.getClearedPositions());
+            saveData.setRainZones(currentState.getRainZones());
+            saveData.setSaveTimestamp(System.currentTimeMillis());
+            
+            // Set game mode
+            String gameMode = this.gameMode == GameMode.SINGLEPLAYER ? "singleplayer" : "multiplayer";
+            saveData.setGameMode(gameMode);
+            
+            // Include current player position in world save (for world restoration)
+            // but don't interfere with the separate player position save system
+            if (player != null) {
+                saveData.setPlayerX(player.getX());
+                saveData.setPlayerY(player.getY());
+                saveData.setPlayerHealth(player.getHealth());
+            }
+            
+            // Save the world using WorldSaveManager
+            // Determine if we're in multiplayer mode for saving
+            boolean isMultiplayer = (this.gameMode != GameMode.SINGLEPLAYER);
+            boolean saveSuccess = WorldSaveManager.saveWorld(
+                saveName, 
+                currentState, 
+                saveData.getPlayerX(), 
+                saveData.getPlayerY(), 
+                saveData.getPlayerHealth(),
+                isMultiplayer
+            );
+            
+            if (saveSuccess) {
+                System.out.println("World saved successfully: " + saveName);
+                displayNotification("World saved: " + saveName);
+                
+                // Also save current player position using existing system
+                // This maintains the separation between world saves and player position saves
+                if (gameMenu != null) {
+                    gameMenu.savePlayerPosition();
+                    System.out.println("Player position saved separately using existing system");
+                }
+                
+                return true;
+            } else {
+                System.err.println("Failed to save world: " + saveName);
+                displayNotification("Failed to save world: " + saveName);
+                return false;
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Error saving world: " + e.getMessage());
+            e.printStackTrace();
+            displayNotification("Error saving world: " + e.getMessage());
+            return false;
+        }
     }
     
     /**

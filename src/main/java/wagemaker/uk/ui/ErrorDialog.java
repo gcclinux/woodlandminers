@@ -18,10 +18,13 @@ public class ErrorDialog {
     private boolean isVisible = false;
     private boolean retrySelected = false;
     private boolean cancelled = false;
+    private boolean okSelected = false;
     private Texture woodenPlank;
     private BitmapFont dialogFont;
     private String errorMessage = "";
-    private int selectedOption = 0; // 0 = Retry, 1 = Cancel
+    private String dialogTitle = "Error";
+    private boolean isSuccessMode = false; // true for success messages, false for errors
+    private int selectedOption = 0; // 0 = Retry/OK, 1 = Cancel (only in error mode)
     private static final float DIALOG_WIDTH = 500;
     private static final float DIALOG_HEIGHT = 250;
     
@@ -96,7 +99,44 @@ public class ErrorDialog {
         this.isVisible = true;
         this.retrySelected = false;
         this.cancelled = false;
+        this.okSelected = false;
         this.errorMessage = message;
+        this.dialogTitle = "Error"; // Default title
+        this.isSuccessMode = false; // Default to error mode
+        this.selectedOption = 0;
+    }
+    
+    /**
+     * Shows the error dialog with the specified error message and title.
+     * 
+     * @param message The error message to display
+     * @param title The title for the dialog
+     */
+    public void show(String message, String title) {
+        this.isVisible = true;
+        this.retrySelected = false;
+        this.cancelled = false;
+        this.okSelected = false;
+        this.errorMessage = message;
+        this.dialogTitle = title;
+        this.isSuccessMode = false; // Default to error mode
+        this.selectedOption = 0;
+    }
+    
+    /**
+     * Shows the dialog as a success message with OK button.
+     * 
+     * @param message The success message to display
+     * @param title The title for the dialog
+     */
+    public void showSuccess(String message, String title) {
+        this.isVisible = true;
+        this.retrySelected = false;
+        this.cancelled = false;
+        this.okSelected = false;
+        this.errorMessage = message;
+        this.dialogTitle = title;
+        this.isSuccessMode = true; // Success mode shows only OK button
         this.selectedOption = 0;
     }
     
@@ -109,32 +149,44 @@ public class ErrorDialog {
             return;
         }
         
-        // Handle up/down arrow keys for navigation
-        if (Gdx.input.isKeyJustPressed(Input.Keys.UP) || Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
-            selectedOption = 0; // Retry
-        }
-        
-        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN) || Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
-            selectedOption = 1; // Cancel
-        }
-        
-        // Handle enter (confirm selection)
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-            if (selectedOption == 0) {
-                retrySelected = true;
+        if (isSuccessMode) {
+            // Success mode: only OK button, any key closes the dialog
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER) || 
+                Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) ||
+                Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                okSelected = true;
                 isVisible = false;
-                System.out.println("Retry selected");
-            } else {
+                System.out.println("OK selected");
+            }
+        } else {
+            // Error mode: Retry/Cancel buttons
+            // Handle up/down arrow keys for navigation
+            if (Gdx.input.isKeyJustPressed(Input.Keys.UP) || Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
+                selectedOption = 0; // Retry
+            }
+            
+            if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN) || Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
+                selectedOption = 1; // Cancel
+            }
+            
+            // Handle enter (confirm selection)
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+                if (selectedOption == 0) {
+                    retrySelected = true;
+                    isVisible = false;
+                    System.out.println("Retry selected");
+                } else {
+                    cancelled = true;
+                    isVisible = false;
+                    System.out.println("Cancel selected");
+                }
+            }
+            
+            // Handle escape (same as cancel)
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
                 cancelled = true;
                 isVisible = false;
-                System.out.println("Cancel selected");
             }
-        }
-        
-        // Handle escape (same as cancel)
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-            cancelled = true;
-            isVisible = false;
         }
     }
     
@@ -162,7 +214,7 @@ public class ErrorDialog {
         
         // Draw title
         dialogFont.setColor(Color.RED);
-        dialogFont.draw(batch, "Connection Error", dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
+        dialogFont.draw(batch, dialogTitle, dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
         
         // Draw error message (wrap text if too long)
         dialogFont.setColor(Color.WHITE);
@@ -173,28 +225,39 @@ public class ErrorDialog {
             messageY -= 25;
         }
         
-        // Draw options
+        // Draw options based on mode
         float optionY = dialogY + 80;
         
-        // Retry option
-        if (selectedOption == 0) {
+        if (isSuccessMode) {
+            // Success mode: only OK button (centered)
             dialogFont.setColor(Color.YELLOW);
-        } else {
+            dialogFont.draw(batch, "OK", dialogX + DIALOG_WIDTH / 2 - 10, optionY);
+            
+            // Draw instructions for success mode
             dialogFont.setColor(Color.LIGHT_GRAY);
-        }
-        dialogFont.draw(batch, "Retry", dialogX + 150, optionY);
-        
-        // Cancel option
-        if (selectedOption == 1) {
-            dialogFont.setColor(Color.YELLOW);
+            dialogFont.draw(batch, "Press Enter, Space, or ESC to continue", dialogX + 40, dialogY + 30);
         } else {
+            // Error mode: Retry/Cancel buttons
+            // Retry option
+            if (selectedOption == 0) {
+                dialogFont.setColor(Color.YELLOW);
+            } else {
+                dialogFont.setColor(Color.LIGHT_GRAY);
+            }
+            dialogFont.draw(batch, "Retry", dialogX + 150, optionY);
+            
+            // Cancel option
+            if (selectedOption == 1) {
+                dialogFont.setColor(Color.YELLOW);
+            } else {
+                dialogFont.setColor(Color.LIGHT_GRAY);
+            }
+            dialogFont.draw(batch, "Cancel", dialogX + 300, optionY);
+            
+            // Draw instructions for error mode
             dialogFont.setColor(Color.LIGHT_GRAY);
+            dialogFont.draw(batch, "Arrow keys to select, Enter to confirm", dialogX + 80, dialogY + 30);
         }
-        dialogFont.draw(batch, "Cancel", dialogX + 300, optionY);
-        
-        // Draw instructions
-        dialogFont.setColor(Color.LIGHT_GRAY);
-        dialogFont.draw(batch, "Arrow keys to select, Enter to confirm", dialogX + 80, dialogY + 30);
         
         batch.end();
     }
@@ -261,12 +324,22 @@ public class ErrorDialog {
     }
     
     /**
+     * Checks if the user selected OK (in success mode).
+     * 
+     * @return true if OK was selected, false otherwise
+     */
+    public boolean isOkSelected() {
+        return okSelected;
+    }
+    
+    /**
      * Resets the dialog state.
      * Should be called after handling the user's choice.
      */
     public void reset() {
         retrySelected = false;
         cancelled = false;
+        okSelected = false;
     }
     
     /**
@@ -276,6 +349,7 @@ public class ErrorDialog {
         isVisible = false;
         retrySelected = false;
         cancelled = false;
+        okSelected = false;
     }
     
     /**

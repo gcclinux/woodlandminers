@@ -18,14 +18,16 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import wagemaker.uk.client.PlayerConfig;
 import wagemaker.uk.player.Player;
+import wagemaker.uk.world.WorldSaveManager;
+import wagemaker.uk.world.WorldSaveData;
 
 public class GameMenu {
     private boolean isOpen = false;
     private Texture woodenPlank;
     private BitmapFont font;
     private BitmapFont playerNameFont; // Custom font for player name
-    private String[] singleplayerMenuItems = {"Player Name", "Multiplayer", "Save", "Exit"};
-    private String[] multiplayerMenuItems = {"Player Name", "Save", "Disconnect", "Exit"};
+    private String[] singleplayerMenuItems = {"Player Name", "Save World", "Load World", "Multiplayer", "Save Position", "Exit"};
+    private String[] multiplayerMenuItems = {"Player Name", "Save World", "Load World", "Save Position", "Disconnect", "Exit"};
     private int selectedIndex = 0;
     private float menuX, menuY;
     private Player player;
@@ -46,6 +48,12 @@ public class GameMenu {
     private ServerHostDialog serverHostDialog;
     private ConnectDialog connectDialog;
     private ErrorDialog errorDialog;
+    
+    // World save/load components
+    private WorldSaveDialog worldSaveDialog;
+    private WorldLoadDialog worldLoadDialog;
+    private WorldManageDialog worldManageDialog;
+    private WorldSaveManager worldSaveManager;
 
 
     public GameMenu() {
@@ -63,6 +71,12 @@ public class GameMenu {
         serverHostDialog = new ServerHostDialog();
         connectDialog = new ConnectDialog();
         errorDialog = new ErrorDialog();
+        
+        // Initialize world save/load components
+        worldSaveManager = new WorldSaveManager();
+        worldSaveDialog = new WorldSaveDialog();
+        worldLoadDialog = new WorldLoadDialog();
+        worldManageDialog = new WorldManageDialog();
     }
     
     private void createPlayerNameFont() {
@@ -365,6 +379,23 @@ public class GameMenu {
             return;
         }
         
+        if (worldSaveDialog.isVisible()) {
+            worldSaveDialog.handleInput();
+            handleWorldSaveDialogResult();
+            return;
+        }
+        
+        if (worldLoadDialog.isVisible()) {
+            worldLoadDialog.handleInput();
+            handleWorldLoadDialogResult();
+            return;
+        }
+        
+        if (worldManageDialog.isVisible()) {
+            worldManageDialog.handleInput();
+            return;
+        }
+        
         if (connectDialog.isVisible()) {
             connectDialog.handleInput();
             return;
@@ -393,18 +424,28 @@ public class GameMenu {
         // Handle main menu
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             isOpen = !isOpen;
+            if (isOpen) {
+                ensureValidMenuSelection();
+            }
         }
 
         if (isOpen) {
             String[] currentMenuItems = getCurrentMenuItems();
             if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
-                selectedIndex = (selectedIndex - 1 + currentMenuItems.length) % currentMenuItems.length;
+                do {
+                    selectedIndex = (selectedIndex - 1 + currentMenuItems.length) % currentMenuItems.length;
+                } while (isMenuItemDisabled(currentMenuItems[selectedIndex]));
             }
             if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
-                selectedIndex = (selectedIndex + 1) % currentMenuItems.length;
+                do {
+                    selectedIndex = (selectedIndex + 1) % currentMenuItems.length;
+                } while (isMenuItemDisabled(currentMenuItems[selectedIndex]));
             }
             if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-                executeMenuItem(selectedIndex);
+                // Only execute if the item is not disabled
+                if (!isMenuItemDisabled(currentMenuItems[selectedIndex])) {
+                    executeMenuItem(selectedIndex);
+                }
             }
         }
     }
@@ -413,6 +454,21 @@ public class GameMenu {
         // Render dialogs (highest priority)
         if (errorDialog.isVisible()) {
             errorDialog.render(batch, shapeRenderer, camX, camY);
+            return;
+        }
+        
+        if (worldSaveDialog.isVisible()) {
+            worldSaveDialog.render(batch, shapeRenderer, camX, camY);
+            return;
+        }
+        
+        if (worldLoadDialog.isVisible()) {
+            worldLoadDialog.render(batch, shapeRenderer, camX, camY);
+            return;
+        }
+        
+        if (worldManageDialog.isVisible()) {
+            worldManageDialog.render(batch, shapeRenderer, camX, camY);
             return;
         }
         
@@ -477,14 +533,24 @@ public class GameMenu {
             
             String[] currentMenuItems = getCurrentMenuItems();
             for (int i = 0; i < currentMenuItems.length; i++) {
-                if (i == selectedIndex) {
+                String menuItem = currentMenuItems[i];
+                
+                // Check if this menu item should be disabled
+                boolean isDisabled = isMenuItemDisabled(menuItem);
+                
+                if (isDisabled) {
+                    playerNameFont.setColor(Color.GRAY);
+                } else if (i == selectedIndex) {
                     playerNameFont.setColor(Color.YELLOW);
                 } else {
                     playerNameFont.setColor(Color.WHITE);
                 }
+                
                 float textX = menuX + 40;
                 float textY = menuY + MENU_HEIGHT - 40 - (i * 30);
-                playerNameFont.draw(batch, currentMenuItems[i], textX, textY);
+                
+                // Display the menu item (disabled items are shown in gray color)
+                playerNameFont.draw(batch, menuItem, textX, textY);
             }
         }
         
@@ -502,11 +568,15 @@ public class GameMenu {
         
         if (selectedItem.equals("Player Name")) {
             openNameDialog();
+        } else if (selectedItem.equals("Save World")) {
+            openWorldSaveDialog();
+        } else if (selectedItem.equals("Load World")) {
+            openWorldLoadDialog();
         } else if (selectedItem.equals("Multiplayer")) {
             openMultiplayerMenu();
         } else if (selectedItem.equals("Disconnect")) {
             disconnectFromMultiplayer();
-        } else if (selectedItem.equals("Save")) {
+        } else if (selectedItem.equals("Save Position")) {
             savePlayerPosition();
         } else if (selectedItem.equals("Exit")) {
             savePlayerPosition(); // Auto-save before exit
@@ -544,6 +614,246 @@ public class GameMenu {
     }
     
     /**
+     * Opens the world save dialog if save functionality is available.
+     */
+    private void openWorldSaveDialog() {
+        if (!isWorldSaveAllowed()) {
+            String errorMessage = getWorldSaveRestrictionMessage();
+            showError(errorMessage, "Save Restricted");
+            return;
+        }
+        
+        isOpen = false; // Close main menu
+        boolean isMultiplayer = isCurrentlyMultiplayer();
+        worldSaveDialog.show(isMultiplayer);
+    }
+    
+    /**
+     * Gets the appropriate error message for world save restrictions.
+     * @return The error message explaining why world save is not available
+     */
+    private String getWorldSaveRestrictionMessage() {
+        if (gameInstance == null) {
+            return "World save is not available: Game not initialized.";
+        }
+        
+        wagemaker.uk.gdx.MyGdxGame.GameMode currentMode = gameInstance.getGameMode();
+        
+        if (currentMode == wagemaker.uk.gdx.MyGdxGame.GameMode.MULTIPLAYER_CLIENT) {
+            return "World save is not available for multiplayer clients. Only the server host can save worlds.";
+        }
+        
+        return "World save is only available in singleplayer mode or when hosting multiplayer games.";
+    }
+    
+    /**
+     * Checks if a menu item should be disabled based on current game state.
+     * @param menuItem The menu item to check
+     * @return true if the menu item should be disabled, false otherwise
+     */
+    private boolean isMenuItemDisabled(String menuItem) {
+        if (menuItem.equals("Save World")) {
+            return !isWorldSaveAllowed();
+        }
+        
+        // Other menu items are always enabled
+        return false;
+    }
+    
+    /**
+     * Ensures that the currently selected menu item is not disabled.
+     * If it is disabled, moves to the next available item.
+     */
+    private void ensureValidMenuSelection() {
+        String[] currentMenuItems = getCurrentMenuItems();
+        if (currentMenuItems.length == 0) {
+            return;
+        }
+        
+        // If current selection is disabled, find the next enabled item
+        if (isMenuItemDisabled(currentMenuItems[selectedIndex])) {
+            int originalIndex = selectedIndex;
+            do {
+                selectedIndex = (selectedIndex + 1) % currentMenuItems.length;
+            } while (isMenuItemDisabled(currentMenuItems[selectedIndex]) && selectedIndex != originalIndex);
+        }
+    }
+    
+    /**
+     * Opens the world load dialog.
+     */
+    private void openWorldLoadDialog() {
+        isOpen = false; // Close main menu
+        boolean isMultiplayer = isCurrentlyMultiplayer();
+        worldLoadDialog.show(isMultiplayer);
+    }
+    
+    /**
+     * Checks if the current game mode is multiplayer.
+     * @return true if in multiplayer mode, false otherwise
+     */
+    private boolean isCurrentlyMultiplayer() {
+        if (gameInstance == null) {
+            return false;
+        }
+        
+        return gameInstance.getGameMode() != wagemaker.uk.gdx.MyGdxGame.GameMode.SINGLEPLAYER;
+    }
+    
+    /**
+     * Handles the result of the world save dialog.
+     */
+    private void handleWorldSaveDialogResult() {
+        if (worldSaveDialog.isConfirmed()) {
+            String saveName = worldSaveDialog.getSaveName();
+            if (saveName != null && !saveName.trim().isEmpty()) {
+                performWorldSave(saveName.trim());
+            }
+            worldSaveDialog.hide();
+        } else if (worldSaveDialog.isCancelled()) {
+            worldSaveDialog.hide();
+            isOpen = true; // Return to main menu
+        }
+    }
+    
+    /**
+     * Handles the result of the world load dialog.
+     */
+    private void handleWorldLoadDialogResult() {
+        if (worldLoadDialog.isConfirmed()) {
+            String saveName = worldLoadDialog.getSelectedSaveName();
+            if (saveName != null && !saveName.trim().isEmpty()) {
+                performWorldLoad(saveName.trim());
+            }
+            worldLoadDialog.hide();
+        } else if (worldLoadDialog.isCancelled()) {
+            worldLoadDialog.hide();
+            isOpen = true; // Return to main menu
+        }
+    }
+    
+    /**
+     * Performs the actual world save operation.
+     * @param saveName The name of the save
+     */
+    private void performWorldSave(String saveName) {
+        if (gameInstance == null || player == null) {
+            showError("Cannot save world: Game or player not initialized.", "Save Error");
+            return;
+        }
+        
+        try {
+            System.out.println("World save requested for: " + saveName);
+            
+            // Extract current world state from the game
+            wagemaker.uk.network.WorldState currentWorldState = gameInstance.extractCurrentWorldState();
+            
+            if (currentWorldState == null) {
+                showError("Failed to extract world state. Please try again.", "Save Error");
+                return;
+            }
+            
+            boolean isMultiplayer = isCurrentlyMultiplayer();
+            boolean success = WorldSaveManager.saveWorld(
+                saveName, 
+                currentWorldState,
+                player.getX(), 
+                player.getY(), 
+                player.getHealth(),
+                isMultiplayer
+            );
+            
+            if (success) {
+                showSuccess("World saved successfully!", "Save Complete");
+                System.out.println("World '" + saveName + "' saved successfully");
+            } else {
+                showError("Failed to save world. Please try again.", "Save Failed");
+                System.err.println("World save failed for: " + saveName);
+            }
+        } catch (Exception e) {
+            System.err.println("Error saving world: " + e.getMessage());
+            showError("Error saving world: " + e.getMessage(), "Save Error");
+        }
+    }
+    
+    /**
+     * Performs the actual world load operation.
+     * @param saveName The name of the save to load
+     */
+    private void performWorldLoad(String saveName) {
+        if (gameInstance == null) {
+            showError("Cannot load world: Game not initialized.", "Load Error");
+            return;
+        }
+        
+        try {
+            boolean isMultiplayer = isCurrentlyMultiplayer();
+            
+            // Load the world save data
+            WorldSaveData saveData = WorldSaveManager.loadWorld(saveName, isMultiplayer);
+            
+            if (saveData != null) {
+                System.out.println("World save data loaded: " + saveName);
+                System.out.println("World seed: " + saveData.getWorldSeed());
+                System.out.println("Trees: " + saveData.getTrees().size());
+                System.out.println("Items: " + saveData.getItems().size());
+                
+                // Restore the world state in the game
+                boolean success = gameInstance.restoreWorldState(saveData);
+                
+                if (success) {
+                    // Update player position and health from save data
+                    if (player != null) {
+                        player.setPosition(saveData.getPlayerX(), saveData.getPlayerY());
+                        player.setHealth(saveData.getPlayerHealth());
+                    }
+                    
+                    showSuccess("World loaded successfully!", "Load Complete");
+                    System.out.println("World '" + saveName + "' loaded successfully");
+                } else {
+                    showError("Failed to restore world state. Please try again.", "Load Failed");
+                    System.err.println("World state restoration failed for: " + saveName);
+                }
+            } else {
+                showError("Failed to load world. Save file may not exist or be corrupted.", "Load Failed");
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading world: " + e.getMessage());
+            showError("Error loading world: " + e.getMessage(), "Load Error");
+        }
+    }
+    
+    /**
+     * Checks if world save functionality is allowed based on current game mode.
+     * @return true if world save is allowed, false otherwise
+     */
+    private boolean isWorldSaveAllowed() {
+        if (gameInstance == null) {
+            return true; // Default to allowing save if game instance not set
+        }
+        
+        wagemaker.uk.gdx.MyGdxGame.GameMode currentMode = gameInstance.getGameMode();
+        
+        // Allow save in singleplayer mode
+        if (currentMode == wagemaker.uk.gdx.MyGdxGame.GameMode.SINGLEPLAYER) {
+            return true;
+        }
+        
+        // Allow save when hosting multiplayer (server mode)
+        if (currentMode == wagemaker.uk.gdx.MyGdxGame.GameMode.MULTIPLAYER_HOST) {
+            return true;
+        }
+        
+        // Disable save for multiplayer clients
+        if (currentMode == wagemaker.uk.gdx.MyGdxGame.GameMode.MULTIPLAYER_CLIENT) {
+            return false;
+        }
+        
+        // Default to false for any unknown modes
+        return false;
+    }
+    
+    /**
      * Handles selection in the multiplayer menu.
      */
     private void handleMultiplayerMenuSelection() {
@@ -576,7 +886,33 @@ public class GameMenu {
      * @param message The error message to display
      */
     public void showError(String message) {
-        errorDialog.show(message);
+        // Determine appropriate title based on message content
+        String title = "Error";
+        if (message.toLowerCase().contains("connect") || message.toLowerCase().contains("server")) {
+            title = "Connection Error";
+        } else if (message.toLowerCase().contains("save") || message.toLowerCase().contains("load")) {
+            title = "World Save/Load";
+        }
+        
+        errorDialog.show(message, title);
+    }
+    
+    /**
+     * Shows an error dialog with the specified message and custom title.
+     * @param message The error message to display
+     * @param title The title for the dialog
+     */
+    public void showError(String message, String title) {
+        errorDialog.show(message, title);
+    }
+    
+    /**
+     * Shows a success dialog with the specified message and title.
+     * @param message The success message to display
+     * @param title The title for the dialog
+     */
+    public void showSuccess(String message, String title) {
+        errorDialog.showSuccess(message, title);
     }
     
     /**
@@ -818,7 +1154,10 @@ public class GameMenu {
                multiplayerMenu.isOpen() || 
                errorDialog.isVisible() || 
                connectDialog.isVisible() || 
-               serverHostDialog.isVisible();
+               serverHostDialog.isVisible() ||
+               worldSaveDialog.isVisible() ||
+               worldLoadDialog.isVisible() ||
+               worldManageDialog.isVisible();
     }
     
     /**
@@ -860,6 +1199,38 @@ public class GameMenu {
     public ErrorDialog getErrorDialog() {
         return errorDialog;
     }
+    
+    /**
+     * Gets the world save dialog instance.
+     * @return The world save dialog
+     */
+    public WorldSaveDialog getWorldSaveDialog() {
+        return worldSaveDialog;
+    }
+    
+    /**
+     * Gets the world load dialog instance.
+     * @return The world load dialog
+     */
+    public WorldLoadDialog getWorldLoadDialog() {
+        return worldLoadDialog;
+    }
+    
+    /**
+     * Gets the world manage dialog instance.
+     * @return The world manage dialog
+     */
+    public WorldManageDialog getWorldManageDialog() {
+        return worldManageDialog;
+    }
+    
+    /**
+     * Gets the world save manager instance.
+     * @return The world save manager
+     */
+    public WorldSaveManager getWorldSaveManager() {
+        return worldSaveManager;
+    }
 
     public void dispose() {
         woodenPlank.dispose();
@@ -881,6 +1252,15 @@ public class GameMenu {
         }
         if (errorDialog != null) {
             errorDialog.dispose();
+        }
+        if (worldSaveDialog != null) {
+            worldSaveDialog.dispose();
+        }
+        if (worldLoadDialog != null) {
+            worldLoadDialog.dispose();
+        }
+        if (worldManageDialog != null) {
+            worldManageDialog.dispose();
         }
     }
 }

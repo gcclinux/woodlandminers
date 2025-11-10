@@ -64,8 +64,8 @@ A 2D top-down multiplayer adventure game built with libGDX featuring infinite wo
 
 <div align="center">
 
-### Multiplayer Menu - Host Server
-![Multiplayer Menu](screenshots/mp-menu01.png)   
+### Multiplayer Compass & Rain - Host Server
+![Multiplayer Menu](screenshots/mp-sp-compass-rain.png)   
 *Host your own server or connect to existing multiplayer games*
 
 ### Single Player Menu - Player Name
@@ -79,10 +79,6 @@ A 2D top-down multiplayer adventure game built with libGDX featuring infinite wo
 ### Multiplayer Gameplay - Player 1
 ![Multiplayer Player 1](screenshots/mp-player01.png)   
 *Real-time multiplayer with synchronized player movements and actions*
-
-### Multiplayer & SinglePlayer Rain system
-![Multiplayer Player 2](screenshots/woodlander-rain.jpg)   
-*Multiplayer and Singleplayer Rain System*
 
 ### Multiplayer Gameplay - Attack Tree
 ![Multiplayer Attack](screenshots/mp-multisession.png)   

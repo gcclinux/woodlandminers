@@ -61,7 +61,7 @@ public class RainParticle {
      * @return true if the particle is below the screen bottom, false otherwise
      */
     public boolean isOffScreen(float screenBottom) {
-        return y < screenBottom;
+        return y <= screenBottom;
     }
     
     // Getters

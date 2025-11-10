@@ -28,10 +28,12 @@ public class Compass {
         this.currentRotation = 0.0f;
         
         try {
-            compassBackground = new Texture("assets/ui/compass_background.png");
-            compassNeedle = new Texture("assets/ui/compass_needle.png");
+            compassBackground = new Texture("ui/compass_background.png");
+            compassNeedle = new Texture("ui/compass_needle.png");
+            System.out.println("Compass textures loaded successfully");
         } catch (Exception e) {
             System.err.println("Failed to load compass textures: " + e.getMessage());
+            e.printStackTrace();
             compassBackground = null;
             compassNeedle = null;
         }

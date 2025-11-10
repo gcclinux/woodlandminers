@@ -61,6 +61,9 @@ jar {
     manifest {
         attributes 'Main-Class': application.mainClass
     }
+    // Include compiled classes and resources (including assets)
+    from sourceSets.main.output
+    // Include dependencies
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
 }
 

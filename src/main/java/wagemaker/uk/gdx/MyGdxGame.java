@@ -1,6 +1,8 @@
 package wagemaker.uk.gdx;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -1243,8 +1245,12 @@ public class MyGdxGame extends ApplicationAdapter {
             }
         }
         
-        // Sync tree states
+        // Sync tree states and remove ghost trees
         if (state.getTrees() != null) {
+            // First, remove any local trees that don't exist on the server (ghost trees)
+            removeGhostTrees(state.getTrees());
+            
+            // Then sync the server's trees
             for (TreeState treeState : state.getTrees().values()) {
                 updateTreeFromState(treeState);
             }
@@ -1259,6 +1265,66 @@ public class MyGdxGame extends ApplicationAdapter {
         
         System.out.println("World state synchronized");
         System.out.println("  Local trees after sync: " + getTotalTreeCount());
+    }
+    
+    /**
+     * Removes ghost trees - trees that exist locally but not on the server.
+     * This prevents desync issues where clients see trees that don't exist in the server's world state.
+     * Queues removals to be processed on the main thread to avoid OpenGL context issues.
+     * 
+     * @param serverTrees Map of tree IDs to TreeState from the server
+     */
+    private void removeGhostTrees(Map<String, TreeState> serverTrees) {
+        int queuedCount = 0;
+        
+        // Check small trees
+        for (String treeId : trees.keySet()) {
+            if (!serverTrees.containsKey(treeId)) {
+                pendingTreeRemovals.offer(treeId);
+                queuedCount++;
+                System.out.println("Queued ghost small tree for removal: " + treeId);
+            }
+        }
+        
+        // Check apple trees
+        for (String treeId : appleTrees.keySet()) {
+            if (!serverTrees.containsKey(treeId)) {
+                pendingTreeRemovals.offer(treeId);
+                queuedCount++;
+                System.out.println("Queued ghost apple tree for removal: " + treeId);
+            }
+        }
+        
+        // Check coconut trees
+        for (String treeId : coconutTrees.keySet()) {
+            if (!serverTrees.containsKey(treeId)) {
+                pendingTreeRemovals.offer(treeId);
+                queuedCount++;
+                System.out.println("Queued ghost coconut tree for removal: " + treeId);
+            }
+        }
+        
+        // Check bamboo trees
+        for (String treeId : bambooTrees.keySet()) {
+            if (!serverTrees.containsKey(treeId)) {
+                pendingTreeRemovals.offer(treeId);
+                queuedCount++;
+                System.out.println("Queued ghost bamboo tree for removal: " + treeId);
+            }
+        }
+        
+        // Check banana trees
+        for (String treeId : bananaTrees.keySet()) {
+            if (!serverTrees.containsKey(treeId)) {
+                pendingTreeRemovals.offer(treeId);
+                queuedCount++;
+                System.out.println("Queued ghost banana tree for removal: " + treeId);
+            }
+        }
+        
+        if (queuedCount > 0) {
+            System.out.println("Total ghost trees queued for removal: " + queuedCount);
+        }
     }
     
     /**

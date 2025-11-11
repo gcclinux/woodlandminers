@@ -28,6 +28,7 @@ public class BiomeManager {
     private final BiomeTextureGenerator textureGenerator;
     private boolean initialized;
     private final Random noiseRandom;
+    private boolean headlessMode;
     
     /**
      * Creates a new BiomeManager instance.
@@ -39,6 +40,7 @@ public class BiomeManager {
         this.textureGenerator = new BiomeTextureGenerator();
         this.initialized = false;
         this.noiseRandom = new Random(54321); // Fixed seed for consistent noise pattern
+        this.headlessMode = false;
     }
     
     /**
@@ -61,7 +63,14 @@ public class BiomeManager {
         initializeBiomeZones();
         
         // Generate and cache textures for each biome type
-        generateAndCacheTextures();
+        // In headless mode (tests), texture generation may fail due to missing native libraries
+        try {
+            generateAndCacheTextures();
+        } catch (UnsatisfiedLinkError e) {
+            // Running in headless mode (e.g., unit tests)
+            // Biome zones are still initialized and functional
+            headlessMode = true;
+        }
         
         initialized = true;
     }
@@ -79,6 +88,10 @@ public class BiomeManager {
     public Texture getTextureForPosition(float worldX, float worldY) {
         if (!initialized) {
             throw new IllegalStateException("BiomeManager must be initialized before use. Call initialize() first.");
+        }
+        
+        if (headlessMode) {
+            throw new IllegalStateException("Cannot get textures in headless mode (unit tests). Use getBiomeAtPosition() instead.");
         }
         
         BiomeType biomeType = getBiomeAtPosition(worldX, worldY);

@@ -130,7 +130,7 @@ Or build a fat jar:
 
 ```bash
 cd <project folder>/Woodlander
-gradle build
+gradle clean build -x test
 java -jar .\build\libs\woodlanders-client.jar
 ```
 

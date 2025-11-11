@@ -533,6 +533,38 @@ public class MyGdxGame extends ApplicationAdapter {
         }
     }
     
+    /**
+     * Generates a tree at the specified world coordinates using deterministic procedural generation.
+     * 
+     * <p><b>DETERMINISTIC BEHAVIOR GUARANTEE:</b></p>
+     * <p>This method ensures that the same world seed and coordinates will ALWAYS produce the same
+     * tree type at the same location across all game sessions and multiplayer clients. This is
+     * critical for multiplayer synchronization.</p>
+     * 
+     * <p><b>Order of Operations (CRITICAL for determinism):</b></p>
+     * <ol>
+     *   <li>Set deterministic random seed based on worldSeed + position</li>
+     *   <li>Check spawn probability (2%) using seeded random</li>
+     *   <li>Validate spawn location (distance checks, view checks)</li>
+     *   <li>Query biome type (deterministic, based on coordinates only)</li>
+     *   <li>Select tree type using seeded random + biome filtering</li>
+     * </ol>
+     * 
+     * <p><b>Randomness Sources:</b></p>
+     * <ul>
+     *   <li>Spawn probability: {@code random.nextFloat() < 0.02f} (seeded)</li>
+     *   <li>Tree type selection: {@code random.nextFloat()} (seeded)</li>
+     *   <li>Biome query: {@code biomeManager.getBiomeAtPosition(x, y)} (deterministic, NO randomness)</li>
+     * </ul>
+     * 
+     * <p><b>Multiplayer Synchronization:</b></p>
+     * <p>All clients use the same worldSeed value synchronized from the server. Combined with
+     * deterministic biome queries and seeded random generation, this ensures all clients see
+     * identical trees at identical positions without requiring per-tree network synchronization.</p>
+     * 
+     * @param x The x-coordinate in world space (must be aligned to 64px grid)
+     * @param y The y-coordinate in world space (must be aligned to 64px grid)
+     */
     private void generateTreeAt(int x, int y) {
         // In multiplayer mode, use deterministic generation based on world seed
         // This ensures all clients generate the same trees at the same positions
@@ -540,10 +572,15 @@ public class MyGdxGame extends ApplicationAdapter {
         
         String key = x + "," + y;
         if (!trees.containsKey(key) && !appleTrees.containsKey(key) && !coconutTrees.containsKey(key) && !bambooTrees.containsKey(key) && !bananaTrees.containsKey(key) && !clearedPositions.containsKey(key)) {
-            // 2% chance to generate a tree at this grass tile
-            // Use world seed combined with position for deterministic generation across clients
-            random.setSeed(worldSeed + x * 31L + y * 17L); // deterministic based on world seed and position
+            // STEP 1: Set deterministic random seed
+            // Combines world seed with position using prime number multipliers to ensure unique,
+            // reproducible seeds for each coordinate pair across all clients
+            random.setSeed(worldSeed + x * 31L + y * 17L);
+            
+            // STEP 2: Check spawn probability (2% chance)
+            // Uses the seeded random to ensure same coordinates always get same spawn decision
             if (random.nextFloat() < 0.02f) {
+                // STEP 3: Validate spawn location
                 // Check if any tree is within 256px distance
                 if (isTreeNearby(x, y, 256)) {
                     return;
@@ -554,18 +591,30 @@ public class MyGdxGame extends ApplicationAdapter {
                     return;
                 }
                 
-                // 20% chance each for small tree, apple tree, coconut tree, bamboo tree, banana tree
-                float treeType = random.nextFloat();
-                if (treeType < 0.2f) {
-                    trees.put(key, new SmallTree(x, y));
-                } else if (treeType < 0.4f) {
-                    appleTrees.put(key, new AppleTree(x, y));
-                } else if (treeType < 0.6f) {
-                    coconutTrees.put(key, new CoconutTree(x, y));
-                } else if (treeType < 0.8f) {
+                // STEP 4: Query biome type (DETERMINISTIC - no randomness)
+                // BiomeManager returns consistent biome types based solely on world coordinates
+                // This query happens AFTER seed is set but does NOT consume random values
+                wagemaker.uk.biome.BiomeType biome = biomeManager.getBiomeAtPosition(x, y);
+                
+                // STEP 5: Generate tree based on biome type
+                // Tree type selection uses the SAME seeded random instance from Step 1
+                if (biome == wagemaker.uk.biome.BiomeType.SAND) {
+                    // Sand biomes: only bamboo trees (100% probability)
                     bambooTrees.put(key, new BambooTree(x, y));
                 } else {
-                    bananaTrees.put(key, new BananaTree(x, y));
+                    // Grass biomes: only non-bamboo trees (25% each for 4 types)
+                    // This random.nextFloat() call is the SECOND call on the seeded random,
+                    // ensuring deterministic tree type selection
+                    float treeType = random.nextFloat();
+                    if (treeType < 0.25f) {
+                        trees.put(key, new SmallTree(x, y));
+                    } else if (treeType < 0.5f) {
+                        appleTrees.put(key, new AppleTree(x, y));
+                    } else if (treeType < 0.75f) {
+                        coconutTrees.put(key, new CoconutTree(x, y));
+                    } else {
+                        bananaTrees.put(key, new BananaTree(x, y));
+                    }
                 }
             }
         }

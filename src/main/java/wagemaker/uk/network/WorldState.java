@@ -67,10 +67,19 @@ public class WorldState implements Serializable {
     /**
      * Generates initial trees around the spawn point (0,0).
      * This ensures players have trees to interact with when they spawn.
-     * Trees are generated in a large area around spawn using deterministic generation.
+     * Trees are generated in a large area around spawn using deterministic generation
+     * with biome-specific tree filtering.
+     * 
+     * IMPORTANT: This method uses the same biome-aware tree generation logic as the client
+     * to ensure initial trees respect biome boundaries (bamboo in sand, other trees in grass).
      */
     private void generateInitialTrees() {
         java.util.Random random = new java.util.Random();
+        
+        // Create a temporary BiomeManager for biome queries during initial generation
+        // This ensures server-side tree generation respects biome boundaries
+        wagemaker.uk.biome.BiomeManager biomeManager = new wagemaker.uk.biome.BiomeManager();
+        biomeManager.initialize();
         
         // Generate trees in a 5000x5000 area around spawn (-2500 to +2500)
         // This gives players plenty of trees to explore
@@ -84,11 +93,12 @@ public class WorldState implements Serializable {
             for (int y = minY; y <= maxY; y += gridSize) {
                 String key = x + "," + y;
                 
-                // Use world seed combined with position for deterministic generation
+                // STEP 1: Set deterministic random seed (same as client-side generation)
                 random.setSeed(worldSeed + x * 31L + y * 17L);
                 
-                // 2% chance to generate a tree at this position
+                // STEP 2: Check spawn probability (2% chance)
                 if (random.nextFloat() < 0.02f) {
+                    // STEP 3: Validate spawn location
                     // Check if any tree is within 256px distance
                     if (isTreeNearby(x, y, 256)) {
                         continue;
@@ -100,20 +110,31 @@ public class WorldState implements Serializable {
                         continue;
                     }
                     
-                    // 20% chance each for different tree types
-                    float treeTypeRoll = random.nextFloat();
+                    // STEP 4: Query biome type (DETERMINISTIC - same as client)
+                    // This ensures server generates the same biome-specific trees as clients
+                    wagemaker.uk.biome.BiomeType biome = biomeManager.getBiomeAtPosition(x, y);
+                    
+                    // STEP 5: Generate tree based on biome type (SAME LOGIC AS CLIENT)
                     TreeType treeType;
                     
-                    if (treeTypeRoll < 0.2f) {
-                        treeType = TreeType.SMALL;
-                    } else if (treeTypeRoll < 0.4f) {
-                        treeType = TreeType.APPLE;
-                    } else if (treeTypeRoll < 0.6f) {
-                        treeType = TreeType.COCONUT;
-                    } else if (treeTypeRoll < 0.8f) {
+                    if (biome == wagemaker.uk.biome.BiomeType.SAND) {
+                        // Sand biomes: only bamboo trees (100% probability)
                         treeType = TreeType.BAMBOO;
                     } else {
-                        treeType = TreeType.BANANA;
+                        // Grass biomes: only non-bamboo trees (25% each for 4 types)
+                        // This random.nextFloat() call is the SECOND call on the seeded random,
+                        // ensuring deterministic tree type selection matching client behavior
+                        float treeTypeRoll = random.nextFloat();
+                        
+                        if (treeTypeRoll < 0.25f) {
+                            treeType = TreeType.SMALL;
+                        } else if (treeTypeRoll < 0.5f) {
+                            treeType = TreeType.APPLE;
+                        } else if (treeTypeRoll < 0.75f) {
+                            treeType = TreeType.COCONUT;
+                        } else {
+                            treeType = TreeType.BANANA;
+                        }
                     }
                     
                     // Create tree state with full health
@@ -123,7 +144,10 @@ public class WorldState implements Serializable {
             }
         }
         
-        System.out.println("Generated " + trees.size() + " initial trees for world seed: " + worldSeed);
+        // Clean up temporary BiomeManager
+        biomeManager.dispose();
+        
+        System.out.println("Generated " + trees.size() + " initial biome-specific trees for world seed: " + worldSeed);
     }
     
     /**

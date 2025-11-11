@@ -38,6 +38,7 @@ import wagemaker.uk.trees.BananaTree;
 import wagemaker.uk.trees.Cactus;
 import wagemaker.uk.trees.CoconutTree;
 import wagemaker.uk.trees.SmallTree;
+import wagemaker.uk.biome.BiomeManager;
 import wagemaker.uk.ui.Compass;
 import wagemaker.uk.ui.GameMenu;
 import wagemaker.uk.weather.RainSystem;
@@ -155,7 +156,7 @@ public class MyGdxGame extends ApplicationAdapter {
     
     SpriteBatch batch;
     ShapeRenderer shapeRenderer;
-    Texture grassTexture;
+    BiomeManager biomeManager;
     Player player;
     OrthographicCamera camera;
     Viewport viewport;
@@ -294,9 +295,9 @@ public class MyGdxGame extends ApplicationAdapter {
         // Initialize compass
         compass = new Compass();
 
-        // create realistic grass texture
-        grassTexture = createRealisticGrassTexture();
-        grassTexture.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat);
+        // Initialize biome manager for ground texture variation
+        biomeManager = new BiomeManager();
+        biomeManager.initialize();
 
         // Initialize rain system
         rainSystem = new RainSystem(shapeRenderer);
@@ -523,7 +524,9 @@ public class MyGdxGame extends ApplicationAdapter {
         
         for (int x = startX; x <= endX; x += 64) {
             for (int y = startY; y <= endY; y += 64) {
-                batch.draw(grassTexture, x, y, 64, 64);
+                // Get appropriate texture for this position based on biome
+                Texture texture = biomeManager.getTextureForPosition(x, y);
+                batch.draw(texture, x, y, 64, 64);
                 // randomly generate trees
                 generateTreeAt(x, y);
             }
@@ -970,84 +973,6 @@ public class MyGdxGame extends ApplicationAdapter {
         
         System.out.println("New cactus spawned at: " + newX + ", " + newY + " (distance from player: " + 
                           Math.sqrt((newX - playerX) * (newX - playerX) + (newY - playerY) * (newY - playerY)) + ")");
-    }
-
-    private Texture createRealisticGrassTexture() {
-        Pixmap grassPixmap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
-        Random grassRandom = new Random(12345); // Fixed seed for consistent grass pattern
-        
-        // Base grass colors (different shades of green)
-        float[] baseGreen = {0.15f, 0.5f, 0.08f, 1.0f}; // Dark green
-        float[] lightGreen = {0.25f, 0.65f, 0.15f, 1.0f}; // Light green
-        float[] mediumGreen = {0.2f, 0.55f, 0.12f, 1.0f}; // Medium green
-        float[] brownish = {0.3f, 0.4f, 0.1f, 1.0f}; // Brownish green (dirt patches)
-        
-        // Fill with base grass color
-        grassPixmap.setColor(baseGreen[0], baseGreen[1], baseGreen[2], baseGreen[3]);
-        grassPixmap.fill();
-        
-        // Add grass blade patterns and texture variations
-        for (int x = 0; x < 64; x++) {
-            for (int y = 0; y < 64; y++) {
-                float noise = grassRandom.nextFloat();
-                
-                // Create grass blade patterns (vertical lines with variations)
-                if (x % 3 == 0 && noise > 0.3f) {
-                    // Lighter grass blades
-                    grassPixmap.setColor(lightGreen[0], lightGreen[1], lightGreen[2], lightGreen[3]);
-                    grassPixmap.drawPixel(x, y);
-                    if (y > 0 && grassRandom.nextFloat() > 0.5f) {
-                        grassPixmap.drawPixel(x, y - 1); // Extend blade
-                    }
-                } else if (x % 4 == 1 && noise > 0.6f) {
-                    // Medium grass blades
-                    grassPixmap.setColor(mediumGreen[0], mediumGreen[1], mediumGreen[2], mediumGreen[3]);
-                    grassPixmap.drawPixel(x, y);
-                } else if (noise > 0.85f) {
-                    // Random dirt/brown patches for realism
-                    grassPixmap.setColor(brownish[0], brownish[1], brownish[2], brownish[3]);
-                    grassPixmap.drawPixel(x, y);
-                } else if (noise > 0.75f) {
-                    // Darker grass areas (shadows)
-                    grassPixmap.setColor(baseGreen[0] * 0.8f, baseGreen[1] * 0.8f, baseGreen[2] * 0.8f, baseGreen[3]);
-                    grassPixmap.drawPixel(x, y);
-                }
-            }
-        }
-        
-        // Add some scattered small details (seeds, small stones, etc.)
-        for (int i = 0; i < 8; i++) {
-            int x = grassRandom.nextInt(64);
-            int y = grassRandom.nextInt(64);
-            
-            if (grassRandom.nextFloat() > 0.5f) {
-                // Small brown spots (seeds/dirt)
-                grassPixmap.setColor(0.4f, 0.3f, 0.2f, 1.0f);
-                grassPixmap.drawPixel(x, y);
-            } else {
-                // Tiny light spots (small flowers/highlights)
-                grassPixmap.setColor(0.6f, 0.8f, 0.3f, 1.0f);
-                grassPixmap.drawPixel(x, y);
-            }
-        }
-        
-        // Add some diagonal grass patterns for more natural look
-        for (int i = 0; i < 64; i += 8) {
-            for (int j = 0; j < 64; j += 6) {
-                if (grassRandom.nextFloat() > 0.4f) {
-                    // Diagonal grass blade pattern
-                    grassPixmap.setColor(lightGreen[0], lightGreen[1], lightGreen[2], lightGreen[3]);
-                    if (i + 1 < 64 && j + 1 < 64) {
-                        grassPixmap.drawPixel(i, j);
-                        grassPixmap.drawPixel(i + 1, j + 1);
-                    }
-                }
-            }
-        }
-        
-        Texture texture = new Texture(grassPixmap);
-        grassPixmap.dispose();
-        return texture;
     }
 
     /**
@@ -3093,7 +3018,12 @@ public class MyGdxGame extends ApplicationAdapter {
         batch.dispose();
         shapeRenderer.dispose();
         player.dispose();
-        grassTexture.dispose();
+        
+        // Dispose biome manager
+        if (biomeManager != null) {
+            biomeManager.dispose();
+        }
+        
         for (SmallTree tree : trees.values()) {
             tree.dispose();
         }

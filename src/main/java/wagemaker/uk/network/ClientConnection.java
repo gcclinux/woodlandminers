@@ -386,7 +386,7 @@ public class ClientConnection implements Runnable {
             TreeDestroyedMessage destroyMsg = new TreeDestroyedMessage("server", targetId, quantizedX, quantizedY);
             server.broadcastToAll(destroyMsg);
             
-            // Spawn item only for apple and banana trees
+            // Spawn item(s) based on tree type
             if (tree.getType() == TreeType.APPLE || tree.getType() == TreeType.BANANA) {
                 ItemType itemType = tree.getType() == TreeType.APPLE ? ItemType.APPLE : ItemType.BANANA;
                 String itemId = UUID.randomUUID().toString();
@@ -397,6 +397,27 @@ public class ClientConnection implements Runnable {
                 server.broadcastToAll(spawnMsg);
                 
                 System.out.println("Item spawned: " + itemType + " at (" + quantizedX + ", " + quantizedY + ")");
+            } else if (tree.getType() == TreeType.BAMBOO) {
+                // Spawn BambooStack at tree position
+                String bambooStackId = UUID.randomUUID().toString();
+                ItemState bambooStack = new ItemState(bambooStackId, ItemType.BAMBOO_STACK, quantizedX, quantizedY, false);
+                server.getWorldState().addOrUpdateItem(bambooStack);
+                
+                ItemSpawnMessage bambooStackSpawnMsg = new ItemSpawnMessage("server", bambooStackId, ItemType.BAMBOO_STACK, quantizedX, quantizedY);
+                server.broadcastToAll(bambooStackSpawnMsg);
+                
+                System.out.println("Item spawned: BAMBOO_STACK at (" + quantizedX + ", " + quantizedY + ")");
+                
+                // Spawn BabyBamboo offset by 8 pixels horizontally
+                String babyBambooId = UUID.randomUUID().toString();
+                float babyBambooX = quantizePosition(tree.getX() + 8);
+                ItemState babyBamboo = new ItemState(babyBambooId, ItemType.BABY_BAMBOO, babyBambooX, quantizedY, false);
+                server.getWorldState().addOrUpdateItem(babyBamboo);
+                
+                ItemSpawnMessage babyBambooSpawnMsg = new ItemSpawnMessage("server", babyBambooId, ItemType.BABY_BAMBOO, babyBambooX, quantizedY);
+                server.broadcastToAll(babyBambooSpawnMsg);
+                
+                System.out.println("Item spawned: BABY_BAMBOO at (" + babyBambooX + ", " + quantizedY + ")");
             }
         } else {
             // Broadcast health update
@@ -452,22 +473,27 @@ public class ClientConnection implements Runnable {
         // Remove item
         server.getWorldState().removeItem(itemId);
         
-        // Update player health
-        float healthRestore = item.getType() == ItemType.APPLE ? 20 : 20; // Both restore 20 HP
+        // Update player health (only for food items)
         float oldHealth = playerState.getHealth();
-        playerState.setHealth(Math.min(100, playerState.getHealth() + healthRestore));
-        server.getWorldState().addOrUpdatePlayer(playerState);
-        
-        System.out.println("Player " + clientId + " picked up " + item.getType() + 
-                         " (Health: " + oldHealth + " -> " + playerState.getHealth() + ")");
+        if (item.getType() == ItemType.APPLE || item.getType() == ItemType.BANANA) {
+            float healthRestore = 20; // Both restore 20 HP
+            playerState.setHealth(Math.min(100, playerState.getHealth() + healthRestore));
+            server.getWorldState().addOrUpdatePlayer(playerState);
+            
+            System.out.println("Player " + clientId + " picked up " + item.getType() + 
+                             " (Health: " + oldHealth + " -> " + playerState.getHealth() + ")");
+            
+            // Broadcast health update
+            PlayerHealthUpdateMessage healthMsg = new PlayerHealthUpdateMessage("server", clientId, playerState.getHealth());
+            server.broadcastToAll(healthMsg);
+        } else {
+            // BambooStack or BabyBamboo - no health restoration
+            System.out.println("Player " + clientId + " picked up " + item.getType());
+        }
         
         // Broadcast pickup confirmation
         ItemPickupMessage pickupMsg = new ItemPickupMessage(clientId, itemId, clientId);
         server.broadcastToAll(pickupMsg);
-        
-        // Broadcast health update
-        PlayerHealthUpdateMessage healthMsg = new PlayerHealthUpdateMessage("server", clientId, playerState.getHealth());
-        server.broadcastToAll(healthMsg);
     }
     
     /**

@@ -7,7 +7,9 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import wagemaker.uk.items.Apple;
+import wagemaker.uk.items.BabyBamboo;
 import wagemaker.uk.items.Banana;
+import wagemaker.uk.items.BambooStack;
 import wagemaker.uk.trees.SmallTree;
 import wagemaker.uk.trees.AppleTree;
 import wagemaker.uk.trees.BambooTree;
@@ -51,6 +53,8 @@ public class Player {
     private Map<String, BananaTree> bananaTrees;
     private Map<String, Apple> apples;
     private Map<String, Banana> bananas;
+    private Map<String, wagemaker.uk.items.BambooStack> bambooStacks;
+    private Map<String, wagemaker.uk.items.BabyBamboo> babyBamboos;
     private Cactus cactus; // Single cactus reference
     private Object gameInstance; // Reference to MyGdxGame for cactus respawning
     private Map<String, Boolean> clearedPositions;
@@ -94,6 +98,14 @@ public class Player {
     
     public void setBananas(Map<String, Banana> bananas) {
         this.bananas = bananas;
+    }
+    
+    public void setBambooStacks(Map<String, wagemaker.uk.items.BambooStack> bambooStacks) {
+        this.bambooStacks = bambooStacks;
+    }
+    
+    public void setBabyBamboos(Map<String, wagemaker.uk.items.BabyBamboo> babyBamboos) {
+        this.babyBamboos = babyBamboos;
     }
     
     public void setCactus(Cactus cactus) {
@@ -296,6 +308,12 @@ public class Player {
         
         // Check for banana pickups
         checkBananaPickups();
+        
+        // Check for bamboo stack pickups
+        checkBambooStackPickups();
+        
+        // Check for baby bamboo pickups
+        checkBabyBambooPickups();
         
         // Send health updates to server in multiplayer mode
         checkAndSendHealthUpdate();
@@ -649,10 +667,20 @@ public class Player {
                     attackedSomething = true;
                     
                     if (destroyed) {
+                        // Spawn BambooStack at tree position
+                        bambooStacks.put(targetKey + "-bamboostack", 
+                            new BambooStack(targetBambooTree.getX(), targetBambooTree.getY()));
+                        
+                        // Spawn BabyBamboo offset by 8 pixels horizontally
+                        babyBamboos.put(targetKey + "-babybamboo", 
+                            new BabyBamboo(targetBambooTree.getX() + 8, targetBambooTree.getY()));
+                        
+                        System.out.println("BambooStack dropped at: " + targetBambooTree.getX() + ", " + targetBambooTree.getY());
+                        System.out.println("BabyBamboo dropped at: " + (targetBambooTree.getX() + 8) + ", " + targetBambooTree.getY());
+                        
                         targetBambooTree.dispose();
                         bambooTrees.remove(targetKey);
                         clearedPositions.put(targetKey, true);
-                        System.out.println("Bamboo tree removed from world");
                     }
                 }
             }
@@ -901,6 +929,86 @@ public class Player {
                 banana.dispose();
                 bananas.remove(bananaKey);
                 System.out.println("Banana removed from game");
+            }
+        }
+    }
+    
+    private void checkBambooStackPickups() {
+        if (bambooStacks != null) {
+            // Check all bamboo stacks for pickup
+            for (Map.Entry<String, BambooStack> entry : bambooStacks.entrySet()) {
+                BambooStack bambooStack = entry.getValue();
+                String bambooStackKey = entry.getKey();
+                
+                // Check if player is close enough to pick up bamboo stack (32px range)
+                float dx = Math.abs((x + 32) - (bambooStack.getX() + 16)); // Player center to bamboo stack center
+                float dy = Math.abs((y + 32) - (bambooStack.getY() + 16)); // BambooStack is 32x32, so center is +16
+                
+                if (dx <= 32 && dy <= 32) {
+                    // Pick up the bamboo stack
+                    pickupBambooStack(bambooStackKey);
+                    break; // Only pick up one bamboo stack per frame
+                }
+            }
+        }
+    }
+    
+    private void pickupBambooStack(String bambooStackKey) {
+        // Send pickup request to server in multiplayer mode
+        if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+            gameClient.sendItemPickup(bambooStackKey);
+            // In multiplayer, server handles item removal
+            // The server will broadcast the pickup to all clients
+        } else {
+            // Single-player mode: handle locally
+            System.out.println("BambooStack picked up!");
+            
+            // Remove bamboo stack from game
+            if (bambooStacks.containsKey(bambooStackKey)) {
+                BambooStack bambooStack = bambooStacks.get(bambooStackKey);
+                bambooStack.dispose();
+                bambooStacks.remove(bambooStackKey);
+                System.out.println("BambooStack removed from game");
+            }
+        }
+    }
+    
+    private void checkBabyBambooPickups() {
+        if (babyBamboos != null) {
+            // Check all baby bamboos for pickup
+            for (Map.Entry<String, BabyBamboo> entry : babyBamboos.entrySet()) {
+                BabyBamboo babyBamboo = entry.getValue();
+                String babyBambooKey = entry.getKey();
+                
+                // Check if player is close enough to pick up baby bamboo (32px range)
+                float dx = Math.abs((x + 32) - (babyBamboo.getX() + 16)); // Player center to baby bamboo center
+                float dy = Math.abs((y + 32) - (babyBamboo.getY() + 16)); // BabyBamboo is 32x32, so center is +16
+                
+                if (dx <= 32 && dy <= 32) {
+                    // Pick up the baby bamboo
+                    pickupBabyBamboo(babyBambooKey);
+                    break; // Only pick up one baby bamboo per frame
+                }
+            }
+        }
+    }
+    
+    private void pickupBabyBamboo(String babyBambooKey) {
+        // Send pickup request to server in multiplayer mode
+        if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+            gameClient.sendItemPickup(babyBambooKey);
+            // In multiplayer, server handles item removal
+            // The server will broadcast the pickup to all clients
+        } else {
+            // Single-player mode: handle locally
+            System.out.println("BabyBamboo picked up!");
+            
+            // Remove baby bamboo from game
+            if (babyBamboos.containsKey(babyBambooKey)) {
+                BabyBamboo babyBamboo = babyBamboos.get(babyBambooKey);
+                babyBamboo.dispose();
+                babyBamboos.remove(babyBambooKey);
+                System.out.println("BabyBamboo removed from game");
             }
         }
     }

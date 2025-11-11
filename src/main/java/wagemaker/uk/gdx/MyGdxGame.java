@@ -19,6 +19,8 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 import wagemaker.uk.items.Apple;
+import wagemaker.uk.items.BabyBamboo;
+import wagemaker.uk.items.BambooStack;
 import wagemaker.uk.items.Banana;
 import wagemaker.uk.network.GameClient;
 import wagemaker.uk.network.GameServer;
@@ -164,6 +166,8 @@ public class MyGdxGame extends ApplicationAdapter {
     Map<String, BananaTree> bananaTrees;
     Map<String, Apple> apples;
     Map<String, Banana> bananas;
+    Map<String, BambooStack> bambooStacks;
+    Map<String, BabyBamboo> babyBamboos;
     Cactus cactus; // Single cactus near spawn
     Map<String, Boolean> clearedPositions;
     Random random;
@@ -235,6 +239,8 @@ public class MyGdxGame extends ApplicationAdapter {
         bananaTrees = new HashMap<>();
         apples = new HashMap<>();
         bananas = new HashMap<>();
+        bambooStacks = new HashMap<>();
+        babyBamboos = new HashMap<>();
         clearedPositions = new HashMap<>();
         remotePlayers = new HashMap<>();
         random = new Random();
@@ -267,6 +273,8 @@ public class MyGdxGame extends ApplicationAdapter {
         player.setBananaTrees(bananaTrees);
         player.setApples(apples);
         player.setBananas(bananas);
+        player.setBambooStacks(bambooStacks);
+        player.setBabyBamboos(babyBamboos);
         player.setCactus(cactus);
         player.setGameInstance(this);
         player.setClearedPositions(clearedPositions);
@@ -449,6 +457,8 @@ public class MyGdxGame extends ApplicationAdapter {
         drawBambooTrees();
         drawApples();
         drawBananas();
+        drawBambooStacks();
+        drawBabyBamboos();
         drawCactus();
         // draw player before apple trees so foliage appears in front
         batch.draw(player.getCurrentFrame(), player.getX(), player.getY(), 100, 100);
@@ -720,6 +730,34 @@ public class MyGdxGame extends ApplicationAdapter {
             if (Math.abs(banana.getX() - camX) < viewWidth && 
                 Math.abs(banana.getY() - camY) < viewHeight) {
                 batch.draw(banana.getTexture(), banana.getX(), banana.getY(), 32, 32);
+            }
+        }
+    }
+    
+    private void drawBambooStacks() {
+        float camX = camera.position.x;
+        float camY = camera.position.y;
+        float viewWidth = viewport.getWorldWidth() / 2;
+        float viewHeight = viewport.getWorldHeight() / 2;
+        
+        for (BambooStack bambooStack : bambooStacks.values()) {
+            if (Math.abs(bambooStack.getX() - camX) < viewWidth && 
+                Math.abs(bambooStack.getY() - camY) < viewHeight) {
+                batch.draw(bambooStack.getTexture(), bambooStack.getX(), bambooStack.getY(), 32, 32);
+            }
+        }
+    }
+    
+    private void drawBabyBamboos() {
+        float camX = camera.position.x;
+        float camY = camera.position.y;
+        float viewWidth = viewport.getWorldWidth() / 2;
+        float viewHeight = viewport.getWorldHeight() / 2;
+        
+        for (BabyBamboo babyBamboo : babyBamboos.values()) {
+            if (Math.abs(babyBamboo.getX() - camX) < viewWidth && 
+                Math.abs(babyBamboo.getY() - camY) < viewHeight) {
+                batch.draw(babyBamboo.getTexture(), babyBamboo.getX(), babyBamboo.getY(), 32, 32);
             }
         }
     }
@@ -1721,6 +1759,20 @@ public class MyGdxGame extends ApplicationAdapter {
         if (banana != null) {
             // Defer texture disposal to render thread
             deferOperation(() -> banana.dispose());
+            return;
+        }
+        
+        BambooStack bambooStack = bambooStacks.remove(itemId);
+        if (bambooStack != null) {
+            // Defer texture disposal to render thread
+            deferOperation(() -> bambooStack.dispose());
+            return;
+        }
+        
+        BabyBamboo babyBamboo = babyBamboos.remove(itemId);
+        if (babyBamboo != null) {
+            // Defer texture disposal to render thread
+            deferOperation(() -> babyBamboo.dispose());
         }
     }
     
@@ -2955,6 +3007,16 @@ public class MyGdxGame extends ApplicationAdapter {
                 case BANANA:
                     if (!bananas.containsKey(itemId)) {
                         bananas.put(itemId, new Banana(x, y));
+                    }
+                    break;
+                case BAMBOO_STACK:
+                    if (!bambooStacks.containsKey(itemId)) {
+                        bambooStacks.put(itemId, new BambooStack(x, y));
+                    }
+                    break;
+                case BABY_BAMBOO:
+                    if (!babyBamboos.containsKey(itemId)) {
+                        babyBamboos.put(itemId, new BabyBamboo(x, y));
                     }
                     break;
             }

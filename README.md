@@ -60,40 +60,44 @@ This isn't just a game - it's proof of concept that complex software can be buil
 
 A 2D top-down multiplayer adventure game built with libGDX featuring infinite world exploration, animated characters, tree chopping mechanics, and real-time multiplayer gameplay.
 
-## 📸 Screenshots
+## 📸 [Woodland Screenshots](./SCREENSHOTS.md)
 
-<div align="center">
-
-### Multiplayer Compass & Rain - Host Server
-![Multiplayer Menu](screenshots/mp-sp-compass-rain.png)   
-*Host your own server or connect to existing multiplayer games*
-
-### Single Player Menu - Player Name
-![Connect Dialog](screenshots/mp-menu02.png)   
-*Enter server IP and port to join multiplayer sessions*
-
-### Multiplayer Menu - Host or Connect
-![Player Name Setup](screenshots/mp-menu03.png)   
-*Customize your player name for multiplayer identification*
-
-### Multiplayer Gameplay - Player 1
-![Multiplayer Player 1](screenshots/mp-player01.png)   
-*Real-time multiplayer with synchronized player movements and actions*
-
-### Multiplayer Gameplay - Attack Tree
-![Multiplayer Attack](screenshots/mp-multisession.png)   
-*Multiple players exploring and attacking tree*
-
-### Singleplayer Menu - Save & Load world maps
-![Singleplayer Load](screenshots/SP-Save-Load-World.png)
-*Single player save and load world maps* 
-</div>
-
-> **Note**: All screenshots are 800x600 resolution showcasing multiplayer features.
 
 ## Requirements
-- Java 21+ (OpenJDK 21.0.8)
+- Java 21+ (OpenJDK 21.0.8 or higher)
 - Gradle 9.2.0+
+- libGDX 1.12.1
+
+## Technical Details
+
+### Project Information
+- **Version**: 0.0.8
+- **Game Engine**: libGDX 1.12.1
+- **Language**: Java 21
+- **Build Tool**: Gradle 9.2.0
+- **Architecture**: Client-Server with dedicated server support
+
+### Key Technologies
+- **Graphics**: libGDX with LWJGL3 backend
+- **Fonts**: FreeType font rendering (slkscr.ttf)
+- **Networking**: Java Socket-based TCP networking
+- **Serialization**: Java ObjectOutputStream for world saves
+- **Concurrency**: Multi-threaded server with client connection pools
+
+### Performance Features
+- Chunk-based rendering (only visible areas)
+- Optimized collision detection with spatial partitioning
+- Efficient network message batching
+- Delta-time based animations and physics
+- Texture atlas for sprite management
+- Memory-efficient world generation
+
+### Network Architecture
+- **Protocol**: Custom TCP-based protocol
+- **Message Types**: 20+ synchronized message types
+- **Synchronization**: Server-authoritative with client prediction
+- **Heartbeat**: 5-second keepalive with 15-second timeout
+- **Rate Limiting**: Configurable message rate limits per client
 
 ## Installation Guide
 
@@ -121,25 +125,140 @@ sdk install gradle 9.2.0
 
 ## How to Run
 
+### Run from Source
 ```bash
-cd <project folder>/Woodlander
+cd <project folder>/Woodlanders
 gradle run
 ```
 
-Or build a fat jar:
-
+### Build and Run Client JAR
 ```bash
-cd <project folder>/Woodlander
+cd <project folder>/Woodlanders
 gradle clean build -x test
-java -jar .\build\libs\woodlanders-client.jar
+java -jar build/libs/woodlanders-client.jar
 ```
+
+### Build and Run Dedicated Server
+```bash
+cd <project folder>/Woodlanders
+gradle clean build -x test
+java -jar build/libs/woodlanders-server.jar
+```
+
+### Server with Custom Configuration
+```bash
+# Basic server start
+java -jar build/libs/woodlanders-server.jar
+
+# With custom port
+java -jar build/libs/woodlanders-server.jar --port 30000
+
+# With custom config file
+java -jar build/libs/woodlanders-server.jar --config custom.properties
+
+# With memory allocation
+java -Xms2G -Xmx2G -jar build/libs/woodlanders-server.jar
+
+# All options combined
+java -Xms4G -Xmx4G -jar build/libs/woodlanders-server.jar --port 25565 --config server.properties
+```
+
+## Controls
+
+### Movement
+- **Arrow Keys** - Move character (Up/Down/Left/Right)
+- Character automatically animates based on movement direction
+
+### Actions
+- **Spacebar** - Attack nearby trees
+- **E** - Pick up nearby items (when inventory has space)
+
+### Interface
+- **Escape** - Open/close game menu
+- **Tab** - Toggle inventory display
+
+### Menu Navigation
+- **Arrow Keys** or **Up/Down** - Navigate menu options
+- **Enter** - Select menu option
+- **Escape** - Close menu or cancel dialog
+- **Backspace** - Delete character in text input
+- **Delete** - Remove selected save file (in load menu)
 
 ## Menu Navigation
 
 ### Main Menu (Press "Esc" in-game)
-Access the main menu at any time by pressing the Escape key. From here you can configure multiplayer settings, change your player name, save your progress, or exit the game.
+Access the main menu at any time by pressing the Escape key. The menu adapts based on whether you're in singleplayer or multiplayer mode.
 
-**"Esc" → Menu → Multiplayer**
+#### Singleplayer Menu Options
+```
+┌────────────────────────────┐
+│   Player Name              │
+│   Save World               │
+│   Load World               │
+│   Multiplayer              │
+│   Save Player              │
+│   Exit                     │
+└────────────────────────────┘
+```
+
+#### Multiplayer Menu Options
+```
+┌────────────────────────────┐
+│   Player Name              │
+│   Save World               │
+│   Load World               │
+│   Save Player              │
+│   Disconnect               │
+│   Exit                     │
+└────────────────────────────┘
+```
+
+### Menu Options Explained
+
+**Player Name**
+```
+┌────────────────────────────┐
+│   Enter Player Name        │
+│                            │
+│   ______________________   │
+│                            │
+│   Min 3 Characters!!!      │
+│   Enter, or Esc to Cancel  │
+└────────────────────────────┘
+```
+*Set your player name (minimum 3 characters, maximum 15 characters). Supports letters, numbers, and spaces. This name is visible to other players in multiplayer mode.*
+
+**Save World**
+```
+┌────────────────────────────┐
+│   Save World               │
+│                            │
+│   World Name:              │
+│   ______________________   │
+│                            │
+│   Enter to Save            │
+│   Esc to Cancel            │
+└────────────────────────────┘
+```
+*Save the complete world state including all trees, items, cleared positions, rain zones, and player data. Separate save directories for singleplayer and multiplayer. Automatically creates backups of existing saves.*
+
+**Load World**
+```
+┌────────────────────────────┐
+│   Load World               │
+│                            │
+│   > World_1                │
+│     World_2                │
+│     World_3                │
+│                            │
+│   Enter to Load            │
+│   Delete to Remove         │
+│   Esc to Cancel            │
+└────────────────────────────┘
+```
+*Browse and load previously saved worlds. Shows save name, timestamp, and file size. Use arrow keys to navigate, Enter to load, Delete to remove a save.*
+
+**Multiplayer**
 ```
 ┌────────────────────────────┐
 │   Multiplayer              │
@@ -147,13 +266,26 @@ Access the main menu at any time by pressing the Escape key. From here you can c
 │   Host Server              │
 │   Connect to Server        │
 │                            │
-│                            │
 │   Back                     │
 └────────────────────────────┘
 ```
-*Access multiplayer options to either host your own server or connect to an existing server. Select "Back" to return to the main menu.*
+*Access multiplayer options. Host a server for others to join, or connect to an existing server.*
 
-**"Esc" → Menu → Multiplayer → Connect to Server**
+**Multiplayer → Host Server**
+```
+┌────────────────────────────┐
+│   Host Server              │
+│                            │
+│   Port: 25565              │
+│   Max Clients: 20          │
+│                            │
+│   Enter to Start           │
+│   Esc to Cancel            │
+└────────────────────────────┘
+```
+*Start a server on your machine. Configure port and maximum player count. Your public IP will be displayed for others to connect.*
+
+**Multiplayer → Connect to Server**
 ```
 ┌────────────────────────────┐
 │   Connect to Server        │
@@ -163,81 +295,266 @@ Access the main menu at any time by pressing the Escape key. From here you can c
 │   Port Number:             │
 │   ________                 │
 │                            │
-│   Enter, or Esc to Cancel  │
+│   Enter to Connect         │
+│   Esc to Cancel            │
 └────────────────────────────┘
 ```
-*Enter the server IP address and port to join a multiplayer game. Press Enter to connect or Esc to cancel.*
+*Connect to a remote server. Enter the server's IP address and port. The game remembers your last server for quick reconnection.*
 
-**"Esc" → Menu → Player Name**
-```
-┌────────────────────────────┐
-│     Enter Player Name:     │
-│                            │
-│   ______________________   │
-│                            │
-│                            │
-│     Min 3 Characters!!!    │
-│   Enter, or Esc to Cancel  │
-└────────────────────────────┘
-```
-*Set your player name (minimum 3 characters required). This name will be visible to other players in multiplayer mode.*
+**Save Player**
+*Saves your player data including position, health, inventory, and settings. Separate saves for singleplayer and multiplayer positions. Data is saved to your OS-specific config directory.*
 
-**"Esc" → Menu → Save**
+**Disconnect** *(Multiplayer only)*
+*Disconnect from the current multiplayer server and return to singleplayer mode. Your multiplayer progress is automatically saved.*
 
-*Saves your current game progress including player position, health, world state, destroyed trees, and player settings. Your game is automatically saved when you exit, but you can manually save at any time from this menu option.*
-
-**"Esc" → Menu → Exit**
-
-*Exits the game and returns to desktop. The game automatically saves all player data including your position, health, inventory, and world changes before closing. All progress is preserved for your next session.*
+**Exit**
+*Exit the game. All player data and world state are automatically saved before closing.*
 
 ## 🎮 Game Features
 
 For a comprehensive list of all game features, mechanics, and technical details, see **[FEATURES.md](docs/FEATURES.md)**.
 
 ### Quick Feature Highlights
-- ✨ **Infinite Procedurally Generated World** - Explore endlessly with dynamic terrain
-- 🏃 **Animated Player Character** - Smooth walking animations and responsive controls
-- 🌳 **Multiple Tree Types** - Regular trees, apple trees, and banana trees with unique properties
+
+#### World & Environment
+- ✨ **Infinite Procedurally Generated World** - Explore endlessly with dynamic terrain generation
+- 🏜️ **Multiple Biomes** - Grass and sand biomes with distinct visual styles
+- �️ ***Dynamic Weather System** - Random rain events that follow the player (120s duration, 2-8 minute intervals)
+- 🧭 **Compass Navigation** - Always points toward spawn point for easy navigation
+- � **Worldp Save/Load System** - Save and load complete world states with separate singleplayer/multiplayer saves
+
+#### Character & Movement
+- 🏃 **Animated Player Character** - Smooth walking animations with directional sprites
+- 💚 **Health System** - Player health management with damage and restoration mechanics
+- 🎯 **Precise Collision Detection** - Optimized hitboxes for all game objects
+
+#### Trees & Resources
+- 🌳 **Multiple Tree Types** - Small trees, regular trees, apple trees, banana trees, bamboo trees, and coconut trees
 - ⚔️ **Combat System** - Attack and destroy trees with visual health bars
+- 🔄 **Health Regeneration** - Damaged trees slowly recover health over time
 - 🌵 **Environmental Hazards** - Cacti that damage players on contact
-- 💚 **Health System** - Player health management with restoration items
-- 🌐 **Multiplayer Support** - Real-time multiplayer with dedicated server
-- 🎯 **Collision Detection** - Precise hitboxes for all game objects
-- 🔄 **Health Regeneration** - Damaged trees slowly recover over time
+
+#### Inventory & Items
+- 🎒 **Inventory System** - Separate inventories for singleplayer and multiplayer modes
+- 🍎 **Collectible Items** - Apples, bananas, baby bamboo, bamboo stacks, and wood stacks
+- 🍌 **Auto-Consumption** - Items automatically consumed when health is low
+- 📦 **Item Drops** - Trees drop resources when destroyed
+- 🔄 **Network Sync** - Inventory synchronized across multiplayer sessions
+
+#### Multiplayer
+- 🌐 **Dedicated Server** - Standalone server with configurable settings
+- 👥 **Real-time Multiplayer** - Synchronized player positions, actions, and world state
+- 📡 **Connection Quality Indicator** - Visual network status display
+- 💾 **Separate Positions** - Independent player positions for singleplayer and multiplayer
+- 🔌 **Disconnect/Reconnect** - Graceful connection handling with last server memory
+
+#### User Interface
+- 📋 **In-Game Menu System** - Wooden plank themed menus with ESC key access
+- 👤 **Player Name Customization** - Set custom player names (min 3 characters)
+- 🖥️ **HUD Elements** - Health bar, inventory display, compass, and connection status
+- 💾 **World Management** - Save, load, and manage multiple world saves
+- 🎨 **Custom Fonts** - Retro pixel font (slkscr.ttf) for authentic game feel
 
 ## Game Classes
-- `MyGdxGame.java` - Main game loop and rendering
+
+### Core Game
+- `MyGdxGame.java` - Main game loop, rendering, and game state management
+- `DesktopLauncher.java` - Desktop application entry point
+
+### Player System
 - `Player.java` - Character movement, animation, combat, and health management
-- `Tree.java` - Regular tree implementation with health regeneration
-- `AppleTree.java` - Large apple tree with fruit and health restoration
-- `BananaTree.java` - Banana tree with health restoration
+- `RemotePlayer.java` - Remote player representation in multiplayer
+- `PlayerConfig.java` - Player configuration and persistence
+
+### Trees & Environment
+- `SmallTree.java` - Small decorative trees
+- `AppleTree.java` - Large apple trees with fruit drops
+- `BananaTree.java` - Banana trees with fruit drops
+- `BambooTree.java` - Bamboo trees with unique collision
+- `CoconutTree.java` - Coconut trees
 - `Cactus.java` - Environmental hazard with damage system
-- `NetworkClient.java` - Multiplayer client connection handling
-- `MenuSystem.java` - In-game menu and UI management
+
+### Items & Inventory
+- `Apple.java` - Apple item with health restoration
+- `Banana.java` - Banana item with health restoration
+- `BabyBamboo.java` - Baby bamboo resource
+- `BambooStack.java` - Bamboo stack resource
+- `WoodStack.java` - Wood stack resource
+- `Inventory.java` - Inventory data structure
+- `InventoryManager.java` - Inventory operations and auto-consumption
+- `ItemType.java` - Item type enumeration
+
+### Biome System
+- `BiomeType.java` - Biome type enumeration (grass, sand)
+- `BiomeManager.java` - Biome generation and management
+- `BiomeConfig.java` - Biome configuration
+- `BiomeTextureGenerator.java` - Dynamic biome texture generation
+- `BiomeZone.java` - Biome zone data structure
+
+### Weather System
+- `RainSystem.java` - Rain particle system
+- `DynamicRainManager.java` - Dynamic rain event management
+- `RainZoneManager.java` - Rain zone management
+- `RainRenderer.java` - Rain rendering
+- `RainParticle.java` - Individual rain particle
+- `RainZone.java` - Rain zone data structure
+- `RainConfig.java` - Rain configuration
+
+### World Management
+- `WorldSaveManager.java` - World save/load operations
+- `WorldSaveData.java` - World save data structure
+- `WorldSaveInfo.java` - World save metadata
+
+### User Interface
+- `GameMenu.java` - Main in-game menu system
+- `MultiplayerMenu.java` - Multiplayer connection menu
+- `ConnectDialog.java` - Server connection dialog
+- `ServerHostDialog.java` - Server hosting dialog
+- `ErrorDialog.java` - Error message dialog
+- `WorldSaveDialog.java` - World save dialog
+- `WorldLoadDialog.java` - World load dialog
+- `WorldManageDialog.java` - World management dialog
+- `Compass.java` - Compass navigation UI
+- `InventoryRenderer.java` - Inventory display renderer
+- `ConnectionQualityIndicator.java` - Network status indicator
+
+### Networking
+- `GameServer.java` - Multiplayer server implementation
+- `GameClient.java` - Multiplayer client implementation
+- `ClientConnection.java` - Client connection handler
+- `NetworkMessage.java` - Base network message class
+- `MessageHandler.java` - Message handling interface
+- `GameMessageHandler.java` - Game-specific message handler
+- `DefaultMessageHandler.java` - Default message handler
+
+#### Network Messages
+- `PlayerJoinMessage.java` - Player join notification
+- `PlayerLeaveMessage.java` - Player leave notification
+- `PlayerMovementMessage.java` - Player position updates
+- `PlayerHealthUpdateMessage.java` - Player health sync
+- `AttackActionMessage.java` - Attack action sync
+- `TreeDestroyedMessage.java` - Tree destruction sync
+- `TreeHealthUpdateMessage.java` - Tree health sync
+- `TreeRemovalMessage.java` - Tree removal sync
+- `ItemSpawnMessage.java` - Item spawn notification
+- `ItemPickupMessage.java` - Item pickup sync
+- `InventoryUpdateMessage.java` - Inventory state sync
+- `InventorySyncMessage.java` - Full inventory sync
+- `WorldStateMessage.java` - Complete world state sync
+- `WorldStateUpdateMessage.java` - Incremental world updates
+- `ConnectionAcceptedMessage.java` - Connection acceptance
+- `ConnectionRejectedMessage.java` - Connection rejection
+- `HeartbeatMessage.java` - Connection keepalive
+- `PingMessage.java` - Latency measurement
+- `PongMessage.java` - Ping response
+- `PositionCorrectionMessage.java` - Server position correction
+
+#### Network Data Structures
+- `PlayerState.java` - Player state data
+- `TreeState.java` - Tree state data
+- `ItemState.java` - Item state data
+- `WorldState.java` - Complete world state
+- `WorldStateUpdate.java` - World state update
+- `Direction.java` - Movement direction enum
+- `MessageType.java` - Message type enumeration
+- `TreeType.java` - Network tree type enum
+- `ItemType.java` - Network item type enum
+
+### Server
+- `DedicatedServerLauncher.java` - Standalone server entry point
+- `ServerConfig.java` - Server configuration management
+- `ServerLogger.java` - Server logging system
+- `ServerMonitor.java` - Server monitoring and statistics
 
 ## Current Status
-✅ Complete infinite world system  
-✅ Animated player character  
-✅ Tree generation and collision  
-✅ Combat and destruction mechanics  
-✅ Health bar visualization system  
-✅ Individual attack range detection  
-✅ Camera following system  
-✅ Performance optimization  
-✅ Multiplayer support with dedicated server  
-✅ Player health system  
-✅ Environmental hazards (cacti)  
-✅ Health restoration (apple and banana trees)  
-✅ Tree health regeneration system  
-✅ Menu system with ESC key  
 
-## Future Enhancements
-- Resource collection (wood, apples, bananas)
-- Inventory system
-- Crafting mechanics
-- Additional environmental features
-- Sound effects
-- Save/load functionality
-- More multiplayer features
+### ✅ Completed Features
+- **World System**: Infinite procedural generation with multiple biomes (grass, sand)
+- **Character System**: Animated player with smooth movement and directional sprites
+- **Tree System**: 6 tree types with health, regeneration, and unique collision boxes
+- **Combat System**: Attack mechanics with visual health bars and damage feedback
+- **Inventory System**: Full inventory with 5 item types and auto-consumption
+- **Item System**: Collectible items with health restoration and resource drops
+- **Weather System**: Dynamic rain with random events and zone-based rendering
+- **Biome System**: Multiple biomes with distinct textures and generation patterns
+- **World Persistence**: Complete save/load system with separate SP/MP saves
+- **Multiplayer**: Dedicated server with full world and player synchronization
+- **UI System**: Comprehensive menu system with wooden plank theme
+- **Navigation**: Compass pointing to spawn with dynamic rotation
+- **Network**: 20+ message types for complete multiplayer synchronization
+- **Server**: Configurable dedicated server with monitoring and logging
+- **Health System**: Player health with damage, restoration, and auto-consumption
+- **Collision System**: Precise hitboxes for all entities with optimized detection
+
+### 🚧 Future Enhancements
+- **Crafting System**: Combine resources to create new items
+- **Building System**: Place structures and modify the world
+- **Sound Effects**: Audio feedback for actions and events
+- **Music System**: Background music and ambient sounds
+- **More Biomes**: Desert, forest, snow, and ocean biomes
+- **Day/Night Cycle**: Dynamic lighting and time-based events
+- **Mob System**: Hostile and friendly creatures
+- **Quest System**: Objectives and progression
+- **Trading System**: NPC merchants and player trading
+- **Skills/Leveling**: Character progression and abilities
+
+## Server Configuration
+
+The dedicated server can be configured using a `server.properties` file. Create this file in the same directory as the server JAR.
+
+### server.properties Example
+```properties
+# Server port (default: 25565)
+server.port=25565
+
+# Maximum concurrent clients (default: 20)
+server.max-clients=20
+
+# World seed - 0 for random (default: 0)
+world.seed=0
+
+# Heartbeat interval in seconds (default: 5)
+server.heartbeat-interval=5
+
+# Client timeout in seconds (default: 15)
+server.client-timeout=15
+
+# Message rate limit per client (default: 100)
+server.rate-limit=100
+
+# Enable debug logging (default: false)
+server.debug=false
+```
+
+### Server Requirements by Player Count
+| Players | CPU Cores | RAM  | Upload Speed |
+|---------|-----------|------|--------------|
+| 5-10    | 2         | 1GB  | 2 Mbps       |
+| 10-20   | 2-4       | 2GB  | 5 Mbps       |
+| 20-50   | 4         | 4GB  | 10 Mbps      |
+| 50+     | 8+        | 8GB+ | 20 Mbps      |
+
+### Configuration Directory Locations
+
+Player data and world saves are stored in OS-specific directories:
+
+- **Windows**: `%APPDATA%/Woodlanders/`
+- **macOS**: `~/Library/Application Support/Woodlanders/`
+- **Linux**: `~/.config/woodlanders/`
+
+Directory structure:
+```
+Woodlanders/
+├── woodlanders.json          # Player config (position, health, inventory, name)
+└── world-saves/
+    ├── singleplayer/         # Singleplayer world saves
+    │   ├── World_1.wld
+    │   ├── World_1.wld.backup
+    │   └── ...
+    └── multiplayer/          # Multiplayer world saves
+        ├── Server_1.wld
+        ├── Server_1.wld.backup
+        └── ...
+```
 
 ### 🚀 [Woodland Documentation](./docs/README.md)

@@ -78,8 +78,21 @@ public class WorldState implements Serializable {
         
         // Create a temporary BiomeManager for biome queries during initial generation
         // This ensures server-side tree generation respects biome boundaries
-        wagemaker.uk.biome.BiomeManager biomeManager = new wagemaker.uk.biome.BiomeManager();
-        biomeManager.initialize();
+        wagemaker.uk.biome.BiomeManager biomeManager = null;
+        boolean useBiomeAwareness = true;
+        
+        try {
+            biomeManager = new wagemaker.uk.biome.BiomeManager();
+            biomeManager.initialize();
+            System.out.println("BiomeManager initialized successfully in WorldState (thread: " + Thread.currentThread().getName() + ")");
+        } catch (Exception e) {
+            // BiomeManager initialization failed (likely due to OpenGL context issues on background thread)
+            // Fall back to generating trees without biome awareness
+            System.err.println("BiomeManager initialization failed in WorldState, generating trees without biome awareness: " + e.getMessage());
+            e.printStackTrace();
+            useBiomeAwareness = false;
+            biomeManager = null;
+        }
         
         // Generate trees in a 5000x5000 area around spawn (-2500 to +2500)
         // This gives players plenty of trees to explore
@@ -104,50 +117,113 @@ public class WorldState implements Serializable {
                         continue;
                     }
                     
+                    // Add random offset to break grid pattern (±32px in each direction)
+                    // Try multiple times to find a position without overlapping trees
+                    float treeX = 0, treeY = 0;
+                    boolean validPosition = false;
+                    int maxAttempts = 5;
+                    
+                    for (int attempt = 0; attempt < maxAttempts; attempt++) {
+                        float offsetX = (random.nextFloat() - 0.5f) * 64; // -32 to +32
+                        float offsetY = (random.nextFloat() - 0.5f) * 64; // -32 to +32
+                        treeX = x + offsetX;
+                        treeY = y + offsetY;
+                        
+                        // Check biome type first to determine minimum distance
+                        wagemaker.uk.biome.BiomeType biomeCheck = null;
+                        if (useBiomeAwareness && biomeManager != null) {
+                            biomeCheck = biomeManager.getBiomeAtPosition(treeX, treeY);
+                        }
+                        float minDistance = (biomeCheck == wagemaker.uk.biome.BiomeType.SAND) ? 50f : 192f;
+                        
+                        // Check if any tree is too close (192px for grass, 50px for sand)
+                        if (!isTreeTooClose(treeX, treeY, minDistance)) {
+                            validPosition = true;
+                            break;
+                        }
+                    }
+                    
+                    // If no valid position found after attempts, skip this tree
+                    if (!validPosition) {
+                        continue;
+                    }
+                    
                     // Don't spawn trees too close to spawn point (within 200px)
-                    float distanceFromSpawn = (float) Math.sqrt(x * x + y * y);
+                    float distanceFromSpawn = (float) Math.sqrt(treeX * treeX + treeY * treeY);
                     if (distanceFromSpawn < 200) {
                         continue;
                     }
                     
                     // STEP 4: Query biome type (DETERMINISTIC - same as client)
                     // This ensures server generates the same biome-specific trees as clients
-                    wagemaker.uk.biome.BiomeType biome = biomeManager.getBiomeAtPosition(x, y);
+                    TreeType treeType = null;
                     
-                    // STEP 5: Generate tree based on biome type (SAME LOGIC AS CLIENT)
-                    TreeType treeType;
-                    
-                    if (biome == wagemaker.uk.biome.BiomeType.SAND) {
-                        // Sand biomes: only bamboo trees (100% probability)
-                        treeType = TreeType.BAMBOO;
+                    if (useBiomeAwareness && biomeManager != null) {
+                        wagemaker.uk.biome.BiomeType biome = biomeManager.getBiomeAtPosition(treeX, treeY);
+                        
+                        // STEP 5: Generate tree based on biome type (SAME LOGIC AS CLIENT)
+                        if (biome == wagemaker.uk.biome.BiomeType.SAND) {
+                            // Sand biomes: bamboo trees with 30% spawn rate (reduced by 70%)
+                            if (random.nextFloat() < 0.3f) {
+                                treeType = TreeType.BAMBOO;
+                            }
+                        } else {
+                            // Grass biomes: adjusted tree type distribution
+                            // SmallTree: 42.5% (increased by 30% from 32.5%)
+                            // AppleTree: 12.5% (reduced by 50% from 25%)
+                            // CoconutTree: 32.5% (unchanged)
+                            // BananaTree: 12.5% (reduced by 50% from 25%)
+                            float treeTypeRoll = random.nextFloat();
+                            
+                            if (treeTypeRoll < 0.425f) {
+                                treeType = TreeType.SMALL;
+                            } else if (treeTypeRoll < 0.55f) {
+                                treeType = TreeType.APPLE;
+                            } else if (treeTypeRoll < 0.875f) {
+                                treeType = TreeType.COCONUT;
+                            } else {
+                                treeType = TreeType.BANANA;
+                            }
+                        }
                     } else {
-                        // Grass biomes: only non-bamboo trees (25% each for 4 types)
-                        // This random.nextFloat() call is the SECOND call on the seeded random,
-                        // ensuring deterministic tree type selection matching client behavior
+                        // Fallback: generate trees without biome awareness (all types equally)
                         float treeTypeRoll = random.nextFloat();
                         
-                        if (treeTypeRoll < 0.25f) {
+                        if (treeTypeRoll < 0.2f) {
                             treeType = TreeType.SMALL;
-                        } else if (treeTypeRoll < 0.5f) {
+                        } else if (treeTypeRoll < 0.4f) {
                             treeType = TreeType.APPLE;
-                        } else if (treeTypeRoll < 0.75f) {
+                        } else if (treeTypeRoll < 0.6f) {
                             treeType = TreeType.COCONUT;
-                        } else {
+                        } else if (treeTypeRoll < 0.8f) {
                             treeType = TreeType.BANANA;
+                        } else {
+                            treeType = TreeType.BAMBOO;
                         }
                     }
                     
-                    // Create tree state with full health
-                    TreeState tree = new TreeState(key, treeType, x, y, 100.0f, true);
+                    // Skip if no tree type was selected (e.g., bamboo didn't pass 30% check)
+                    if (treeType == null) {
+                        continue;
+                    }
+                    
+                    // Create tree state with full health and randomized position
+                    TreeState tree = new TreeState(key, treeType, treeX, treeY, 100.0f, true);
                     this.trees.put(key, tree);
                 }
             }
         }
         
         // Clean up temporary BiomeManager
-        biomeManager.dispose();
+        if (biomeManager != null) {
+            biomeManager.dispose();
+        }
         
-        System.out.println("Generated " + trees.size() + " initial biome-specific trees for world seed: " + worldSeed);
+        if (useBiomeAwareness) {
+            System.out.println("Generated " + trees.size() + " initial biome-specific trees for world seed: " + worldSeed);
+        } else {
+            System.out.println("Generated " + trees.size() + " initial trees (without biome awareness) for world seed: " + worldSeed);
+        }
     }
     
     /**
@@ -168,6 +244,155 @@ public class WorldState implements Serializable {
             }
         }
         return false;
+    }
+    
+    /**
+     * Checks if a tree position is too close to any existing tree.
+     * Uses float coordinates for precise overlap detection.
+     * 
+     * @param x The x-coordinate to check
+     * @param y The y-coordinate to check
+     * @param minDistance Minimum distance required between trees
+     * @return true if too close to another tree, false otherwise
+     */
+    private boolean isTreeTooClose(float x, float y, float minDistance) {
+        for (TreeState tree : trees.values()) {
+            if (!tree.isExists()) {
+                continue;
+            }
+            
+            float dx = tree.getX() - x;
+            float dy = tree.getY() - y;
+            float distance = (float) Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < minDistance) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Generates a tree at a specific position using deterministic logic.
+     * This uses the same algorithm as client-side generation to ensure consistency.
+     * 
+     * @param x The x-coordinate (must be aligned to 64px grid)
+     * @param y The y-coordinate (must be aligned to 64px grid)
+     * @return The generated TreeState, or null if no tree should exist at this position
+     */
+    public TreeState generateTreeAt(int x, int y) {
+        String key = x + "," + y;
+        
+        // Check if tree already exists or was cleared
+        if (trees.containsKey(key) || clearedPositions.contains(key)) {
+            return trees.get(key);
+        }
+        
+        // Use deterministic random seed (same as client-side generation)
+        java.util.Random random = new java.util.Random();
+        random.setSeed(worldSeed + x * 31L + y * 17L);
+        
+        // Check spawn probability (2% chance)
+        if (random.nextFloat() < 0.02f) {
+            // Add random offset to break grid pattern (±32px in each direction)
+            // Try multiple times to find a position without overlapping trees
+            float treeX = 0, treeY = 0;
+            boolean validPosition = false;
+            int maxAttempts = 5;
+            
+            for (int attempt = 0; attempt < maxAttempts; attempt++) {
+                float offsetX = (random.nextFloat() - 0.5f) * 64; // -32 to +32
+                float offsetY = (random.nextFloat() - 0.5f) * 64; // -32 to +32
+                treeX = x + offsetX;
+                treeY = y + offsetY;
+                
+                // Check biome type first to determine minimum distance
+                wagemaker.uk.biome.BiomeManager tempBiomeManager = new wagemaker.uk.biome.BiomeManager();
+                tempBiomeManager.initialize();
+                wagemaker.uk.biome.BiomeType biomeCheck = tempBiomeManager.getBiomeAtPosition(treeX, treeY);
+                tempBiomeManager.dispose();
+                
+                float minDistance = (biomeCheck == wagemaker.uk.biome.BiomeType.SAND) ? 50f : 192f;
+                
+                // Check if any tree is too close (192px for grass, 50px for sand)
+                if (!isTreeTooClose(treeX, treeY, minDistance)) {
+                    validPosition = true;
+                    break;
+                }
+            }
+            
+            // If no valid position found after attempts, skip this tree
+            if (!validPosition) {
+                return null;
+            }
+            
+            // Don't spawn trees too close to spawn point (within 200px)
+            // This is deterministic based on coordinates only
+            float distanceFromSpawn = (float) Math.sqrt(treeX * treeX + treeY * treeY);
+            if (distanceFromSpawn < 200) {
+                return null;
+            }
+            
+            // Determine tree type using biome-aware logic (if available)
+            TreeType treeType = null;
+            
+            // Try to use biome manager for tree type determination
+            try {
+                wagemaker.uk.biome.BiomeManager biomeManager = new wagemaker.uk.biome.BiomeManager();
+                biomeManager.initialize();
+                wagemaker.uk.biome.BiomeType biome = biomeManager.getBiomeAtPosition(treeX, treeY);
+                biomeManager.dispose();
+                
+                if (biome == wagemaker.uk.biome.BiomeType.SAND) {
+                    // Sand biomes: bamboo trees with 30% spawn rate (reduced by 70%)
+                    if (random.nextFloat() < 0.3f) {
+                        treeType = TreeType.BAMBOO;
+                    }
+                } else {
+                    // Grass biomes: adjusted tree type distribution
+                    // SmallTree: 42.5% (increased by 30% from 32.5%)
+                    // AppleTree: 12.5% (reduced by 50% from 25%)
+                    // CoconutTree: 32.5% (unchanged)
+                    // BananaTree: 12.5% (reduced by 50% from 25%)
+                    float treeTypeRoll = random.nextFloat();
+                    if (treeTypeRoll < 0.425f) {
+                        treeType = TreeType.SMALL;
+                    } else if (treeTypeRoll < 0.55f) {
+                        treeType = TreeType.APPLE;
+                    } else if (treeTypeRoll < 0.875f) {
+                        treeType = TreeType.COCONUT;
+                    } else {
+                        treeType = TreeType.BANANA;
+                    }
+                }
+            } catch (Exception e) {
+                // Fallback: generate without biome awareness
+                float treeTypeRoll = random.nextFloat();
+                if (treeTypeRoll < 0.2f) {
+                    treeType = TreeType.SMALL;
+                } else if (treeTypeRoll < 0.4f) {
+                    treeType = TreeType.APPLE;
+                } else if (treeTypeRoll < 0.6f) {
+                    treeType = TreeType.COCONUT;
+                } else if (treeTypeRoll < 0.8f) {
+                    treeType = TreeType.BANANA;
+                } else {
+                    treeType = TreeType.BAMBOO;
+                }
+            }
+            
+            // If no tree type was selected (e.g., bamboo didn't pass 30% check), return null
+            if (treeType == null) {
+                return null;
+            }
+            
+            // Create and store the tree with randomized position
+            TreeState tree = new TreeState(key, treeType, treeX, treeY, 100.0f, true);
+            this.trees.put(key, tree);
+            return tree;
+        }
+        
+        return null;
     }
     
     /**

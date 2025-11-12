@@ -49,7 +49,7 @@ public class BiomeManager {
      * 
      * Initialization steps:
      * 1. Create default biome zone configuration
-     * 2. Generate textures for each biome type
+     * 2. Generate textures for each biome type (only if on OpenGL thread)
      * 3. Cache textures for fast lookup
      * 
      * Requirements: 1.1 (multiple biome zones), 3.1 (configurable thresholds)
@@ -63,13 +63,24 @@ public class BiomeManager {
         initializeBiomeZones();
         
         // Generate and cache textures for each biome type
-        // In headless mode (tests), texture generation may fail due to missing native libraries
-        try {
-            generateAndCacheTextures();
-        } catch (UnsatisfiedLinkError e) {
-            // Running in headless mode (e.g., unit tests)
+        // Skip texture generation if not on OpenGL thread (e.g., server-side or tests)
+        // Check if we're on the main rendering thread by checking thread name
+        String threadName = Thread.currentThread().getName();
+        boolean isRenderThread = threadName.contains("LWJGL") || threadName.equals("main");
+        
+        if (com.badlogic.gdx.Gdx.graphics != null && isRenderThread) {
+            try {
+                generateAndCacheTextures();
+            } catch (Exception e) {
+                // Texture generation failed - enter headless mode
+                System.err.println("BiomeManager: Texture generation failed, entering headless mode: " + e.getMessage());
+                headlessMode = true;
+            }
+        } else {
+            // Not on OpenGL thread (e.g., server-side background thread or tests)
             // Biome zones are still initialized and functional
             headlessMode = true;
+            System.out.println("BiomeManager: Skipping texture generation (thread: " + threadName + ")");
         }
         
         initialized = true;
@@ -107,8 +118,8 @@ public class BiomeManager {
     
     /**
      * Determines which biome type applies at a given world position.
-     * Uses distance from spawn point to determine the biome zone.
-     * Adds noise-based variation to create natural, organic biome boundaries.
+     * Uses multiple random sand patches scattered around the world.
+     * Sand patches appear at distances between 7000-15000px from spawn.
      * 
      * @param worldX The x-coordinate in world space
      * @param worldY The y-coordinate in world space
@@ -117,26 +128,56 @@ public class BiomeManager {
      * Requirements: 1.2 (distance calculation), 4.1 (coordinate-based), 4.2 (deterministic)
      */
     public BiomeType getBiomeAtPosition(float worldX, float worldY) {
+        // Check if position is in a sand patch
+        if (isInSandPatch(worldX, worldY)) {
+            return BiomeType.SAND;
+        }
+        
+        // Default to grass
+        return BiomeType.GRASS;
+    }
+    
+    /**
+     * Checks if a position is within a sand patch.
+     * Uses multi-octave noise to create organic, irregular sand patches
+     * scattered throughout the world at various distances from spawn.
+     * 
+     * @param worldX The x-coordinate in world space
+     * @param worldY The y-coordinate in world space
+     * @return true if position is in sand, false otherwise
+     */
+    private boolean isInSandPatch(float worldX, float worldY) {
         float distance = calculateDistanceFromSpawn(worldX, worldY);
         
-        // Handle invalid distances (NaN or Infinity)
-        if (Float.isNaN(distance) || Float.isInfinite(distance)) {
-            return BiomeType.GRASS; // Default to grass for invalid distances
+        // Don't spawn sand too close to spawn (keep spawn area grass)
+        if (distance < 1000) {
+            return false;
         }
         
-        // Add noise-based variation to create natural boundaries
-        float noiseOffset = calculateNoiseOffset(worldX, worldY);
-        float adjustedDistance = distance + noiseOffset;
+        // Use multi-octave noise to create organic sand patches
+        // Scale coordinates for noise sampling
+        float noiseScale1 = 0.00015f; // Large features (major patch locations)
+        float noiseScale2 = 0.0006f;  // Medium features (patch shapes)
+        float noiseScale3 = 0.0015f;  // Small features (edges and details)
         
-        // Find the biome zone that contains this adjusted distance
-        for (BiomeZone zone : biomeZones) {
-            if (zone.containsDistance(adjustedDistance)) {
-                return zone.getBiomeType();
-            }
-        }
+        // Sample noise at different scales
+        float noise1 = simplexNoise(worldX * noiseScale1, worldY * noiseScale1);
+        float noise2 = simplexNoise(worldX * noiseScale2, worldY * noiseScale2);
+        float noise3 = simplexNoise(worldX * noiseScale3, worldY * noiseScale3);
         
-        // Fallback to grass if no zone matches (should not happen with proper configuration)
-        return BiomeType.GRASS;
+        // Combine noise octaves with different weights
+        float combinedNoise = noise1 * 0.5f + noise2 * 0.35f + noise3 * 0.15f;
+        
+        // Add periodic variation based on distance to create "rings" of varying sand density
+        // This creates areas with more/less sand as you travel outward
+        float distancePhase = (float) Math.sin(distance * 0.0003f) * 0.15f;
+        
+        // Normalize combined noise to 0-1 range and add distance variation
+        float sandProbability = (combinedNoise * 0.5f + 0.5f) + distancePhase;
+        
+        // Threshold for sand (adjust to control sand coverage)
+        // 0.6 means roughly 40% of the world will be sand patches
+        return sandProbability > 0.6f;
     }
     
     /**

@@ -166,6 +166,26 @@ public class RainZoneManager {
     }
     
     /**
+     * Gets a specific rain zone by its ID.
+     * 
+     * @param zoneId The unique identifier of the zone
+     * @return The rain zone with the specified ID, or null if not found
+     */
+    public RainZone getRainZone(String zoneId) {
+        if (zoneId == null) {
+            return null;
+        }
+        
+        for (RainZone zone : rainZones) {
+            if (zoneId.equals(zone.getZoneId())) {
+                return zone;
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
      * Gets the number of rain zones currently managed.
      * 
      * @return The number of rain zones

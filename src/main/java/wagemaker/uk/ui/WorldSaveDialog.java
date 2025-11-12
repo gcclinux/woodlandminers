@@ -357,8 +357,8 @@ public class WorldSaveDialog {
         
         // Draw warning message
         dialogFont.setColor(Color.RED);
-        dialogFont.draw(batch, "A save with this name already exists.", dialogX + 20, dialogY + DIALOG_HEIGHT - 110);
-        dialogFont.draw(batch, "Overwriting will permanently replace it.", dialogX + 20, dialogY + DIALOG_HEIGHT - 135);
+        dialogFont.draw(batch, "This save already exists.", dialogX + 20, dialogY + DIALOG_HEIGHT - 110);
+        dialogFont.draw(batch, "Overwrite will replace it forever.", dialogX + 20, dialogY + DIALOG_HEIGHT - 135);
         
         // Draw confirmation options
         dialogFont.setColor(Color.YELLOW);

@@ -328,24 +328,41 @@ public class ClientConnection implements Runnable {
         // Target is not a player, continue with existing tree attack logic
         TreeState tree = server.getWorldState().getTrees().get(targetId);
         
-        // If tree doesn't exist in server state, it's a ghost tree on the client
+        // If tree doesn't exist in server state, try to generate it deterministically
         if (tree == null) {
-            // Log the ghost tree attempt and check if threshold exceeded
-            boolean shouldContinue = logGhostTreeAttempt(targetId);
-            
-            if (!shouldContinue) {
-                // Client exceeded ghost tree attack limit, disconnect them
-                running = false;
-                return;
+            // Parse tree coordinates from targetId (format: "x,y")
+            try {
+                String[] coords = targetId.split(",");
+                if (coords.length == 2) {
+                    int treeX = Integer.parseInt(coords[0]);
+                    int treeY = Integer.parseInt(coords[1]);
+                    
+                    // Try to generate the tree using deterministic logic
+                    tree = server.getWorldState().generateTreeAt(treeX, treeY);
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to parse tree coordinates from targetId: " + targetId);
             }
             
-            // Send tree removal message to client to remove the ghost tree
-            TreeRemovalMessage removalMsg = new TreeRemovalMessage("server", targetId, 
-                "Tree does not exist in server world state");
-            sendMessage(removalMsg);
-            
-            System.out.println("[GHOST_TREE] Sent TreeRemovalMessage to client " + clientId + " for tree " + targetId);
-            return;
+            // If still null after generation attempt, it's a ghost tree
+            if (tree == null) {
+                // Log the ghost tree attempt and check if threshold exceeded
+                boolean shouldContinue = logGhostTreeAttempt(targetId);
+                
+                if (!shouldContinue) {
+                    // Client exceeded ghost tree attack limit, disconnect them
+                    running = false;
+                    return;
+                }
+                
+                // Send tree removal message to client to remove the ghost tree
+                TreeRemovalMessage removalMsg = new TreeRemovalMessage("server", targetId, 
+                    "Tree does not exist in server world state");
+                sendMessage(removalMsg);
+                
+                System.out.println("[GHOST_TREE] Sent TreeRemovalMessage to client " + clientId + " for tree " + targetId);
+                return;
+            }
         }
         
         // Check if tree was already destroyed
@@ -418,6 +435,16 @@ public class ClientConnection implements Runnable {
                 server.broadcastToAll(babyBambooSpawnMsg);
                 
                 System.out.println("Item spawned: BABY_BAMBOO at (" + babyBambooX + ", " + quantizedY + ")");
+            } else if (tree.getType() == TreeType.SMALL) {
+                // Spawn WoodStack at tree position
+                String woodStackId = UUID.randomUUID().toString();
+                ItemState woodStack = new ItemState(woodStackId, ItemType.WOOD_STACK, quantizedX, quantizedY, false);
+                server.getWorldState().addOrUpdateItem(woodStack);
+                
+                ItemSpawnMessage woodStackSpawnMsg = new ItemSpawnMessage("server", woodStackId, ItemType.WOOD_STACK, quantizedX, quantizedY);
+                server.broadcastToAll(woodStackSpawnMsg);
+                
+                System.out.println("Item spawned: WOOD_STACK at (" + quantizedX + ", " + quantizedY + ")");
             }
         } else {
             // Broadcast health update

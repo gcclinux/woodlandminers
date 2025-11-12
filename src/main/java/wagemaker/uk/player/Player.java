@@ -10,6 +10,7 @@ import wagemaker.uk.items.Apple;
 import wagemaker.uk.items.BabyBamboo;
 import wagemaker.uk.items.Banana;
 import wagemaker.uk.items.BambooStack;
+import wagemaker.uk.items.WoodStack;
 import wagemaker.uk.trees.SmallTree;
 import wagemaker.uk.trees.AppleTree;
 import wagemaker.uk.trees.BambooTree;
@@ -55,6 +56,7 @@ public class Player {
     private Map<String, Banana> bananas;
     private Map<String, wagemaker.uk.items.BambooStack> bambooStacks;
     private Map<String, wagemaker.uk.items.BabyBamboo> babyBamboos;
+    private Map<String, WoodStack> woodStacks;
     private Cactus cactus; // Single cactus reference
     private Object gameInstance; // Reference to MyGdxGame for cactus respawning
     private Map<String, Boolean> clearedPositions;
@@ -106,6 +108,10 @@ public class Player {
     
     public void setBabyBamboos(Map<String, wagemaker.uk.items.BabyBamboo> babyBamboos) {
         this.babyBamboos = babyBamboos;
+    }
+    
+    public void setWoodStacks(Map<String, WoodStack> woodStacks) {
+        this.woodStacks = woodStacks;
     }
     
     public void setCactus(Cactus cactus) {
@@ -314,6 +320,9 @@ public class Player {
         
         // Check for baby bamboo pickups
         checkBabyBambooPickups();
+        
+        // Check for wood stack pickups
+        checkWoodStackPickups();
         
         // Send health updates to server in multiplayer mode
         checkAndSendHealthUpdate();
@@ -542,6 +551,12 @@ public class Player {
                     attackedSomething = true;
                     
                     if (destroyed) {
+                        // Spawn WoodStack at tree position
+                        woodStacks.put(targetKey + "-woodstack", 
+                            new WoodStack(targetTree.getX(), targetTree.getY()));
+                        
+                        System.out.println("WoodStack dropped at: " + targetTree.getX() + ", " + targetTree.getY());
+                        
                         targetTree.dispose();
                         trees.remove(targetKey);
                         clearedPositions.put(targetKey, true);
@@ -1009,6 +1024,46 @@ public class Player {
                 babyBamboo.dispose();
                 babyBamboos.remove(babyBambooKey);
                 System.out.println("BabyBamboo removed from game");
+            }
+        }
+    }
+    
+    private void checkWoodStackPickups() {
+        if (woodStacks != null) {
+            // Check all wood stacks for pickup
+            for (Map.Entry<String, WoodStack> entry : woodStacks.entrySet()) {
+                WoodStack woodStack = entry.getValue();
+                String woodStackKey = entry.getKey();
+                
+                // Check if player is close enough to pick up wood stack (32px range)
+                float dx = Math.abs((x + 32) - (woodStack.getX() + 16)); // Player center to wood stack center
+                float dy = Math.abs((y + 32) - (woodStack.getY() + 16)); // WoodStack is 32x32, so center is +16
+                
+                if (dx <= 32 && dy <= 32) {
+                    // Pick up the wood stack
+                    pickupWoodStack(woodStackKey);
+                    break; // Only pick up one wood stack per frame
+                }
+            }
+        }
+    }
+    
+    private void pickupWoodStack(String woodStackKey) {
+        // Send pickup request to server in multiplayer mode
+        if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+            gameClient.sendItemPickup(woodStackKey);
+            // In multiplayer, server handles item removal
+            // The server will broadcast the pickup to all clients
+        } else {
+            // Single-player mode: handle locally
+            System.out.println("WoodStack picked up!");
+            
+            // Remove wood stack from game
+            if (woodStacks.containsKey(woodStackKey)) {
+                WoodStack woodStack = woodStacks.get(woodStackKey);
+                woodStack.dispose();
+                woodStacks.remove(woodStackKey);
+                System.out.println("WoodStack removed from game");
             }
         }
     }

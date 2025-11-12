@@ -764,7 +764,7 @@ public class GameMenu {
             );
             
             if (success) {
-                showSuccess("World saved successfully!", "Save Complete");
+                // World saved successfully - no confirmation dialog needed, just continue
                 System.out.println("World '" + saveName + "' saved successfully");
             } else {
                 showError("Failed to save world. Please try again.", "Save Failed");
@@ -808,7 +808,7 @@ public class GameMenu {
                         player.setHealth(saveData.getPlayerHealth());
                     }
                     
-                    showSuccess("World loaded successfully!", "Load Complete");
+                    // World loaded successfully - no confirmation dialog needed, just continue
                     System.out.println("World '" + saveName + "' loaded successfully");
                 } else {
                     showError("Failed to restore world state. Please try again.", "Load Failed");

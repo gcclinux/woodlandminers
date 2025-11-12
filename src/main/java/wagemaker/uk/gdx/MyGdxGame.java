@@ -22,6 +22,7 @@ import wagemaker.uk.items.Apple;
 import wagemaker.uk.items.BabyBamboo;
 import wagemaker.uk.items.BambooStack;
 import wagemaker.uk.items.Banana;
+import wagemaker.uk.items.WoodStack;
 import wagemaker.uk.network.GameClient;
 import wagemaker.uk.network.GameServer;
 import wagemaker.uk.network.ItemState;
@@ -169,12 +170,14 @@ public class MyGdxGame extends ApplicationAdapter {
     Map<String, Banana> bananas;
     Map<String, BambooStack> bambooStacks;
     Map<String, BabyBamboo> babyBamboos;
+    Map<String, WoodStack> woodStacks;
     Cactus cactus; // Single cactus near spawn
     Map<String, Boolean> clearedPositions;
     Random random;
     long worldSeed; // World seed for deterministic generation
     GameMenu gameMenu;
     RainSystem rainSystem; // Weather system for localized rain effects
+    wagemaker.uk.weather.DynamicRainManager dynamicRainManager; // Dynamic rain event manager
     
     // Multiplayer fields
     private GameMode gameMode;
@@ -242,6 +245,7 @@ public class MyGdxGame extends ApplicationAdapter {
         bananas = new HashMap<>();
         bambooStacks = new HashMap<>();
         babyBamboos = new HashMap<>();
+        woodStacks = new HashMap<>();
         clearedPositions = new HashMap<>();
         remotePlayers = new HashMap<>();
         random = new Random();
@@ -276,6 +280,7 @@ public class MyGdxGame extends ApplicationAdapter {
         player.setBananas(bananas);
         player.setBambooStacks(bambooStacks);
         player.setBabyBamboos(babyBamboos);
+        player.setWoodStacks(woodStacks);
         player.setCactus(cactus);
         player.setGameInstance(this);
         player.setClearedPositions(clearedPositions);
@@ -303,11 +308,11 @@ public class MyGdxGame extends ApplicationAdapter {
         rainSystem = new RainSystem(shapeRenderer);
         rainSystem.initialize();
         
-        // Initialize default rain zones for single-player mode
-        // In multiplayer mode, rain zones will be synced from server
-        if (gameMode == GameMode.SINGLEPLAYER) {
-            rainSystem.getZoneManager().initializeDefaultZones();
-        }
+        // Initialize dynamic rain manager for random rain events
+        dynamicRainManager = new wagemaker.uk.weather.DynamicRainManager(rainSystem.getZoneManager());
+        
+        // Note: We no longer initialize default rain zones
+        // Rain will be managed dynamically by DynamicRainManager
 
     }
 
@@ -401,14 +406,19 @@ public class MyGdxGame extends ApplicationAdapter {
             }
         }
 
+        // Update rain system with player position (always update, even when menu is open)
+        float playerCenterX = player.getX() + 50; // Player sprite is 100x100, center at +50
+        float playerCenterY = player.getY() + 50;
+        
+        // Update dynamic rain manager (handles random rain events)
+        dynamicRainManager.update(deltaTime, playerCenterX, playerCenterY);
+        
+        // Update rain system rendering
+        rainSystem.update(deltaTime, playerCenterX, playerCenterY, camera);
+        
         if (!gameMenu.isAnyMenuOpen()) {
             // update player and camera
             player.update(deltaTime);
-            
-            // update rain system with player position
-            float playerCenterX = player.getX() + 50; // Player sprite is 100x100, center at +50
-            float playerCenterY = player.getY() + 50;
-            rainSystem.update(deltaTime, playerCenterX, playerCenterY, camera);
         
         // update trees
         for (SmallTree tree : trees.values()) {
@@ -460,6 +470,7 @@ public class MyGdxGame extends ApplicationAdapter {
         drawBananas();
         drawBambooStacks();
         drawBabyBamboos();
+        drawWoodStacks();
         drawCactus();
         // draw player before apple trees so foliage appears in front
         batch.draw(player.getCurrentFrame(), player.getX(), player.getY(), 100, 100);
@@ -580,40 +591,67 @@ public class MyGdxGame extends ApplicationAdapter {
             // STEP 2: Check spawn probability (2% chance)
             // Uses the seeded random to ensure same coordinates always get same spawn decision
             if (random.nextFloat() < 0.02f) {
-                // STEP 3: Validate spawn location
-                // Check if any tree is within 256px distance
-                if (isTreeNearby(x, y, 256)) {
+                // STEP 3: Add random offset to break grid pattern (±32px in each direction)
+                // Try multiple times to find a position without overlapping trees
+                float treeX = 0, treeY = 0;
+                boolean validPosition = false;
+                int maxAttempts = 5;
+                
+                for (int attempt = 0; attempt < maxAttempts; attempt++) {
+                    float offsetX = (random.nextFloat() - 0.5f) * 64; // -32 to +32
+                    float offsetY = (random.nextFloat() - 0.5f) * 64; // -32 to +32
+                    treeX = x + offsetX;
+                    treeY = y + offsetY;
+                    
+                    // Check biome type first to determine minimum distance
+                    wagemaker.uk.biome.BiomeType biome = biomeManager.getBiomeAtPosition(treeX, treeY);
+                    float minDistance = (biome == wagemaker.uk.biome.BiomeType.SAND) ? 50f : 192f;
+                    
+                    // Check if any tree is too close (192px for grass, 50px for sand)
+                    if (!isTreeTooClose(treeX, treeY, minDistance)) {
+                        validPosition = true;
+                        break;
+                    }
+                }
+                
+                // If no valid position found after attempts, skip this tree
+                if (!validPosition) {
                     return;
                 }
                 
-                // Don't spawn trees within player's visible area
-                if (isWithinPlayerView(x, y)) {
+                // STEP 4: Validate spawn location (deterministic checks only)
+                // Don't spawn trees too close to spawn point (within 200px)
+                float distanceFromSpawn = (float) Math.sqrt(treeX * treeX + treeY * treeY);
+                if (distanceFromSpawn < 200) {
                     return;
                 }
                 
-                // STEP 4: Query biome type (DETERMINISTIC - no randomness)
+                // STEP 5: Query biome type again for tree type selection
                 // BiomeManager returns consistent biome types based solely on world coordinates
-                // This query happens AFTER seed is set but does NOT consume random values
-                wagemaker.uk.biome.BiomeType biome = biomeManager.getBiomeAtPosition(x, y);
+                wagemaker.uk.biome.BiomeType biome = biomeManager.getBiomeAtPosition(treeX, treeY);
                 
-                // STEP 5: Generate tree based on biome type
+                // STEP 6: Generate tree based on biome type
                 // Tree type selection uses the SAME seeded random instance from Step 1
                 if (biome == wagemaker.uk.biome.BiomeType.SAND) {
-                    // Sand biomes: only bamboo trees (100% probability)
-                    bambooTrees.put(key, new BambooTree(x, y));
+                    // Sand biomes: bamboo trees with 30% spawn rate (reduced by 70%)
+                    if (random.nextFloat() < 0.3f) {
+                        bambooTrees.put(key, new BambooTree(treeX, treeY));
+                    }
                 } else {
-                    // Grass biomes: only non-bamboo trees (25% each for 4 types)
-                    // This random.nextFloat() call is the SECOND call on the seeded random,
-                    // ensuring deterministic tree type selection
+                    // Grass biomes: adjusted tree type distribution
+                    // SmallTree: 42.5% (increased by 30% from 32.5%)
+                    // AppleTree: 12.5% (reduced by 50% from 25%)
+                    // CoconutTree: 32.5% (unchanged)
+                    // BananaTree: 12.5% (reduced by 50% from 25%)
                     float treeType = random.nextFloat();
-                    if (treeType < 0.25f) {
-                        trees.put(key, new SmallTree(x, y));
-                    } else if (treeType < 0.5f) {
-                        appleTrees.put(key, new AppleTree(x, y));
-                    } else if (treeType < 0.75f) {
-                        coconutTrees.put(key, new CoconutTree(x, y));
+                    if (treeType < 0.425f) {
+                        trees.put(key, new SmallTree(treeX, treeY));
+                    } else if (treeType < 0.55f) {
+                        appleTrees.put(key, new AppleTree(treeX, treeY));
+                    } else if (treeType < 0.875f) {
+                        coconutTrees.put(key, new CoconutTree(treeX, treeY));
                     } else {
-                        bananaTrees.put(key, new BananaTree(x, y));
+                        bananaTrees.put(key, new BananaTree(treeX, treeY));
                     }
                 }
             }
@@ -621,6 +659,54 @@ public class MyGdxGame extends ApplicationAdapter {
     }
     
     private boolean isTreeNearby(int x, int y, int minDistance) {
+        for (SmallTree tree : trees.values()) {
+            float dx = tree.getX() - x;
+            float dy = tree.getY() - y;
+            if (Math.sqrt(dx * dx + dy * dy) < minDistance) {
+                return true;
+            }
+        }
+        for (AppleTree tree : appleTrees.values()) {
+            float dx = tree.getX() - x;
+            float dy = tree.getY() - y;
+            if (Math.sqrt(dx * dx + dy * dy) < minDistance) {
+                return true;
+            }
+        }
+        for (CoconutTree tree : coconutTrees.values()) {
+            float dx = tree.getX() - x;
+            float dy = tree.getY() - y;
+            if (Math.sqrt(dx * dx + dy * dy) < minDistance) {
+                return true;
+            }
+        }
+        for (BambooTree tree : bambooTrees.values()) {
+            float dx = tree.getX() - x;
+            float dy = tree.getY() - y;
+            if (Math.sqrt(dx * dx + dy * dy) < minDistance) {
+                return true;
+            }
+        }
+        for (BananaTree tree : bananaTrees.values()) {
+            float dx = tree.getX() - x;
+            float dy = tree.getY() - y;
+            if (Math.sqrt(dx * dx + dy * dy) < minDistance) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Checks if a tree position is too close to any existing tree.
+     * Uses float coordinates for precise overlap detection.
+     * 
+     * @param x The x-coordinate to check
+     * @param y The y-coordinate to check
+     * @param minDistance Minimum distance required between trees
+     * @return true if too close to another tree, false otherwise
+     */
+    private boolean isTreeTooClose(float x, float y, float minDistance) {
         for (SmallTree tree : trees.values()) {
             float dx = tree.getX() - x;
             float dy = tree.getY() - y;
@@ -810,6 +896,20 @@ public class MyGdxGame extends ApplicationAdapter {
             if (Math.abs(babyBamboo.getX() - camX) < viewWidth && 
                 Math.abs(babyBamboo.getY() - camY) < viewHeight) {
                 batch.draw(babyBamboo.getTexture(), babyBamboo.getX(), babyBamboo.getY(), 32, 32);
+            }
+        }
+    }
+    
+    private void drawWoodStacks() {
+        float camX = camera.position.x;
+        float camY = camera.position.y;
+        float viewWidth = viewport.getWorldWidth() / 2;
+        float viewHeight = viewport.getWorldHeight() / 2;
+        
+        for (WoodStack woodStack : woodStacks.values()) {
+            if (Math.abs(woodStack.getX() - camX) < viewWidth && 
+                Math.abs(woodStack.getY() - camY) < viewHeight) {
+                batch.draw(woodStack.getTexture(), woodStack.getX(), woodStack.getY(), 32, 32);
             }
         }
     }
@@ -1747,6 +1847,13 @@ public class MyGdxGame extends ApplicationAdapter {
         if (babyBamboo != null) {
             // Defer texture disposal to render thread
             deferOperation(() -> babyBamboo.dispose());
+            return;
+        }
+        
+        WoodStack woodStack = woodStacks.remove(itemId);
+        if (woodStack != null) {
+            // Defer texture disposal to render thread
+            deferOperation(() -> woodStack.dispose());
         }
     }
     
@@ -2079,9 +2186,9 @@ public class MyGdxGame extends ApplicationAdapter {
         // Reset world seed to 0 for singleplayer
         worldSeed = 0;
         
-        // Reinitialize rain zones for singleplayer
+        // Clear rain zones (dynamic rain manager will handle rain events)
         if (rainSystem != null) {
-            rainSystem.getZoneManager().initializeDefaultZones();
+            rainSystem.getZoneManager().clearAllZones();
         }
         
         // Load singleplayer position
@@ -2991,6 +3098,11 @@ public class MyGdxGame extends ApplicationAdapter {
                 case BABY_BAMBOO:
                     if (!babyBamboos.containsKey(itemId)) {
                         babyBamboos.put(itemId, new BabyBamboo(x, y));
+                    }
+                    break;
+                case WOOD_STACK:
+                    if (!woodStacks.containsKey(itemId)) {
+                        woodStacks.put(itemId, new WoodStack(x, y));
                     }
                     break;
             }

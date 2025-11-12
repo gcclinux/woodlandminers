@@ -9,5 +9,6 @@ public enum ItemType implements Serializable {
     APPLE,
     BANANA,
     BAMBOO_STACK,
-    BABY_BAMBOO
+    BABY_BAMBOO,
+    WOOD_STACK
 }

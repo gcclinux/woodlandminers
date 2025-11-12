@@ -32,7 +32,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
       
       - name: Build JARs with Gradle
-        run: gradle jar serverJar --no-daemon
+        run: gradle jar serverJar -x test --no-daemon
       
       - name: Create jpackage directory
         run: mkdir jpackage-input

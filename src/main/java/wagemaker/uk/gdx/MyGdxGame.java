@@ -45,6 +45,7 @@ import wagemaker.uk.ui.GameMenu;
 import wagemaker.uk.weather.RainSystem;
 import wagemaker.uk.world.WorldSaveData;
 import wagemaker.uk.world.WorldSaveManager;
+import wagemaker.uk.inventory.InventoryManager;
 
 /**
  * Main game class for Woodlanders multiplayer game.
@@ -159,6 +160,8 @@ public class MyGdxGame extends ApplicationAdapter {
     ShapeRenderer shapeRenderer;
     BiomeManager biomeManager;
     Player player;
+    InventoryManager inventoryManager;
+    wagemaker.uk.ui.InventoryRenderer inventoryRenderer;
     OrthographicCamera camera;
     Viewport viewport;
     Map<String, SmallTree> trees;
@@ -285,10 +288,18 @@ public class MyGdxGame extends ApplicationAdapter {
         player.setGameInstance(this);
         player.setClearedPositions(clearedPositions);
         player.setRemotePlayers(remotePlayers);
+        
+        // Initialize inventory manager
+        inventoryManager = new InventoryManager(player);
+        player.setInventoryManager(inventoryManager);
+        
+        // Initialize inventory renderer
+        inventoryRenderer = new wagemaker.uk.ui.InventoryRenderer();
 
         gameMenu = new GameMenu();
         gameMenu.setPlayer(player); // Set player reference for saving
         gameMenu.setGameInstance(this); // Set game instance reference for multiplayer
+        gameMenu.setInventoryManager(inventoryManager); // Set inventory manager for save/load
         player.setGameMenu(gameMenu);
         
         // Load player position from save file if it exists
@@ -391,6 +402,11 @@ public class MyGdxGame extends ApplicationAdapter {
                 
                 // Return to single player mode
                 gameMode = GameMode.SINGLEPLAYER;
+                
+                // Switch inventory back to single-player mode
+                if (inventoryManager != null) {
+                    inventoryManager.setMultiplayerMode(false);
+                }
                 
                 // Clean up multiplayer resources
                 if (gameServer != null) {
@@ -508,6 +524,13 @@ public class MyGdxGame extends ApplicationAdapter {
         batch.begin();
         compass.render(batch, camera, viewport);
         batch.end();
+        
+        // render inventory UI
+        if (inventoryRenderer != null && inventoryManager != null) {
+            inventoryRenderer.render(batch, inventoryManager.getCurrentInventory(), 
+                                    camera.position.x, camera.position.y, 
+                                    viewport.getWorldWidth(), viewport.getWorldHeight());
+        }
         
         // draw menu on top
         gameMenu.render(batch, shapeRenderer, camera.position.x, camera.position.y, viewport.getWorldWidth(), viewport.getWorldHeight());
@@ -1209,6 +1232,12 @@ public class MyGdxGame extends ApplicationAdapter {
             // Set game mode to host
             gameMode = GameMode.MULTIPLAYER_HOST;
             
+            // Switch inventory to multiplayer mode
+            if (inventoryManager != null) {
+                inventoryManager.setMultiplayerMode(true);
+                inventoryManager.setGameClient(gameClient);
+            }
+            
             // Update connection quality indicator
             connectionQualityIndicator.setGameClient(gameClient);
             
@@ -1289,6 +1318,12 @@ public class MyGdxGame extends ApplicationAdapter {
             
             // Set game mode to client
             gameMode = GameMode.MULTIPLAYER_CLIENT;
+            
+            // Switch inventory to multiplayer mode
+            if (inventoryManager != null) {
+                inventoryManager.setMultiplayerMode(true);
+                inventoryManager.setGameClient(gameClient);
+            }
             
             // Update connection quality indicator
             connectionQualityIndicator.setGameClient(gameClient);
@@ -1820,6 +1855,32 @@ public class MyGdxGame extends ApplicationAdapter {
      * @see #deferOperation(Runnable)
      * @see #updateItemFromState(ItemState)
      */
+    /**
+     * Gets the type of an item by its ID.
+     * This method checks all item collections to determine the item type.
+     * 
+     * @param itemId The ID of the item to look up
+     * @return The ItemType of the item, or null if not found
+     */
+    public wagemaker.uk.inventory.ItemType getItemType(String itemId) {
+        if (apples.containsKey(itemId)) {
+            return wagemaker.uk.inventory.ItemType.APPLE;
+        }
+        if (bananas.containsKey(itemId)) {
+            return wagemaker.uk.inventory.ItemType.BANANA;
+        }
+        if (bambooStacks.containsKey(itemId)) {
+            return wagemaker.uk.inventory.ItemType.BAMBOO_STACK;
+        }
+        if (babyBamboos.containsKey(itemId)) {
+            return wagemaker.uk.inventory.ItemType.BABY_BAMBOO;
+        }
+        if (woodStacks.containsKey(itemId)) {
+            return wagemaker.uk.inventory.ItemType.WOOD_STACK;
+        }
+        return null;
+    }
+    
     public void removeItem(String itemId) {
         // Immediately remove from game state (thread-safe map operations)
         Apple apple = apples.remove(itemId);
@@ -2182,6 +2243,11 @@ public class MyGdxGame extends ApplicationAdapter {
         
         // Return to singleplayer mode
         gameMode = GameMode.SINGLEPLAYER;
+        
+        // Switch inventory back to single-player mode
+        if (inventoryManager != null) {
+            inventoryManager.setMultiplayerMode(false);
+        }
         
         // Reset world seed to 0 for singleplayer
         worldSeed = 0;
@@ -3174,6 +3240,14 @@ public class MyGdxGame extends ApplicationAdapter {
         }
     }
 
+    /**
+     * Gets the inventory manager instance.
+     * @return The inventory manager
+     */
+    public InventoryManager getInventoryManager() {
+        return inventoryManager;
+    }
+    
     @Override
     public void dispose() {
         batch.dispose();
@@ -3214,6 +3288,11 @@ public class MyGdxGame extends ApplicationAdapter {
         // Dispose compass
         if (compass != null) {
             compass.dispose();
+        }
+        
+        // Dispose inventory renderer
+        if (inventoryRenderer != null) {
+            inventoryRenderer.dispose();
         }
         
         // Dispose rain system

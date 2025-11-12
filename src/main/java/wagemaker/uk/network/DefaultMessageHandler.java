@@ -91,6 +91,10 @@ public class DefaultMessageHandler implements MessageHandler {
                     handlePong((PongMessage) message);
                     break;
                     
+                case INVENTORY_SYNC:
+                    handleInventorySync((InventorySyncMessage) message);
+                    break;
+                    
                 default:
                     System.err.println("Unknown message type: " + message.getType());
             }
@@ -263,5 +267,18 @@ public class DefaultMessageHandler implements MessageHandler {
      */
     protected void handlePong(PongMessage message) {
         // Pongs are typically handled by the client
+    }
+    
+    /**
+     * Handles INVENTORY_SYNC message.
+     * Override this method to synchronize inventory state from server.
+     */
+    protected void handleInventorySync(InventorySyncMessage message) {
+        System.out.println("Inventory sync for player " + message.getPlayerId() + 
+                         ": Apples=" + message.getAppleCount() +
+                         ", Bananas=" + message.getBananaCount() +
+                         ", BabyBamboo=" + message.getBabyBambooCount() +
+                         ", BambooStack=" + message.getBambooStackCount() +
+                         ", WoodStack=" + message.getWoodStackCount());
     }
 }

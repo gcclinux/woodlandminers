@@ -26,12 +26,13 @@ public class GameMenu {
     private Texture woodenPlank;
     private BitmapFont font;
     private BitmapFont playerNameFont; // Custom font for player name
-    private String[] singleplayerMenuItems = {"Player Name", "Save World", "Load World", "Multiplayer", "Save Position", "Exit"};
-    private String[] multiplayerMenuItems = {"Player Name", "Save World", "Load World", "Save Position", "Disconnect", "Exit"};
+    private String[] singleplayerMenuItems = {"Player Name", "Save World", "Load World", "Multiplayer", "Save Player", "Exit"};
+    private String[] multiplayerMenuItems = {"Player Name", "Save World", "Load World", "Save Player", "Disconnect", "Exit"};
     private int selectedIndex = 0;
     private float menuX, menuY;
     private Player player;
     private wagemaker.uk.gdx.MyGdxGame gameInstance;
+    private wagemaker.uk.inventory.InventoryManager inventoryManager;
     private static final float MENU_WIDTH = 250;
     private static final float MENU_HEIGHT = 220; // Increased height for additional menu item
     private static final float NAME_DIALOG_WIDTH = 320; // Wider for player name dialog
@@ -108,6 +109,10 @@ public class GameMenu {
     
     public void setGameInstance(wagemaker.uk.gdx.MyGdxGame gameInstance) {
         this.gameInstance = gameInstance;
+    }
+    
+    public void setInventoryManager(wagemaker.uk.inventory.InventoryManager inventoryManager) {
+        this.inventoryManager = inventoryManager;
     }
     
     private void openNameDialog() {
@@ -262,6 +267,53 @@ public class GameMenu {
                 playerName = loadedName;
             }
             
+            // Load inventory data if available
+            if (inventoryManager != null) {
+                try {
+                    // Load singleplayer inventory
+                    int spApple = parseJsonObjectInt(jsonContent, "\"singleplayerInventory\"", "apple");
+                    int spBanana = parseJsonObjectInt(jsonContent, "\"singleplayerInventory\"", "banana");
+                    int spBabyBamboo = parseJsonObjectInt(jsonContent, "\"singleplayerInventory\"", "babyBamboo");
+                    int spBambooStack = parseJsonObjectInt(jsonContent, "\"singleplayerInventory\"", "bambooStack");
+                    int spWoodStack = parseJsonObjectInt(jsonContent, "\"singleplayerInventory\"", "woodStack");
+                    
+                    wagemaker.uk.inventory.Inventory spInv = inventoryManager.getSingleplayerInventory();
+                    spInv.setAppleCount(spApple);
+                    spInv.setBananaCount(spBanana);
+                    spInv.setBabyBambooCount(spBabyBamboo);
+                    spInv.setBambooStackCount(spBambooStack);
+                    spInv.setWoodStackCount(spWoodStack);
+                    
+                    System.out.println("Singleplayer inventory loaded: Apple=" + spApple + 
+                                      ", Banana=" + spBanana + ", BabyBamboo=" + spBabyBamboo + 
+                                      ", BambooStack=" + spBambooStack + ", WoodStack=" + spWoodStack);
+                } catch (Exception e) {
+                    System.out.println("No singleplayer inventory data found, starting with empty inventory");
+                }
+                
+                try {
+                    // Load multiplayer inventory
+                    int mpApple = parseJsonObjectInt(jsonContent, "\"multiplayerInventory\"", "apple");
+                    int mpBanana = parseJsonObjectInt(jsonContent, "\"multiplayerInventory\"", "banana");
+                    int mpBabyBamboo = parseJsonObjectInt(jsonContent, "\"multiplayerInventory\"", "babyBamboo");
+                    int mpBambooStack = parseJsonObjectInt(jsonContent, "\"multiplayerInventory\"", "bambooStack");
+                    int mpWoodStack = parseJsonObjectInt(jsonContent, "\"multiplayerInventory\"", "woodStack");
+                    
+                    wagemaker.uk.inventory.Inventory mpInv = inventoryManager.getMultiplayerInventory();
+                    mpInv.setAppleCount(mpApple);
+                    mpInv.setBananaCount(mpBanana);
+                    mpInv.setBabyBambooCount(mpBabyBamboo);
+                    mpInv.setBambooStackCount(mpBambooStack);
+                    mpInv.setWoodStackCount(mpWoodStack);
+                    
+                    System.out.println("Multiplayer inventory loaded: Apple=" + mpApple + 
+                                      ", Banana=" + mpBanana + ", BabyBamboo=" + mpBabyBamboo + 
+                                      ", BambooStack=" + mpBambooStack + ", WoodStack=" + mpWoodStack);
+                } catch (Exception e) {
+                    System.out.println("No multiplayer inventory data found, starting with empty inventory");
+                }
+            }
+            
             System.out.println("Game loaded from: " + saveFile.getAbsolutePath());
             System.out.println("Player position loaded: (" + x + ", " + y + ")");
             System.out.println("Player health loaded: " + health);
@@ -370,6 +422,67 @@ public class GameMenu {
         // Parse the property within the object
         String propertyPattern = "\"" + propertyKey + "\":";
         return parseJsonFloat(objectContent, propertyPattern);
+    }
+    
+    private int parseJsonObjectInt(String json, String objectKey, String propertyKey) {
+        // Find the object
+        int objectIndex = json.indexOf(objectKey);
+        if (objectIndex == -1) {
+            throw new RuntimeException("Object not found: " + objectKey);
+        }
+        
+        // Find the opening brace of the object
+        int braceStart = json.indexOf("{", objectIndex);
+        if (braceStart == -1) {
+            throw new RuntimeException("Object opening brace not found for: " + objectKey);
+        }
+        
+        // Find the closing brace of the object
+        int braceEnd = json.indexOf("}", braceStart);
+        if (braceEnd == -1) {
+            throw new RuntimeException("Object closing brace not found for: " + objectKey);
+        }
+        
+        // Extract the object content
+        String objectContent = json.substring(braceStart + 1, braceEnd);
+        
+        // Parse the property within the object
+        String propertyPattern = "\"" + propertyKey + "\":";
+        int keyIndex = objectContent.indexOf(propertyPattern);
+        if (keyIndex == -1) {
+            throw new RuntimeException("Property not found: " + propertyKey);
+        }
+        
+        // Find the start of the value (after the colon and any whitespace)
+        int valueStart = keyIndex + propertyPattern.length();
+        while (valueStart < objectContent.length() && 
+               (objectContent.charAt(valueStart) == ' ' || objectContent.charAt(valueStart) == '\t')) {
+            valueStart++;
+        }
+        
+        // Find the end of the value (before comma, newline, or closing brace)
+        int valueEnd = valueStart;
+        while (valueEnd < objectContent.length()) {
+            char c = objectContent.charAt(valueEnd);
+            if (c == ',' || c == '\n' || c == '\r' || c == '}' || c == ' ' || c == '\t') {
+                break;
+            }
+            valueEnd++;
+        }
+        
+        String valueStr = objectContent.substring(valueStart, valueEnd).trim();
+        
+        // Remove any trailing non-numeric characters
+        StringBuilder cleanValue = new StringBuilder();
+        for (char c : valueStr.toCharArray()) {
+            if (Character.isDigit(c) || c == '-') {
+                cleanValue.append(c);
+            } else {
+                break; // Stop at first non-numeric character
+            }
+        }
+        
+        return Integer.parseInt(cleanValue.toString());
     }
 
     public void update() {
@@ -576,7 +689,7 @@ public class GameMenu {
             openMultiplayerMenu();
         } else if (selectedItem.equals("Disconnect")) {
             disconnectFromMultiplayer();
-        } else if (selectedItem.equals("Save Position")) {
+        } else if (selectedItem.equals("Save Player")) {
             savePlayerPosition();
         } else if (selectedItem.equals("Exit")) {
             savePlayerPosition(); // Auto-save before exit
@@ -1015,6 +1128,18 @@ public class GameMenu {
                 jsonBuilder.append(String.format("  \"singleplayerHealth\": %.1f,\n", singleplayerHealth));
             }
             
+            // Singleplayer inventory
+            if (inventoryManager != null) {
+                wagemaker.uk.inventory.Inventory spInv = inventoryManager.getSingleplayerInventory();
+                jsonBuilder.append("  \"singleplayerInventory\": {\n");
+                jsonBuilder.append(String.format("    \"apple\": %d,\n", spInv.getAppleCount()));
+                jsonBuilder.append(String.format("    \"banana\": %d,\n", spInv.getBananaCount()));
+                jsonBuilder.append(String.format("    \"babyBamboo\": %d,\n", spInv.getBabyBambooCount()));
+                jsonBuilder.append(String.format("    \"bambooStack\": %d,\n", spInv.getBambooStackCount()));
+                jsonBuilder.append(String.format("    \"woodStack\": %d\n", spInv.getWoodStackCount()));
+                jsonBuilder.append("  },\n");
+            }
+            
             // Multiplayer position
             if (multiplayerX != null && multiplayerY != null && multiplayerHealth != null) {
                 jsonBuilder.append("  \"multiplayerPosition\": {\n");
@@ -1022,6 +1147,18 @@ public class GameMenu {
                 jsonBuilder.append(String.format("    \"y\": %.2f\n", multiplayerY));
                 jsonBuilder.append("  },\n");
                 jsonBuilder.append(String.format("  \"multiplayerHealth\": %.1f,\n", multiplayerHealth));
+            }
+            
+            // Multiplayer inventory
+            if (inventoryManager != null) {
+                wagemaker.uk.inventory.Inventory mpInv = inventoryManager.getMultiplayerInventory();
+                jsonBuilder.append("  \"multiplayerInventory\": {\n");
+                jsonBuilder.append(String.format("    \"apple\": %d,\n", mpInv.getAppleCount()));
+                jsonBuilder.append(String.format("    \"banana\": %d,\n", mpInv.getBananaCount()));
+                jsonBuilder.append(String.format("    \"babyBamboo\": %d,\n", mpInv.getBabyBambooCount()));
+                jsonBuilder.append(String.format("    \"bambooStack\": %d,\n", mpInv.getBambooStackCount()));
+                jsonBuilder.append(String.format("    \"woodStack\": %d\n", mpInv.getWoodStackCount()));
+                jsonBuilder.append("  },\n");
             }
             
             // Include lastServer if it exists

@@ -21,5 +21,7 @@ public enum MessageType {
     HEARTBEAT,
     POSITION_CORRECTION,
     PING,
-    PONG
+    PONG,
+    INVENTORY_UPDATE,
+    INVENTORY_SYNC
 }

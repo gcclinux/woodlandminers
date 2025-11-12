@@ -3,6 +3,7 @@ package wagemaker.uk.gdx;
 import wagemaker.uk.client.PlayerConfig;
 import wagemaker.uk.network.ConnectionAcceptedMessage;
 import wagemaker.uk.network.DefaultMessageHandler;
+import wagemaker.uk.network.InventorySyncMessage;
 import wagemaker.uk.network.ItemPickupMessage;
 import wagemaker.uk.network.ItemSpawnMessage;
 import wagemaker.uk.network.ItemState;
@@ -206,6 +207,21 @@ public class GameMessageHandler extends DefaultMessageHandler {
     
     @Override
     protected void handleItemPickup(ItemPickupMessage message) {
+        // If this pickup is for the local player, collect the item into inventory
+        if (game.getGameClient() != null && 
+            message.getPlayerId().equals(game.getGameClient().getClientId())) {
+            
+            // Get the item type before removing it
+            wagemaker.uk.inventory.ItemType itemType = game.getItemType(message.getItemId());
+            
+            // Collect the item into inventory
+            if (itemType != null && game.getInventoryManager() != null) {
+                game.getInventoryManager().collectItem(itemType);
+                System.out.println("Collected " + itemType + " into inventory");
+            }
+        }
+        
+        // Remove the item from the game world
         game.removeItem(message.getItemId());
     }
     
@@ -256,6 +272,26 @@ public class GameMessageHandler extends DefaultMessageHandler {
         // Pass pong to game client for latency calculation
         if (game.getGameClient() != null) {
             game.getGameClient().handlePong(message);
+        }
+    }
+    
+    @Override
+    protected void handleInventorySync(InventorySyncMessage message) {
+        // Only process sync for our own player
+        if (game.getGameClient() == null || 
+            !message.getPlayerId().equals(game.getGameClient().getClientId())) {
+            return;
+        }
+        
+        // Update inventory from server sync
+        if (game.getInventoryManager() != null) {
+            game.getInventoryManager().syncFromServer(
+                message.getAppleCount(),
+                message.getBananaCount(),
+                message.getBabyBambooCount(),
+                message.getBambooStackCount(),
+                message.getWoodStackCount()
+            );
         }
     }
 }

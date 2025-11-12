@@ -19,6 +19,7 @@ import wagemaker.uk.trees.CoconutTree;
 import wagemaker.uk.trees.Cactus;
 import wagemaker.uk.ui.GameMenu;
 import wagemaker.uk.network.GameClient;
+import wagemaker.uk.inventory.InventoryManager;
 import java.util.Map;
 
 public class Player {
@@ -61,6 +62,7 @@ public class Player {
     private Object gameInstance; // Reference to MyGdxGame for cactus respawning
     private Map<String, Boolean> clearedPositions;
     private GameMenu gameMenu;
+    private InventoryManager inventoryManager;
     
     // Direction tracking
     private enum Direction { UP, DOWN, LEFT, RIGHT }
@@ -128,6 +130,10 @@ public class Player {
     
     public void setGameMenu(GameMenu gameMenu) {
         this.gameMenu = gameMenu;
+    }
+    
+    public void setInventoryManager(InventoryManager inventoryManager) {
+        this.inventoryManager = inventoryManager;
     }
     
     // Multiplayer getters and setters
@@ -323,6 +329,12 @@ public class Player {
         
         // Check for wood stack pickups
         checkWoodStackPickups();
+        
+        // Check for health decrease and trigger auto-consumption
+        if (inventoryManager != null && health < previousHealth) {
+            inventoryManager.tryAutoConsume();
+        }
+        previousHealth = health;
         
         // Send health updates to server in multiplayer mode
         checkAndSendHealthUpdate();
@@ -885,13 +897,10 @@ public class Player {
             // In multiplayer, server handles item removal and health restoration
             // The server will broadcast the pickup to all clients
         } else {
-            // Single-player mode: handle locally
-            // Restore 20% health (20 HP)
-            float healthBefore = health;
-            health = Math.min(100, health + 20); // Cap at 100 HP
-            float healthRestored = health - healthBefore;
-            
-            System.out.println("Apple picked up! Health restored: " + healthRestored + " (Health: " + healthBefore + " → " + health + ")");
+            // Single-player mode: handle locally via inventory manager
+            if (inventoryManager != null) {
+                inventoryManager.collectItem(wagemaker.uk.inventory.ItemType.APPLE);
+            }
             
             // Remove apple from game
             if (apples.containsKey(appleKey)) {
@@ -930,13 +939,10 @@ public class Player {
             // In multiplayer, server handles item removal and health restoration
             // The server will broadcast the pickup to all clients
         } else {
-            // Single-player mode: handle locally
-            // Restore 20% health (20 HP)
-            float healthBefore = health;
-            health = Math.min(100, health + 20); // Cap at 100 HP
-            float healthRestored = health - healthBefore;
-            
-            System.out.println("Banana picked up! Health restored: " + healthRestored + " (Health: " + healthBefore + " → " + health + ")");
+            // Single-player mode: handle locally via inventory manager
+            if (inventoryManager != null) {
+                inventoryManager.collectItem(wagemaker.uk.inventory.ItemType.BANANA);
+            }
             
             // Remove banana from game
             if (bananas.containsKey(bananaKey)) {
@@ -975,8 +981,10 @@ public class Player {
             // In multiplayer, server handles item removal
             // The server will broadcast the pickup to all clients
         } else {
-            // Single-player mode: handle locally
-            System.out.println("BambooStack picked up!");
+            // Single-player mode: handle locally via inventory manager
+            if (inventoryManager != null) {
+                inventoryManager.collectItem(wagemaker.uk.inventory.ItemType.BAMBOO_STACK);
+            }
             
             // Remove bamboo stack from game
             if (bambooStacks.containsKey(bambooStackKey)) {
@@ -1015,8 +1023,10 @@ public class Player {
             // In multiplayer, server handles item removal
             // The server will broadcast the pickup to all clients
         } else {
-            // Single-player mode: handle locally
-            System.out.println("BabyBamboo picked up!");
+            // Single-player mode: handle locally via inventory manager
+            if (inventoryManager != null) {
+                inventoryManager.collectItem(wagemaker.uk.inventory.ItemType.BABY_BAMBOO);
+            }
             
             // Remove baby bamboo from game
             if (babyBamboos.containsKey(babyBambooKey)) {
@@ -1055,8 +1065,10 @@ public class Player {
             // In multiplayer, server handles item removal
             // The server will broadcast the pickup to all clients
         } else {
-            // Single-player mode: handle locally
-            System.out.println("WoodStack picked up!");
+            // Single-player mode: handle locally via inventory manager
+            if (inventoryManager != null) {
+                inventoryManager.collectItem(wagemaker.uk.inventory.ItemType.WOOD_STACK);
+            }
             
             // Remove wood stack from game
             if (woodStacks.containsKey(woodStackKey)) {

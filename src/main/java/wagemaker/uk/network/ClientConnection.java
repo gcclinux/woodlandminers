@@ -28,6 +28,7 @@ public class ClientConnection implements Runnable {
     private static final long PLAYER_ATTACK_COOLDOWN_MS = 500; // 500 milliseconds
     private static final float PLAYER_DAMAGE = 10.0f; // damage per attack
     private static final int MAX_GHOST_TREE_ATTACKS = 10; // Maximum ghost tree attacks before disconnect
+    private static final long INVENTORY_SYNC_INTERVAL = 10000; // 10 seconds
     
     private Socket socket;
     private ObjectInputStream input;
@@ -43,6 +44,7 @@ public class ClientConnection implements Runnable {
     private Map<String, Long> playerAttackCooldowns;
     private Map<String, Integer> ghostTreeAttempts;
     private boolean isFirstPositionUpdate = true;
+    private long lastInventorySync;
     
     /**
      * Creates a new ClientConnection.
@@ -61,6 +63,7 @@ public class ClientConnection implements Runnable {
         this.messageCount = 0;
         this.playerAttackCooldowns = new HashMap<>();
         this.ghostTreeAttempts = new HashMap<>();
+        this.lastInventorySync = System.currentTimeMillis();
         
         // Create output stream first (important for ObjectStream protocol)
         this.output = new ObjectOutputStream(socket.getOutputStream());
@@ -127,6 +130,13 @@ public class ClientConnection implements Runnable {
                     System.out.println("Client " + clientId + " timed out");
                     logSecurityViolation("Connection timeout");
                     break;
+                }
+                
+                // Check if inventory sync is needed
+                long syncTime = System.currentTimeMillis();
+                if (syncTime - lastInventorySync >= INVENTORY_SYNC_INTERVAL) {
+                    sendInventorySync();
+                    lastInventorySync = syncTime;
                 }
                 
                 // Check rate limiting
@@ -218,6 +228,10 @@ public class ClientConnection implements Runnable {
                 
             case PLAYER_HEALTH_UPDATE:
                 handlePlayerHealthUpdate((PlayerHealthUpdateMessage) message);
+                break;
+                
+            case INVENTORY_UPDATE:
+                handleInventoryUpdate((InventoryUpdateMessage) message);
                 break;
                 
             default:
@@ -786,6 +800,73 @@ public class ClientConnection implements Runnable {
     private void logSecurityViolation(String violation) {
         System.err.println("[SECURITY] Client " + clientId + " - " + violation + 
                          " from " + socket.getInetAddress());
+    }
+    
+    /**
+     * Handles an inventory update message from the client.
+     * Validates and updates the player's inventory state on the server.
+     * @param message The inventory update message
+     */
+    private void handleInventoryUpdate(InventoryUpdateMessage message) {
+        // Validate message data
+        if (message == null) {
+            logSecurityViolation("Null inventory update message");
+            return;
+        }
+        
+        // Validate inventory counts (must be non-negative and reasonable)
+        if (!isValidInventoryCount(message.getAppleCount()) ||
+            !isValidInventoryCount(message.getBananaCount()) ||
+            !isValidInventoryCount(message.getBabyBambooCount()) ||
+            !isValidInventoryCount(message.getBambooStackCount()) ||
+            !isValidInventoryCount(message.getWoodStackCount())) {
+            System.err.println("Invalid inventory counts from " + clientId);
+            logSecurityViolation("Invalid inventory counts");
+            return;
+        }
+        
+        // Update player state with new inventory
+        playerState.setAppleCount(message.getAppleCount());
+        playerState.setBananaCount(message.getBananaCount());
+        playerState.setBabyBambooCount(message.getBabyBambooCount());
+        playerState.setBambooStackCount(message.getBambooStackCount());
+        playerState.setWoodStackCount(message.getWoodStackCount());
+        
+        // Update in world state
+        server.getWorldState().addOrUpdatePlayer(playerState);
+        
+        System.out.println("Inventory updated for player " + clientId + 
+                         ": Apples=" + message.getAppleCount() +
+                         ", Bananas=" + message.getBananaCount() +
+                         ", BabyBamboo=" + message.getBabyBambooCount() +
+                         ", BambooStack=" + message.getBambooStackCount() +
+                         ", WoodStack=" + message.getWoodStackCount());
+    }
+    
+    /**
+     * Validates an inventory count value.
+     * @param count The count to validate
+     * @return true if the count is valid, false otherwise
+     */
+    private boolean isValidInventoryCount(int count) {
+        // Counts must be non-negative and less than 10000 (reasonable limit)
+        return count >= 0 && count < 10000;
+    }
+    
+    /**
+     * Sends an inventory sync message to the client with the authoritative server state.
+     */
+    private void sendInventorySync() {
+        InventorySyncMessage syncMsg = new InventorySyncMessage(
+            "server",
+            clientId,
+            playerState.getAppleCount(),
+            playerState.getBananaCount(),
+            playerState.getBabyBambooCount(),
+            playerState.getBambooStackCount(),
+            playerState.getWoodStackCount()
+        );
+        sendMessage(syncMsg);
     }
     
     /**

@@ -17,6 +17,13 @@ public class PlayerState implements Serializable {
     private boolean isMoving;
     private long lastUpdateTime;
     
+    // Inventory fields
+    private int appleCount;
+    private int bananaCount;
+    private int babyBambooCount;
+    private int bambooStackCount;
+    private int woodStackCount;
+    
     public PlayerState() {
     }
     
@@ -94,5 +101,46 @@ public class PlayerState implements Serializable {
     
     public void setLastUpdateTime(long lastUpdateTime) {
         this.lastUpdateTime = lastUpdateTime;
+    }
+    
+    // Inventory getters and setters
+    public int getAppleCount() {
+        return appleCount;
+    }
+    
+    public void setAppleCount(int appleCount) {
+        this.appleCount = appleCount;
+    }
+    
+    public int getBananaCount() {
+        return bananaCount;
+    }
+    
+    public void setBananaCount(int bananaCount) {
+        this.bananaCount = bananaCount;
+    }
+    
+    public int getBabyBambooCount() {
+        return babyBambooCount;
+    }
+    
+    public void setBabyBambooCount(int babyBambooCount) {
+        this.babyBambooCount = babyBambooCount;
+    }
+    
+    public int getBambooStackCount() {
+        return bambooStackCount;
+    }
+    
+    public void setBambooStackCount(int bambooStackCount) {
+        this.bambooStackCount = bambooStackCount;
+    }
+    
+    public int getWoodStackCount() {
+        return woodStackCount;
+    }
+    
+    public void setWoodStackCount(int woodStackCount) {
+        this.woodStackCount = woodStackCount;
     }
 }

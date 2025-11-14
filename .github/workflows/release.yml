@@ -106,6 +106,7 @@ jobs:
           body: |
             ## Downloads
             - **Woodlanders-Windows-Portable.zip** - Windows executable with bundled JRE (no Java installation required)
+            - **Woodlanders-Linux-x86_64.AppImage** - Linux executable with bundled JRE (no Java installation required)
             - **woodlanders-client.jar** - Client JAR (requires Java 21+)
             - **woodlanders-server.jar** - Dedicated server JAR (requires Java 21+)
             

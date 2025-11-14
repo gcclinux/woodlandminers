@@ -299,6 +299,11 @@ public class Player {
             gameClient.sendPlayerMovement(x, y, networkDirection, isMoving);
         }
 
+        // Handle inventory selection (only when menu is not open)
+        if (gameMenu != null && !gameMenu.isAnyMenuOpen()) {
+            handleInventorySelection();
+        }
+
         // handle attack
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
             attackNearbyTargets();
@@ -694,16 +699,35 @@ public class Player {
                     attackedSomething = true;
                     
                     if (destroyed) {
-                        // Spawn BambooStack at tree position
-                        bambooStacks.put(targetKey + "-bamboostack", 
-                            new BambooStack(targetBambooTree.getX(), targetBambooTree.getY()));
+                        // Randomly choose drop pattern: 
+                        // 33% chance: 1 BambooStack + 1 BabyBamboo
+                        // 33% chance: 2 BambooStack
+                        // 33% chance: 2 BabyBamboo
+                        float dropRoll = (float) Math.random();
                         
-                        // Spawn BabyBamboo offset by 8 pixels horizontally
-                        babyBamboos.put(targetKey + "-babybamboo", 
-                            new BabyBamboo(targetBambooTree.getX() + 8, targetBambooTree.getY()));
-                        
-                        System.out.println("BambooStack dropped at: " + targetBambooTree.getX() + ", " + targetBambooTree.getY());
-                        System.out.println("BabyBamboo dropped at: " + (targetBambooTree.getX() + 8) + ", " + targetBambooTree.getY());
+                        if (dropRoll < 0.33f) {
+                            // Drop 1 BambooStack + 1 BabyBamboo (original behavior)
+                            bambooStacks.put(targetKey + "-bamboostack", 
+                                new BambooStack(targetBambooTree.getX(), targetBambooTree.getY()));
+                            babyBamboos.put(targetKey + "-babybamboo", 
+                                new BabyBamboo(targetBambooTree.getX() + 8, targetBambooTree.getY()));
+                            System.out.println("BambooStack dropped at: " + targetBambooTree.getX() + ", " + targetBambooTree.getY());
+                            System.out.println("BabyBamboo dropped at: " + (targetBambooTree.getX() + 8) + ", " + targetBambooTree.getY());
+                        } else if (dropRoll < 0.66f) {
+                            // Drop 2 BambooStack
+                            bambooStacks.put(targetKey + "-bamboostack1", 
+                                new BambooStack(targetBambooTree.getX(), targetBambooTree.getY()));
+                            bambooStacks.put(targetKey + "-bamboostack2", 
+                                new BambooStack(targetBambooTree.getX() + 8, targetBambooTree.getY()));
+                            System.out.println("2x BambooStack dropped at: " + targetBambooTree.getX() + ", " + targetBambooTree.getY());
+                        } else {
+                            // Drop 2 BabyBamboo
+                            babyBamboos.put(targetKey + "-babybamboo1", 
+                                new BabyBamboo(targetBambooTree.getX(), targetBambooTree.getY()));
+                            babyBamboos.put(targetKey + "-babybamboo2", 
+                                new BabyBamboo(targetBambooTree.getX() + 8, targetBambooTree.getY()));
+                            System.out.println("2x BabyBamboo dropped at: " + targetBambooTree.getX() + ", " + targetBambooTree.getY());
+                        }
                         
                         targetBambooTree.dispose();
                         bambooTrees.remove(targetKey);
@@ -783,6 +807,36 @@ public class Player {
         
         if (!attackedSomething) {
             System.out.println("No trees in range to attack");
+        }
+    }
+
+    /**
+     * Handle keyboard input for inventory item selection.
+     * Maps number keys 1-5 to inventory slots 0-4.
+     * Pressing the same key again will deselect the slot (toggle behavior).
+     */
+    private void handleInventorySelection() {
+        if (inventoryManager == null) {
+            return;
+        }
+        
+        int currentSelection = inventoryManager.getSelectedSlot();
+        
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
+            // Toggle: if slot 0 is already selected, deselect it
+            inventoryManager.setSelectedSlot(currentSelection == 0 ? -1 : 0);
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) {
+            // Toggle: if slot 1 is already selected, deselect it
+            inventoryManager.setSelectedSlot(currentSelection == 1 ? -1 : 1);
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) {
+            // Toggle: if slot 2 is already selected, deselect it
+            inventoryManager.setSelectedSlot(currentSelection == 2 ? -1 : 2);
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_4)) {
+            // Toggle: if slot 3 is already selected, deselect it
+            inventoryManager.setSelectedSlot(currentSelection == 3 ? -1 : 3);
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_5)) {
+            // Toggle: if slot 4 is already selected, deselect it
+            inventoryManager.setSelectedSlot(currentSelection == 4 ? -1 : 4);
         }
     }
 

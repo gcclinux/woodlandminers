@@ -1,10 +1,12 @@
 package wagemaker.uk.ui;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import wagemaker.uk.inventory.Inventory;
 
 /**
@@ -26,6 +28,9 @@ public class InventoryRenderer {
     // Font for rendering item counts
     private BitmapFont countFont;
     
+    // ShapeRenderer for selection highlight
+    private ShapeRenderer shapeRenderer;
+    
     // Layout constants
     private static final int SLOT_SIZE = 40;
     private static final int SLOT_SPACING = 8;
@@ -33,6 +38,13 @@ public class InventoryRenderer {
     private static final int PANEL_WIDTH = (SLOT_SIZE * 5) + (SLOT_SPACING * 4) + (PANEL_PADDING * 2);
     private static final int PANEL_HEIGHT = SLOT_SIZE + (PANEL_PADDING * 2);
     private static final int ICON_SIZE = 32;
+    
+    // Selection highlight constants
+    private static final float HIGHLIGHT_R = 1.0f;
+    private static final float HIGHLIGHT_G = 0.84f;
+    private static final float HIGHLIGHT_B = 0.0f;
+    private static final float HIGHLIGHT_ALPHA = 0.8f;
+    private static final int HIGHLIGHT_BORDER_WIDTH = 3;
     
     /**
      * Create a new InventoryRenderer and load all required assets.
@@ -42,6 +54,7 @@ public class InventoryRenderer {
         createWoodenBackground();
         createSlotBorder();
         initializeFont();
+        shapeRenderer = new ShapeRenderer();
     }
     
     /**
@@ -134,9 +147,10 @@ public class InventoryRenderer {
      * @param camY Camera Y position
      * @param viewWidth Viewport width
      * @param viewHeight Viewport height
+     * @param selectedSlot The currently selected slot index (0-4), or -1 for no selection
      */
     public void render(SpriteBatch batch, Inventory inventory, 
-                      float camX, float camY, float viewWidth, float viewHeight) {
+                      float camX, float camY, float viewWidth, float viewHeight, int selectedSlot) {
         if (inventory == null) {
             return;
         }
@@ -160,11 +174,11 @@ public class InventoryRenderer {
         }
         
         // Render slots with icons and counts in order: Apple, Banana, BabyBamboo, BambooStack, WoodStack
-        renderSlot(batch, appleIcon, inventory.getAppleCount(), slotX, slotY);
-        renderSlot(batch, bananaIcon, inventory.getBananaCount(), slotX + (SLOT_SIZE + SLOT_SPACING), slotY);
-        renderSlot(batch, babyBambooIcon, inventory.getBabyBambooCount(), slotX + 2 * (SLOT_SIZE + SLOT_SPACING), slotY);
-        renderSlot(batch, bambooStackIcon, inventory.getBambooStackCount(), slotX + 3 * (SLOT_SIZE + SLOT_SPACING), slotY);
-        renderSlot(batch, woodStackIcon, inventory.getWoodStackCount(), slotX + 4 * (SLOT_SIZE + SLOT_SPACING), slotY);
+        renderSlot(batch, appleIcon, inventory.getAppleCount(), slotX, slotY, selectedSlot == 0);
+        renderSlot(batch, bananaIcon, inventory.getBananaCount(), slotX + (SLOT_SIZE + SLOT_SPACING), slotY, selectedSlot == 1);
+        renderSlot(batch, babyBambooIcon, inventory.getBabyBambooCount(), slotX + 2 * (SLOT_SIZE + SLOT_SPACING), slotY, selectedSlot == 2);
+        renderSlot(batch, bambooStackIcon, inventory.getBambooStackCount(), slotX + 3 * (SLOT_SIZE + SLOT_SPACING), slotY, selectedSlot == 3);
+        renderSlot(batch, woodStackIcon, inventory.getWoodStackCount(), slotX + 4 * (SLOT_SIZE + SLOT_SPACING), slotY, selectedSlot == 4);
         
         batch.end();
     }
@@ -177,8 +191,31 @@ public class InventoryRenderer {
      * @param count The item count to display
      * @param x The X position of the slot
      * @param y The Y position of the slot
+     * @param isSelected Whether this slot is currently selected
      */
-    private void renderSlot(SpriteBatch batch, Texture icon, int count, float x, float y) {
+    private void renderSlot(SpriteBatch batch, Texture icon, int count, float x, float y, boolean isSelected) {
+        // Draw selection highlight if this slot is selected
+        if (isSelected) {
+            // Get the current projection matrix from the batch before ending it
+            com.badlogic.gdx.math.Matrix4 projectionMatrix = batch.getProjectionMatrix().cpy();
+            
+            batch.end(); // End batch to use ShapeRenderer
+            
+            // Set ShapeRenderer to use the same projection matrix as the batch
+            shapeRenderer.setProjectionMatrix(projectionMatrix);
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+            shapeRenderer.setColor(HIGHLIGHT_R, HIGHLIGHT_G, HIGHLIGHT_B, HIGHLIGHT_ALPHA);
+            Gdx.gl.glLineWidth(HIGHLIGHT_BORDER_WIDTH);
+            
+            // Draw highlight border (44x44) around selected slot
+            shapeRenderer.rect(x - 2, y - 2, SLOT_SIZE + 4, SLOT_SIZE + 4);
+            
+            shapeRenderer.end();
+            Gdx.gl.glLineWidth(1); // Reset line width
+            
+            batch.begin(); // Resume batch rendering
+        }
+        
         // Calculate centered position for 32x32 icon in 40x40 slot
         float iconX = x + (SLOT_SIZE - ICON_SIZE) / 2;
         float iconY = y + (SLOT_SIZE - ICON_SIZE) / 2;
@@ -216,5 +253,6 @@ public class InventoryRenderer {
         if (woodenBackground != null) woodenBackground.dispose();
         if (slotBorder != null) slotBorder.dispose();
         if (countFont != null) countFont.dispose();
+        if (shapeRenderer != null) shapeRenderer.dispose();
     }
 }

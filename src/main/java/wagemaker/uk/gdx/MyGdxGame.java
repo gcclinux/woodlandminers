@@ -531,9 +531,11 @@ public class MyGdxGame extends ApplicationAdapter {
         
         // render inventory UI
         if (inventoryRenderer != null && inventoryManager != null) {
+            int selectedSlot = inventoryManager.getSelectedSlot();
             inventoryRenderer.render(batch, inventoryManager.getCurrentInventory(), 
                                     camera.position.x, camera.position.y, 
-                                    viewport.getWorldWidth(), viewport.getWorldHeight());
+                                    viewport.getWorldWidth(), viewport.getWorldHeight(),
+                                    selectedSlot);
         }
         
         // draw menu on top

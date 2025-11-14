@@ -429,26 +429,67 @@ public class ClientConnection implements Runnable {
                 
                 System.out.println("Item spawned: " + itemType + " at (" + quantizedX + ", " + quantizedY + ")");
             } else if (tree.getType() == TreeType.BAMBOO) {
-                // Spawn BambooStack at tree position
-                String bambooStackId = UUID.randomUUID().toString();
-                ItemState bambooStack = new ItemState(bambooStackId, ItemType.BAMBOO_STACK, quantizedX, quantizedY, false);
-                server.getWorldState().addOrUpdateItem(bambooStack);
+                // Randomly choose drop pattern: 
+                // 33% chance: 1 BambooStack + 1 BabyBamboo
+                // 33% chance: 2 BambooStack
+                // 33% chance: 2 BabyBamboo
+                float dropRoll = (float) Math.random();
                 
-                ItemSpawnMessage bambooStackSpawnMsg = new ItemSpawnMessage("server", bambooStackId, ItemType.BAMBOO_STACK, quantizedX, quantizedY);
-                server.broadcastToAll(bambooStackSpawnMsg);
-                
-                System.out.println("Item spawned: BAMBOO_STACK at (" + quantizedX + ", " + quantizedY + ")");
-                
-                // Spawn BabyBamboo offset by 8 pixels horizontally
-                String babyBambooId = UUID.randomUUID().toString();
-                float babyBambooX = quantizePosition(tree.getX() + 8);
-                ItemState babyBamboo = new ItemState(babyBambooId, ItemType.BABY_BAMBOO, babyBambooX, quantizedY, false);
-                server.getWorldState().addOrUpdateItem(babyBamboo);
-                
-                ItemSpawnMessage babyBambooSpawnMsg = new ItemSpawnMessage("server", babyBambooId, ItemType.BABY_BAMBOO, babyBambooX, quantizedY);
-                server.broadcastToAll(babyBambooSpawnMsg);
-                
-                System.out.println("Item spawned: BABY_BAMBOO at (" + babyBambooX + ", " + quantizedY + ")");
+                if (dropRoll < 0.33f) {
+                    // Drop 1 BambooStack + 1 BabyBamboo (original behavior)
+                    String bambooStackId = UUID.randomUUID().toString();
+                    ItemState bambooStack = new ItemState(bambooStackId, ItemType.BAMBOO_STACK, quantizedX, quantizedY, false);
+                    server.getWorldState().addOrUpdateItem(bambooStack);
+                    
+                    ItemSpawnMessage bambooStackSpawnMsg = new ItemSpawnMessage("server", bambooStackId, ItemType.BAMBOO_STACK, quantizedX, quantizedY);
+                    server.broadcastToAll(bambooStackSpawnMsg);
+                    
+                    String babyBambooId = UUID.randomUUID().toString();
+                    float babyBambooX = quantizePosition(tree.getX() + 8);
+                    ItemState babyBamboo = new ItemState(babyBambooId, ItemType.BABY_BAMBOO, babyBambooX, quantizedY, false);
+                    server.getWorldState().addOrUpdateItem(babyBamboo);
+                    
+                    ItemSpawnMessage babyBambooSpawnMsg = new ItemSpawnMessage("server", babyBambooId, ItemType.BABY_BAMBOO, babyBambooX, quantizedY);
+                    server.broadcastToAll(babyBambooSpawnMsg);
+                    
+                    System.out.println("Items spawned: BAMBOO_STACK at (" + quantizedX + ", " + quantizedY + "), BABY_BAMBOO at (" + babyBambooX + ", " + quantizedY + ")");
+                } else if (dropRoll < 0.66f) {
+                    // Drop 2 BambooStack
+                    String bambooStackId1 = UUID.randomUUID().toString();
+                    ItemState bambooStack1 = new ItemState(bambooStackId1, ItemType.BAMBOO_STACK, quantizedX, quantizedY, false);
+                    server.getWorldState().addOrUpdateItem(bambooStack1);
+                    
+                    ItemSpawnMessage bambooStackSpawnMsg1 = new ItemSpawnMessage("server", bambooStackId1, ItemType.BAMBOO_STACK, quantizedX, quantizedY);
+                    server.broadcastToAll(bambooStackSpawnMsg1);
+                    
+                    String bambooStackId2 = UUID.randomUUID().toString();
+                    float bambooStack2X = quantizePosition(tree.getX() + 8);
+                    ItemState bambooStack2 = new ItemState(bambooStackId2, ItemType.BAMBOO_STACK, bambooStack2X, quantizedY, false);
+                    server.getWorldState().addOrUpdateItem(bambooStack2);
+                    
+                    ItemSpawnMessage bambooStackSpawnMsg2 = new ItemSpawnMessage("server", bambooStackId2, ItemType.BAMBOO_STACK, bambooStack2X, quantizedY);
+                    server.broadcastToAll(bambooStackSpawnMsg2);
+                    
+                    System.out.println("Items spawned: 2x BAMBOO_STACK at (" + quantizedX + ", " + quantizedY + ")");
+                } else {
+                    // Drop 2 BabyBamboo
+                    String babyBambooId1 = UUID.randomUUID().toString();
+                    ItemState babyBamboo1 = new ItemState(babyBambooId1, ItemType.BABY_BAMBOO, quantizedX, quantizedY, false);
+                    server.getWorldState().addOrUpdateItem(babyBamboo1);
+                    
+                    ItemSpawnMessage babyBambooSpawnMsg1 = new ItemSpawnMessage("server", babyBambooId1, ItemType.BABY_BAMBOO, quantizedX, quantizedY);
+                    server.broadcastToAll(babyBambooSpawnMsg1);
+                    
+                    String babyBambooId2 = UUID.randomUUID().toString();
+                    float babyBamboo2X = quantizePosition(tree.getX() + 8);
+                    ItemState babyBamboo2 = new ItemState(babyBambooId2, ItemType.BABY_BAMBOO, babyBamboo2X, quantizedY, false);
+                    server.getWorldState().addOrUpdateItem(babyBamboo2);
+                    
+                    ItemSpawnMessage babyBambooSpawnMsg2 = new ItemSpawnMessage("server", babyBambooId2, ItemType.BABY_BAMBOO, babyBamboo2X, quantizedY);
+                    server.broadcastToAll(babyBambooSpawnMsg2);
+                    
+                    System.out.println("Items spawned: 2x BABY_BAMBOO at (" + quantizedX + ", " + quantizedY + ")");
+                }
             } else if (tree.getType() == TreeType.SMALL) {
                 // Spawn WoodStack at tree position
                 String woodStackId = UUID.randomUUID().toString();

@@ -15,6 +15,7 @@ public class InventoryManager {
     private Player player;
     private boolean isMultiplayerMode;
     private GameClient gameClient;
+    private int selectedSlot; // 0-4 for slots, -1 for no selection
     
     /**
      * Create a new InventoryManager for the given player.
@@ -25,6 +26,7 @@ public class InventoryManager {
         this.singleplayerInventory = new Inventory();
         this.multiplayerInventory = new Inventory();
         this.isMultiplayerMode = false;
+        this.selectedSlot = -1; // No selection by default
     }
     
     /**
@@ -259,6 +261,48 @@ public class InventoryManager {
                          ", BabyBamboo=" + babyBambooCount +
                          ", BambooStack=" + bambooStackCount +
                          ", WoodStack=" + woodStackCount);
+    }
+    
+    /**
+     * Set the selected inventory slot.
+     * @param slot The slot index (0-4 for valid slots, any other value clears selection)
+     */
+    public void setSelectedSlot(int slot) {
+        if (slot >= 0 && slot <= 4) {
+            this.selectedSlot = slot;
+        } else {
+            this.selectedSlot = -1; // Clear selection
+        }
+    }
+    
+    /**
+     * Get the currently selected inventory slot.
+     * @return The selected slot index (0-4), or -1 if no slot is selected
+     */
+    public int getSelectedSlot() {
+        return selectedSlot;
+    }
+    
+    /**
+     * Clear the current inventory selection.
+     */
+    public void clearSelection() {
+        this.selectedSlot = -1;
+    }
+    
+    /**
+     * Get the item type for the currently selected slot.
+     * @return The ItemType for the selected slot, or null if no slot is selected
+     */
+    public ItemType getSelectedItemType() {
+        switch (selectedSlot) {
+            case 0: return ItemType.APPLE;
+            case 1: return ItemType.BANANA;
+            case 2: return ItemType.BABY_BAMBOO;
+            case 3: return ItemType.BAMBOO_STACK;
+            case 4: return ItemType.WOOD_STACK;
+            default: return null;
+        }
     }
 }
 

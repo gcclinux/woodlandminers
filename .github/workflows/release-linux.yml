@@ -1,0 +1,161 @@
+name: Build and Release Linux AppImage
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - '[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for manual release'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+      
+      - name: Build JARs with Gradle
+        run: gradle jar serverJar -x test --no-daemon
+      
+      - name: Create jpackage directory
+        run: mkdir -p jpackage-input
+      
+      - name: Copy JAR to jpackage input
+        run: |
+          if [ -f build/libs/woodlanders-client.jar ]; then
+            echo "Found woodlanders-client.jar"
+            cp build/libs/woodlanders-client.jar jpackage-input/woodlanders.jar
+          else
+            echo "woodlanders-client.jar not found in build/libs"
+            echo "Available files:"
+            ls -la build/libs
+            exit 1
+          fi
+      
+      - name: Verify JAR exists
+        run: |
+          if [ -f jpackage-input/woodlanders.jar ]; then
+            echo "JAR file found successfully"
+            ls -lh jpackage-input/woodlanders.jar
+          else
+            echo "JAR file not found!"
+            exit 1
+          fi
+      
+      - name: Create Linux app-image with jpackage
+        run: |
+          jpackage \
+            --input jpackage-input \
+            --name Woodlanders \
+            --main-jar woodlanders.jar \
+            --type app-image \
+            --dest dist \
+            --app-version 1.0.0 \
+            --vendor "Wagemaker UK" \
+            --description "Woodlanders Game" \
+            --linux-shortcut
+      
+      - name: Install AppImage tools
+        run: |
+          wget -O appimagetool https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+      
+      - name: Create AppDir structure
+        run: |
+          mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/lib
+          
+          # Copy the jpackage output
+          cp -r dist/Woodlanders/* AppDir/usr/
+          
+          # Create desktop entry
+          cat > AppDir/Woodlanders.desktop << 'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=Woodlanders
+          Exec=Woodlanders
+          Icon=woodlanders
+          Categories=Game;
+          Terminal=false
+          EOF
+          
+          # Create a simple icon (you can replace this with your actual icon)
+          cat > AppDir/woodlanders.png << 'EOF'
+          iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+          EOF
+          
+          # Create AppRun script
+          cat > AppDir/AppRun << 'EOF'
+          #!/bin/bash
+          SELF=$(readlink -f "$0")
+          HERE=${SELF%/*}
+          export PATH="${HERE}/usr/bin:${PATH}"
+          export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"
+          exec "${HERE}/usr/bin/Woodlanders" "$@"
+          EOF
+          
+          chmod +x AppDir/AppRun
+      
+      - name: Build AppImage
+        run: |
+          ARCH=x86_64 ./appimagetool AppDir Woodlanders-Linux-x86_64.AppImage
+      
+      - name: Make AppImage executable
+        run: chmod +x Woodlanders-Linux-x86_64.AppImage
+      
+      - name: Get tag name
+        id: get_tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ] && [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG_NAME=${GITHUB_REF#refs/tags/}
+            echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+            echo "is_tag=true" >> $GITHUB_OUTPUT
+            echo "Detected tag: $TAG_NAME"
+          elif [ -n "${{ github.event.inputs.tag_name }}" ]; then
+            echo "tag_name=${{ github.event.inputs.tag_name }}" >> $GITHUB_OUTPUT
+            echo "is_tag=true" >> $GITHUB_OUTPUT
+            echo "Manual tag: ${{ github.event.inputs.tag_name }}"
+          else
+            echo "is_tag=false" >> $GITHUB_OUTPUT
+            echo "No tag detected"
+          fi
+      
+      - name: Create or Update GitHub Release
+        if: steps.get_tag.outputs.is_tag == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_tag.outputs.tag_name }}
+          name: Release ${{ steps.get_tag.outputs.tag_name }}
+          draft: false
+          prerelease: false
+          files: |
+            ./Woodlanders-Linux-x86_64.AppImage
+            ./build/libs/woodlanders-client.jar
+            ./build/libs/woodlanders-server.jar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload artifact as backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: Woodlanders-Linux-AppImage
+          path: Woodlanders-Linux-x86_64.AppImage
+          retention-days: 90

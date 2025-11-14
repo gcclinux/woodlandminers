@@ -23,5 +23,7 @@ public enum MessageType {
     PING,
     PONG,
     INVENTORY_UPDATE,
-    INVENTORY_SYNC
+    INVENTORY_SYNC,
+    BAMBOO_PLANT,
+    BAMBOO_TRANSFORM
 }

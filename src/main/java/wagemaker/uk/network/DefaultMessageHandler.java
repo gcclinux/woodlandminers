@@ -95,6 +95,14 @@ public class DefaultMessageHandler implements MessageHandler {
                     handleInventorySync((InventorySyncMessage) message);
                     break;
                     
+                case BAMBOO_PLANT:
+                    handleBambooPlant((BambooPlantMessage) message);
+                    break;
+                    
+                case BAMBOO_TRANSFORM:
+                    handleBambooTransform((BambooTransformMessage) message);
+                    break;
+                    
                 default:
                     System.err.println("Unknown message type: " + message.getType());
             }
@@ -280,5 +288,25 @@ public class DefaultMessageHandler implements MessageHandler {
                          ", BabyBamboo=" + message.getBabyBambooCount() +
                          ", BambooStack=" + message.getBambooStackCount() +
                          ", WoodStack=" + message.getWoodStackCount());
+    }
+    
+    /**
+     * Handles BAMBOO_PLANT message.
+     * Override this method to add planted bamboo to game world.
+     */
+    protected void handleBambooPlant(BambooPlantMessage message) {
+        System.out.println("Bamboo planted: " + message.getPlantedBambooId() + 
+                         " at (" + message.getX() + ", " + message.getY() + 
+                         ") by player " + message.getPlayerId());
+    }
+    
+    /**
+     * Handles BAMBOO_TRANSFORM message.
+     * Override this method to transform planted bamboo into bamboo tree.
+     */
+    protected void handleBambooTransform(BambooTransformMessage message) {
+        System.out.println("Bamboo transformed: " + message.getPlantedBambooId() + 
+                         " -> " + message.getBambooTreeId() + 
+                         " at (" + message.getX() + ", " + message.getY() + ")");
     }
 }

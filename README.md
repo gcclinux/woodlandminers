@@ -14,6 +14,16 @@ The goal was simple yet audacious: **build a complete, enjoyable multiplayer gam
 [![Kiro.dev](https://img.shields.io/badge/🛠️_IDE-Kiro.dev-0EA5A4?style=for-the-badge)](https://kiro.dev/)
 [![Sponsor](https://img.shields.io/badge/🤝_Sponsor-GitHub_Sponsors-8A3FFC?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sponsors/gcclinux)
 
+<div align="center">
+
+### Farming Bamboo
+![Latest 0.0.9](screenshots/Rain-Inv-Planting-MP-009.png)
+*Farming Baoom with rain, inventory, trees, items, sand, compas, ping*
+
+</div>
+
+### 📸 [More Woodland Screenshots](./SCREENSHOTS.md)
+
 ### The Kiro Contains: Two Powerful Approaches
 
 **Kiro AI Vibe** and **Kiro Spec** are two complementary ways to work with AI in the Kiro IDE:
@@ -60,30 +70,6 @@ This isn't just a game - it's proof of concept that complex software can be buil
 
 A 2D top-down multiplayer adventure game built with libGDX featuring infinite world exploration, animated characters, tree chopping mechanics, and real-time multiplayer gameplay.
 
-## 📸 [Woodland Screenshots](./SCREENSHOTS.md)
-
-
-## Requirements
-- Java 21+ (OpenJDK 21.0.8 or higher)
-- Gradle 9.2.0+
-- libGDX 1.12.1
-
-## Technical Details
-
-### Project Information
-- **Version**: 0.0.8
-- **Game Engine**: libGDX 1.12.1
-- **Language**: Java 21
-- **Build Tool**: Gradle 9.2.0
-- **Architecture**: Client-Server with dedicated server support
-
-### Key Technologies
-- **Graphics**: libGDX with LWJGL3 backend
-- **Fonts**: FreeType font rendering (slkscr.ttf)
-- **Networking**: Java Socket-based TCP networking
-- **Serialization**: Java ObjectOutputStream for world saves
-- **Concurrency**: Multi-threaded server with client connection pools
-
 ### Performance Features
 - Chunk-based rendering (only visible areas)
 - Optimized collision detection with spatial partitioning
@@ -99,69 +85,7 @@ A 2D top-down multiplayer adventure game built with libGDX featuring infinite wo
 - **Heartbeat**: 5-second keepalive with 15-second timeout
 - **Rate Limiting**: Configurable message rate limits per client
 
-## Installation Guide
-
-### Install SDKMAN (for Gradle management)
-```bash
-curl -s "https://get.sdkman.io" | bash
-source "$HOME/.sdkman/bin/sdkman-init.sh"
-```
-
-### Add to ~/.bashrc
-```bash
-# THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
-export SDKMAN_DIR="$HOME/.sdkman"
-[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
-
-# Java configuration
-export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
-export PATH="$JAVA_HOME/bin:$PATH"
-```
-
-### Install Gradle via SDKMAN
-```bash
-sdk install gradle 9.2.0
-```
-
-## How to Run
-
-### Run from Source
-```bash
-cd <project folder>/Woodlanders
-gradle run
-```
-
-### Build and Run Client JAR
-```bash
-cd <project folder>/Woodlanders
-gradle clean build -x test
-java -jar build/libs/woodlanders-client.jar
-```
-
-### Build and Run Dedicated Server
-```bash
-cd <project folder>/Woodlanders
-gradle clean build -x test
-java -jar build/libs/woodlanders-server.jar
-```
-
-### Server with Custom Configuration
-```bash
-# Basic server start
-java -jar build/libs/woodlanders-server.jar
-
-# With custom port
-java -jar build/libs/woodlanders-server.jar --port 30000
-
-# With custom config file
-java -jar build/libs/woodlanders-server.jar --config custom.properties
-
-# With memory allocation
-java -Xms2G -Xmx2G -jar build/libs/woodlanders-server.jar
-
-# All options combined
-java -Xms4G -Xmx4G -jar build/libs/woodlanders-server.jar --port 25565 --config server.properties
-```
+## [Installation Guide](INSTALLATION.md)
 
 ## Controls
 
@@ -171,11 +95,15 @@ java -Xms4G -Xmx4G -jar build/libs/woodlanders-server.jar --port 25565 --config 
 
 ### Actions
 - **Spacebar** - Attack nearby trees
-- **E** - Pick up nearby items (when inventory has space)
+- **P** - Plant baby bamboo (when standing on sand with baby bamboo in inventory slot 2)
+- **Automatic Pickup** - Items are automatically collected when walking near them (within 32 pixels)
+
+### Inventory
+- **1-5 Keys** - Select/deselect inventory slots (toggle selection)
+- **Tab** - Toggle inventory display
 
 ### Interface
 - **Escape** - Open/close game menu
-- **Tab** - Toggle inventory display
 
 ### Menu Navigation
 - **Arrow Keys** or **Up/Down** - Navigate menu options
@@ -197,6 +125,7 @@ Access the main menu at any time by pressing the Escape key. The menu adapts bas
 │   Load World               │
 │   Multiplayer              │
 │   Save Player              │
+│   Language                 │
 │   Exit                     │
 └────────────────────────────┘
 ```
@@ -209,6 +138,7 @@ Access the main menu at any time by pressing the Escape key. The menu adapts bas
 │   Load World               │
 │   Save Player              │
 │   Disconnect               │
+│   Language                 │
 │   Exit                     │
 └────────────────────────────┘
 ```
@@ -304,6 +234,22 @@ Access the main menu at any time by pressing the Escape key. The menu adapts bas
 **Save Player**
 *Saves your player data including position, health, inventory, and settings. Separate saves for singleplayer and multiplayer positions. Data is saved to your OS-specific config directory.*
 
+**Language**
+```
+┌────────────────────────────┐
+│   Select Language          │
+│                            │
+│   > English                │
+│     Polski                 │
+│     Português              │
+│     Nederlands             │
+│                            │
+│   Enter to Select          │
+│   Esc to Cancel            │
+└────────────────────────────┘
+```
+*Change the game's display language. Supports English, Polish (Polski), Portuguese (Português), and Dutch (Nederlands). All menus, dialogs, and UI text will update immediately. The game automatically detects your system language on first launch.*
+
 **Disconnect** *(Multiplayer only)*
 *Disconnect from the current multiplayer server and return to singleplayer mode. Your multiplayer progress is automatically saved.*
 
@@ -333,6 +279,7 @@ For a comprehensive list of all game features, mechanics, and technical details,
 - ⚔️ **Combat System** - Attack and destroy trees with visual health bars
 - 🔄 **Health Regeneration** - Damaged trees slowly recover health over time
 - 🌵 **Environmental Hazards** - Cacti that damage players on contact
+- 🎋 **Bamboo Planting System** - Plant baby bamboo on sand tiles that grows into harvestable bamboo trees (120s growth time)
 
 #### Inventory & Items
 - 🎒 **Inventory System** - Separate inventories for singleplayer and multiplayer modes
@@ -354,117 +301,9 @@ For a comprehensive list of all game features, mechanics, and technical details,
 - 🖥️ **HUD Elements** - Health bar, inventory display, compass, and connection status
 - 💾 **World Management** - Save, load, and manage multiple world saves
 - 🎨 **Custom Fonts** - Retro pixel font (slkscr.ttf) for authentic game feel
+- 🌍 **Multi-Language Support** - English, Polish (Polski), Portuguese (Português), and Dutch (Nederlands) with auto-detection
 
-## Game Classes
-
-### Core Game
-- `MyGdxGame.java` - Main game loop, rendering, and game state management
-- `DesktopLauncher.java` - Desktop application entry point
-
-### Player System
-- `Player.java` - Character movement, animation, combat, and health management
-- `RemotePlayer.java` - Remote player representation in multiplayer
-- `PlayerConfig.java` - Player configuration and persistence
-
-### Trees & Environment
-- `SmallTree.java` - Small decorative trees
-- `AppleTree.java` - Large apple trees with fruit drops
-- `BananaTree.java` - Banana trees with fruit drops
-- `BambooTree.java` - Bamboo trees with unique collision
-- `CoconutTree.java` - Coconut trees
-- `Cactus.java` - Environmental hazard with damage system
-
-### Items & Inventory
-- `Apple.java` - Apple item with health restoration
-- `Banana.java` - Banana item with health restoration
-- `BabyBamboo.java` - Baby bamboo resource
-- `BambooStack.java` - Bamboo stack resource
-- `WoodStack.java` - Wood stack resource
-- `Inventory.java` - Inventory data structure
-- `InventoryManager.java` - Inventory operations and auto-consumption
-- `ItemType.java` - Item type enumeration
-
-### Biome System
-- `BiomeType.java` - Biome type enumeration (grass, sand)
-- `BiomeManager.java` - Biome generation and management
-- `BiomeConfig.java` - Biome configuration
-- `BiomeTextureGenerator.java` - Dynamic biome texture generation
-- `BiomeZone.java` - Biome zone data structure
-
-### Weather System
-- `RainSystem.java` - Rain particle system
-- `DynamicRainManager.java` - Dynamic rain event management
-- `RainZoneManager.java` - Rain zone management
-- `RainRenderer.java` - Rain rendering
-- `RainParticle.java` - Individual rain particle
-- `RainZone.java` - Rain zone data structure
-- `RainConfig.java` - Rain configuration
-
-### World Management
-- `WorldSaveManager.java` - World save/load operations
-- `WorldSaveData.java` - World save data structure
-- `WorldSaveInfo.java` - World save metadata
-
-### User Interface
-- `GameMenu.java` - Main in-game menu system
-- `MultiplayerMenu.java` - Multiplayer connection menu
-- `ConnectDialog.java` - Server connection dialog
-- `ServerHostDialog.java` - Server hosting dialog
-- `ErrorDialog.java` - Error message dialog
-- `WorldSaveDialog.java` - World save dialog
-- `WorldLoadDialog.java` - World load dialog
-- `WorldManageDialog.java` - World management dialog
-- `Compass.java` - Compass navigation UI
-- `InventoryRenderer.java` - Inventory display renderer
-- `ConnectionQualityIndicator.java` - Network status indicator
-
-### Networking
-- `GameServer.java` - Multiplayer server implementation
-- `GameClient.java` - Multiplayer client implementation
-- `ClientConnection.java` - Client connection handler
-- `NetworkMessage.java` - Base network message class
-- `MessageHandler.java` - Message handling interface
-- `GameMessageHandler.java` - Game-specific message handler
-- `DefaultMessageHandler.java` - Default message handler
-
-#### Network Messages
-- `PlayerJoinMessage.java` - Player join notification
-- `PlayerLeaveMessage.java` - Player leave notification
-- `PlayerMovementMessage.java` - Player position updates
-- `PlayerHealthUpdateMessage.java` - Player health sync
-- `AttackActionMessage.java` - Attack action sync
-- `TreeDestroyedMessage.java` - Tree destruction sync
-- `TreeHealthUpdateMessage.java` - Tree health sync
-- `TreeRemovalMessage.java` - Tree removal sync
-- `ItemSpawnMessage.java` - Item spawn notification
-- `ItemPickupMessage.java` - Item pickup sync
-- `InventoryUpdateMessage.java` - Inventory state sync
-- `InventorySyncMessage.java` - Full inventory sync
-- `WorldStateMessage.java` - Complete world state sync
-- `WorldStateUpdateMessage.java` - Incremental world updates
-- `ConnectionAcceptedMessage.java` - Connection acceptance
-- `ConnectionRejectedMessage.java` - Connection rejection
-- `HeartbeatMessage.java` - Connection keepalive
-- `PingMessage.java` - Latency measurement
-- `PongMessage.java` - Ping response
-- `PositionCorrectionMessage.java` - Server position correction
-
-#### Network Data Structures
-- `PlayerState.java` - Player state data
-- `TreeState.java` - Tree state data
-- `ItemState.java` - Item state data
-- `WorldState.java` - Complete world state
-- `WorldStateUpdate.java` - World state update
-- `Direction.java` - Movement direction enum
-- `MessageType.java` - Message type enumeration
-- `TreeType.java` - Network tree type enum
-- `ItemType.java` - Network item type enum
-
-### Server
-- `DedicatedServerLauncher.java` - Standalone server entry point
-- `ServerConfig.java` - Server configuration management
-- `ServerLogger.java` - Server logging system
-- `ServerMonitor.java` - Server monitoring and statistics
+##  [Java Classes](CLASSES.md)
 
 ## Current Status
 
@@ -481,10 +320,11 @@ For a comprehensive list of all game features, mechanics, and technical details,
 - **Multiplayer**: Dedicated server with full world and player synchronization
 - **UI System**: Comprehensive menu system with wooden plank theme
 - **Navigation**: Compass pointing to spawn with dynamic rotation
-- **Network**: 20+ message types for complete multiplayer synchronization
+- **Network**: 22+ message types for complete multiplayer synchronization
 - **Server**: Configurable dedicated server with monitoring and logging
 - **Health System**: Player health with damage, restoration, and auto-consumption
 - **Collision System**: Precise hitboxes for all entities with optimized detection
+- **Planting System**: Plant baby bamboo on sand tiles with growth and transformation mechanics
 
 ### 🚧 Future Enhancements
 - **Crafting System**: Combine resources to create new items
@@ -497,42 +337,6 @@ For a comprehensive list of all game features, mechanics, and technical details,
 - **Quest System**: Objectives and progression
 - **Trading System**: NPC merchants and player trading
 - **Skills/Leveling**: Character progression and abilities
-
-## Server Configuration
-
-The dedicated server can be configured using a `server.properties` file. Create this file in the same directory as the server JAR.
-
-### server.properties Example
-```properties
-# Server port (default: 25565)
-server.port=25565
-
-# Maximum concurrent clients (default: 20)
-server.max-clients=20
-
-# World seed - 0 for random (default: 0)
-world.seed=0
-
-# Heartbeat interval in seconds (default: 5)
-server.heartbeat-interval=5
-
-# Client timeout in seconds (default: 15)
-server.client-timeout=15
-
-# Message rate limit per client (default: 100)
-server.rate-limit=100
-
-# Enable debug logging (default: false)
-server.debug=false
-```
-
-### Server Requirements by Player Count
-| Players | CPU Cores | RAM  | Upload Speed |
-|---------|-----------|------|--------------|
-| 5-10    | 2         | 1GB  | 2 Mbps       |
-| 10-20   | 2-4       | 2GB  | 5 Mbps       |
-| 20-50   | 4         | 4GB  | 10 Mbps      |
-| 50+     | 8+        | 8GB+ | 20 Mbps      |
 
 ### Configuration Directory Locations
 

@@ -2,6 +2,10 @@ SOme screenshots are older the idea is to start adding them based on their versi
 
 <div align="center">
 
+### Farming Bamboo
+![Latest 0.0.9](screenshots/Rain-Inv-Planting-MP-009.png)
+*Farming Baoom with rain, inventory, trees, items, sand, compas, ping*
+
 ### Single Multi
 ![Latest 0.0.8](screenshots/SP-MP-Rain-Sand-Inventory-Trees-Health.png)
 *Example screenshot with rain, inventory, trees, items, sand, compas, ping*

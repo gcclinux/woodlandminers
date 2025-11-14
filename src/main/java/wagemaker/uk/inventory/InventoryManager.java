@@ -235,6 +235,14 @@ public class InventoryManager {
     }
     
     /**
+     * Public method to send inventory update to server.
+     * Used when inventory is modified outside of InventoryManager (e.g., planting system).
+     */
+    public void sendInventoryUpdateToServer() {
+        sendInventoryUpdate();
+    }
+    
+    /**
      * Update inventory from server sync message.
      * Used to synchronize inventory state with authoritative server.
      * @param appleCount The apple count from server

@@ -234,6 +234,14 @@ public class ClientConnection implements Runnable {
                 handleInventoryUpdate((InventoryUpdateMessage) message);
                 break;
                 
+            case BAMBOO_PLANT:
+                handleBambooPlant((BambooPlantMessage) message);
+                break;
+                
+            case BAMBOO_TRANSFORM:
+                handleBambooTransform((BambooTransformMessage) message);
+                break;
+                
             default:
                 System.out.println("Unhandled message type from " + clientId + ": " + message.getType());
                 break;
@@ -908,6 +916,95 @@ public class ClientConnection implements Runnable {
             playerState.getWoodStackCount()
         );
         sendMessage(syncMsg);
+    }
+    
+    /**
+     * Handles a bamboo plant message.
+     * Validates the planting action and broadcasts to all clients.
+     * @param message The bamboo plant message
+     */
+    private void handleBambooPlant(BambooPlantMessage message) {
+        // Validate message data
+        if (message == null) {
+            logSecurityViolation("Null bamboo plant message");
+            return;
+        }
+        
+        String plantedBambooId = message.getPlantedBambooId();
+        float x = message.getX();
+        float y = message.getY();
+        
+        // Validate planted bamboo ID
+        if (plantedBambooId == null || plantedBambooId.isEmpty()) {
+            System.err.println("Invalid planted bamboo ID from " + clientId);
+            logSecurityViolation("Invalid planted bamboo ID");
+            return;
+        }
+        
+        // Validate position
+        if (!isValidPosition(x, y)) {
+            System.err.println("Invalid bamboo plant position from " + clientId);
+            logSecurityViolation("Invalid bamboo plant position");
+            return;
+        }
+        
+        // Validate planting distance (player must be near the planting location)
+        float dx = x - playerState.getX();
+        float dy = y - playerState.getY();
+        float distance = (float) Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance > 128) { // Allow planting within 128 pixels
+            System.out.println("Bamboo plant out of range from " + clientId + ": distance=" + distance);
+            logSecurityViolation("Bamboo plant range check failed: distance=" + distance);
+            return;
+        }
+        
+        System.out.println("Player " + clientId + " planted bamboo at (" + x + ", " + y + ")");
+        
+        // Broadcast to all clients (including sender for confirmation)
+        server.broadcastToAll(message);
+    }
+    
+    /**
+     * Handles a bamboo transform message.
+     * This is sent by clients when a planted bamboo matures into a tree.
+     * @param message The bamboo transform message
+     */
+    private void handleBambooTransform(BambooTransformMessage message) {
+        // Validate message data
+        if (message == null) {
+            logSecurityViolation("Null bamboo transform message");
+            return;
+        }
+        
+        String plantedBambooId = message.getPlantedBambooId();
+        String bambooTreeId = message.getBambooTreeId();
+        float x = message.getX();
+        float y = message.getY();
+        
+        // Validate IDs
+        if (plantedBambooId == null || plantedBambooId.isEmpty() ||
+            bambooTreeId == null || bambooTreeId.isEmpty()) {
+            System.err.println("Invalid bamboo transform IDs from " + clientId);
+            logSecurityViolation("Invalid bamboo transform IDs");
+            return;
+        }
+        
+        // Validate position
+        if (!isValidPosition(x, y)) {
+            System.err.println("Invalid bamboo transform position from " + clientId);
+            logSecurityViolation("Invalid bamboo transform position");
+            return;
+        }
+        
+        // Create bamboo tree in world state
+        TreeState bambooTree = new TreeState(bambooTreeId, TreeType.BAMBOO, x, y, 100.0f, true);
+        server.getWorldState().addOrUpdateTree(bambooTree);
+        
+        System.out.println("Bamboo transformed: " + plantedBambooId + " -> " + bambooTreeId + " at (" + x + ", " + y + ")");
+        
+        // Broadcast to all clients
+        server.broadcastToAll(message);
     }
     
     /**

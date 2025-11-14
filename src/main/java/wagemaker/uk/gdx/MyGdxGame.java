@@ -24,6 +24,8 @@ import wagemaker.uk.items.BambooStack;
 import wagemaker.uk.items.Banana;
 import wagemaker.uk.items.WoodStack;
 import wagemaker.uk.localization.LocalizationManager;
+import wagemaker.uk.planting.PlantedBamboo;
+import wagemaker.uk.planting.PlantingSystem;
 import wagemaker.uk.network.GameClient;
 import wagemaker.uk.network.GameServer;
 import wagemaker.uk.network.ItemState;
@@ -175,8 +177,10 @@ public class MyGdxGame extends ApplicationAdapter {
     Map<String, BambooStack> bambooStacks;
     Map<String, BabyBamboo> babyBamboos;
     Map<String, WoodStack> woodStacks;
+    Map<String, PlantedBamboo> plantedBamboos;
     Cactus cactus; // Single cactus near spawn
     Map<String, Boolean> clearedPositions;
+    PlantingSystem plantingSystem;
     Random random;
     long worldSeed; // World seed for deterministic generation
     GameMenu gameMenu;
@@ -209,6 +213,8 @@ public class MyGdxGame extends ApplicationAdapter {
     private java.util.concurrent.ConcurrentLinkedQueue<ItemState> pendingItemSpawns;
     private java.util.concurrent.ConcurrentLinkedQueue<String> pendingTreeRemovals;
     private java.util.concurrent.ConcurrentLinkedQueue<TreeState> pendingTreeCreations;
+    private java.util.concurrent.ConcurrentLinkedQueue<wagemaker.uk.network.BambooPlantMessage> pendingBambooPlants;
+    private java.util.concurrent.ConcurrentLinkedQueue<wagemaker.uk.network.BambooTransformMessage> pendingBambooTransforms;
     
     // Queue for operations that must execute on the render thread (e.g., OpenGL operations)
     private java.util.concurrent.ConcurrentLinkedQueue<Runnable> pendingDeferredOperations;
@@ -253,9 +259,11 @@ public class MyGdxGame extends ApplicationAdapter {
         bambooStacks = new HashMap<>();
         babyBamboos = new HashMap<>();
         woodStacks = new HashMap<>();
+        plantedBamboos = new HashMap<>();
         clearedPositions = new HashMap<>();
         remotePlayers = new HashMap<>();
         random = new Random();
+        plantingSystem = new PlantingSystem();
         worldSeed = 0; // Will be set by server in multiplayer, or remain 0 for single-player
         
         // Initialize pending player queues
@@ -264,6 +272,8 @@ public class MyGdxGame extends ApplicationAdapter {
         pendingItemSpawns = new java.util.concurrent.ConcurrentLinkedQueue<>();
         pendingTreeRemovals = new java.util.concurrent.ConcurrentLinkedQueue<>();
         pendingTreeCreations = new java.util.concurrent.ConcurrentLinkedQueue<>();
+        pendingBambooPlants = new java.util.concurrent.ConcurrentLinkedQueue<>();
+        pendingBambooTransforms = new java.util.concurrent.ConcurrentLinkedQueue<>();
         
         // Initialize deferred operations queue
         pendingDeferredOperations = new java.util.concurrent.ConcurrentLinkedQueue<>();
@@ -318,6 +328,11 @@ public class MyGdxGame extends ApplicationAdapter {
         // Initialize biome manager for ground texture variation
         biomeManager = new BiomeManager();
         biomeManager.initialize();
+        
+        // Set planting system references on player
+        player.setPlantingSystem(plantingSystem);
+        player.setBiomeManager(biomeManager);
+        player.setPlantedBamboos(plantedBamboos);
 
         // Initialize rain system
         rainSystem = new RainSystem(shapeRenderer);
@@ -355,6 +370,8 @@ public class MyGdxGame extends ApplicationAdapter {
         processPendingPlayerLeaves();
         processPendingItemSpawns();
         processPendingTreeRemovals();
+        processPendingBambooPlants();
+        processPendingBambooTransforms();
         processPendingTreeCreations();
         
         // Process pending world load operations on main thread (for OpenGL context)
@@ -457,6 +474,42 @@ public class MyGdxGame extends ApplicationAdapter {
             bananaTree.update(deltaTime);
         }
         
+        // update planted bamboos and check for transformations
+        List<String> bambooToTransform = new ArrayList<>();
+        for (Map.Entry<String, PlantedBamboo> entry : plantedBamboos.entrySet()) {
+            PlantedBamboo planted = entry.getValue();
+            if (planted.update(deltaTime)) {
+                bambooToTransform.add(entry.getKey());
+            }
+        }
+        
+        // transform mature planted bamboos into bamboo trees
+        for (String key : bambooToTransform) {
+            PlantedBamboo planted = plantedBamboos.remove(key);
+            float x = planted.getX();
+            float y = planted.getY();
+            
+            // Generate bamboo tree ID (reuse the planted bamboo key)
+            String bambooTreeId = key;
+            
+            BambooTree tree = new BambooTree(x, y);
+            bambooTrees.put(bambooTreeId, tree);
+            planted.dispose();
+            
+            // Send transformation message in multiplayer
+            if (gameClient != null && gameClient.isConnected()) {
+                wagemaker.uk.network.BambooTransformMessage message = 
+                    new wagemaker.uk.network.BambooTransformMessage(
+                        gameClient.getClientId(), 
+                        key, 
+                        bambooTreeId, 
+                        x, 
+                        y
+                    );
+                gameClient.sendMessage(message);
+            }
+        }
+        
         // update cactus
         if (cactus != null) {
             cactus.update(deltaTime);
@@ -482,6 +535,8 @@ public class MyGdxGame extends ApplicationAdapter {
         batch.begin();
         // draw infinite grass background around camera
         drawInfiniteGrass();
+        // draw planted bamboos (after terrain, before trees)
+        drawPlantedBamboos();
         // draw trees
         drawTrees();
         drawCoconutTrees();
@@ -939,6 +994,20 @@ public class MyGdxGame extends ApplicationAdapter {
             if (Math.abs(woodStack.getX() - camX) < viewWidth && 
                 Math.abs(woodStack.getY() - camY) < viewHeight) {
                 batch.draw(woodStack.getTexture(), woodStack.getX(), woodStack.getY(), 32, 32);
+            }
+        }
+    }
+    
+    private void drawPlantedBamboos() {
+        float camX = camera.position.x;
+        float camY = camera.position.y;
+        float viewWidth = viewport.getWorldWidth();
+        float viewHeight = viewport.getWorldHeight();
+        
+        for (PlantedBamboo planted : plantedBamboos.values()) {
+            if (Math.abs(planted.getX() - camX) < viewWidth && 
+                Math.abs(planted.getY() - camY) < viewHeight) {
+                batch.draw(planted.getTexture(), planted.getX(), planted.getY(), 64, 64);
             }
         }
     }
@@ -3247,6 +3316,69 @@ public class MyGdxGame extends ApplicationAdapter {
     }
 
     /**
+     * Queues a bamboo plant to be processed on the main thread.
+     * @param message The bamboo plant message
+     */
+    public void queueBambooPlant(wagemaker.uk.network.BambooPlantMessage message) {
+        pendingBambooPlants.offer(message);
+    }
+    
+    /**
+     * Queues a bamboo transform to be processed on the main thread.
+     * @param message The bamboo transform message
+     */
+    public void queueBambooTransform(wagemaker.uk.network.BambooTransformMessage message) {
+        pendingBambooTransforms.offer(message);
+    }
+    
+    /**
+     * Processes pending bamboo plants on the main render thread.
+     * This ensures OpenGL operations happen in the correct context.
+     */
+    private void processPendingBambooPlants() {
+        wagemaker.uk.network.BambooPlantMessage message;
+        while ((message = pendingBambooPlants.poll()) != null) {
+            String plantedBambooId = message.getPlantedBambooId();
+            float x = message.getX();
+            float y = message.getY();
+            
+            // Create planted bamboo if it doesn't exist
+            if (!plantedBamboos.containsKey(plantedBambooId)) {
+                PlantedBamboo plantedBamboo = new PlantedBamboo(x, y);
+                plantedBamboos.put(plantedBambooId, plantedBamboo);
+                System.out.println("Remote player planted bamboo at: " + plantedBambooId);
+            }
+        }
+    }
+    
+    /**
+     * Processes pending bamboo transforms on the main render thread.
+     * This ensures OpenGL operations happen in the correct context.
+     */
+    private void processPendingBambooTransforms() {
+        wagemaker.uk.network.BambooTransformMessage message;
+        while ((message = pendingBambooTransforms.poll()) != null) {
+            String plantedBambooId = message.getPlantedBambooId();
+            String bambooTreeId = message.getBambooTreeId();
+            float x = message.getX();
+            float y = message.getY();
+            
+            // Remove planted bamboo
+            PlantedBamboo plantedBamboo = plantedBamboos.remove(plantedBambooId);
+            if (plantedBamboo != null) {
+                plantedBamboo.dispose();
+            }
+            
+            // Create bamboo tree
+            if (!bambooTrees.containsKey(bambooTreeId)) {
+                BambooTree bambooTree = new BambooTree(x, y);
+                bambooTrees.put(bambooTreeId, bambooTree);
+                System.out.println("Bamboo transformed to tree: " + bambooTreeId);
+            }
+        }
+    }
+
+    /**
      * Gets the inventory manager instance.
      * @return The inventory manager
      */
@@ -3285,6 +3417,9 @@ public class MyGdxGame extends ApplicationAdapter {
         }
         for (Banana banana : bananas.values()) {
             banana.dispose();
+        }
+        for (PlantedBamboo planted : plantedBamboos.values()) {
+            planted.dispose();
         }
         if (cactus != null) {
             cactus.dispose();

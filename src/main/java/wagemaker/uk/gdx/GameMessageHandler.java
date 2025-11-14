@@ -294,4 +294,22 @@ public class GameMessageHandler extends DefaultMessageHandler {
             );
         }
     }
+    
+    @Override
+    protected void handleBambooPlant(wagemaker.uk.network.BambooPlantMessage message) {
+        // Don't process our own planting messages (already handled locally)
+        if (game.getGameClient() != null && 
+            message.getPlayerId().equals(game.getGameClient().getClientId())) {
+            return;
+        }
+        
+        // Queue bamboo planting to be processed on the main thread
+        game.queueBambooPlant(message);
+    }
+    
+    @Override
+    protected void handleBambooTransform(wagemaker.uk.network.BambooTransformMessage message) {
+        // Queue bamboo transformation to be processed on the main thread
+        game.queueBambooTransform(message);
+    }
 }

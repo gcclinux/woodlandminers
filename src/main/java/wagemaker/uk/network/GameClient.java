@@ -380,6 +380,22 @@ public class GameClient {
     }
     
     /**
+     * Sends a bamboo planting action to the server.
+     * @param plantedBambooId The unique ID for the planted bamboo
+     * @param x The tile-aligned x position
+     * @param y The tile-aligned y position
+     */
+    public void sendBambooPlant(String plantedBambooId, float x, float y) {
+        if (clientId == null) {
+            System.err.println("Cannot send bamboo plant: client ID not set");
+            return;
+        }
+        
+        BambooPlantMessage message = new BambooPlantMessage(clientId, plantedBambooId, x, y);
+        sendMessage(message);
+    }
+    
+    /**
      * Sends a heartbeat message to the server to maintain connection.
      */
     public void sendHeartbeat() {

@@ -20,6 +20,9 @@ import wagemaker.uk.trees.Cactus;
 import wagemaker.uk.ui.GameMenu;
 import wagemaker.uk.network.GameClient;
 import wagemaker.uk.inventory.InventoryManager;
+import wagemaker.uk.planting.PlantingSystem;
+import wagemaker.uk.planting.PlantedBamboo;
+import wagemaker.uk.biome.BiomeManager;
 import java.util.Map;
 
 public class Player {
@@ -63,6 +66,11 @@ public class Player {
     private Map<String, Boolean> clearedPositions;
     private GameMenu gameMenu;
     private InventoryManager inventoryManager;
+    
+    // Planting system fields
+    private PlantingSystem plantingSystem;
+    private BiomeManager biomeManager;
+    private Map<String, PlantedBamboo> plantedBamboos;
     
     // Direction tracking
     private enum Direction { UP, DOWN, LEFT, RIGHT }
@@ -134,6 +142,18 @@ public class Player {
     
     public void setInventoryManager(InventoryManager inventoryManager) {
         this.inventoryManager = inventoryManager;
+    }
+    
+    public void setPlantingSystem(PlantingSystem plantingSystem) {
+        this.plantingSystem = plantingSystem;
+    }
+    
+    public void setBiomeManager(BiomeManager biomeManager) {
+        this.biomeManager = biomeManager;
+    }
+    
+    public void setPlantedBamboos(Map<String, PlantedBamboo> plantedBamboos) {
+        this.plantedBamboos = plantedBamboos;
     }
     
     // Multiplayer getters and setters
@@ -302,6 +322,7 @@ public class Player {
         // Handle inventory selection (only when menu is not open)
         if (gameMenu != null && !gameMenu.isAnyMenuOpen()) {
             handleInventorySelection();
+            handlePlantingAction();
         }
 
         // handle attack
@@ -837,6 +858,47 @@ public class Player {
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_5)) {
             // Toggle: if slot 4 is already selected, deselect it
             inventoryManager.setSelectedSlot(currentSelection == 4 ? -1 : 4);
+        }
+    }
+    
+    /**
+     * Handle planting action when "p" key is pressed.
+     * Validates that baby bamboo is selected (slot 2) before attempting to plant.
+     * Requirements: 1.1, 1.3, 4.1, 4.2
+     */
+    private void handlePlantingAction() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.P)) {
+            if (plantingSystem != null && inventoryManager != null && biomeManager != null && plantedBamboos != null) {
+                // Check if baby bamboo is selected (slot 2)
+                if (inventoryManager.getSelectedSlot() == 2) {
+                    // Attempt to plant baby bamboo at player's current position
+                    PlantedBamboo plantedBamboo = plantingSystem.attemptPlant(
+                        x, y, 
+                        inventoryManager, 
+                        biomeManager, 
+                        plantedBamboos, 
+                        bambooTrees
+                    );
+                    
+                    // Add planted bamboo to game world map if planting succeeds
+                    if (plantedBamboo != null) {
+                        // Generate unique key for the planted bamboo
+                        float tileX = (float) (Math.floor(x / 64.0) * 64.0);
+                        float tileY = (float) (Math.floor(y / 64.0) * 64.0);
+                        String key = "planted-bamboo-" + (int)tileX + "-" + (int)tileY;
+                        plantedBamboos.put(key, plantedBamboo);
+                        System.out.println("Planted bamboo added to game world at: " + key);
+                        
+                        // Send planting message to server in multiplayer
+                        if (gameClient != null && gameClient.isConnected()) {
+                            gameClient.sendBambooPlant(key, tileX, tileY);
+                            
+                            // Send inventory update after planting (baby bamboo was deducted)
+                            inventoryManager.sendInventoryUpdateToServer();
+                        }
+                    }
+                }
+            }
         }
     }
 

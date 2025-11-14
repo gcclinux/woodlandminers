@@ -149,8 +149,6 @@ jobs:
           prerelease: false
           files: |
             ./Woodlanders-Linux-x86_64.AppImage
-            ./build/libs/woodlanders-client.jar
-            ./build/libs/woodlanders-server.jar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       

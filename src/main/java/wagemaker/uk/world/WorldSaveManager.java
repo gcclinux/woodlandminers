@@ -129,11 +129,13 @@ public class WorldSaveManager {
      * @param playerX Player X position at save time
      * @param playerY Player Y position at save time
      * @param playerHealth Player health at save time
+     * @param inventory Player inventory at save time (can be null)
      * @param isMultiplayer true if this is a multiplayer save, false for singleplayer
      * @return true if save was successful, false otherwise
      */
     public static boolean saveWorld(String saveName, WorldState worldState, 
-                                  float playerX, float playerY, float playerHealth, 
+                                  float playerX, float playerY, float playerHealth,
+                                  wagemaker.uk.inventory.Inventory inventory,
                                   boolean isMultiplayer) {
         try {
             // Validate save name
@@ -175,6 +177,7 @@ public class WorldSaveManager {
             WorldSaveData saveData = new WorldSaveData(
                 worldState.getWorldSeed(),
                 worldState.getTrees(),
+                worldState.getStones(),
                 worldState.getItems(),
                 worldState.getClearedPositions(),
                 worldState.getRainZones(),
@@ -184,6 +187,16 @@ public class WorldSaveManager {
                 saveName,
                 isMultiplayer ? "multiplayer" : "singleplayer"
             );
+            
+            // Set inventory data if provided
+            if (inventory != null) {
+                saveData.setAppleCount(inventory.getAppleCount());
+                saveData.setBananaCount(inventory.getBananaCount());
+                saveData.setBabyBambooCount(inventory.getBabyBambooCount());
+                saveData.setBambooStackCount(inventory.getBambooStackCount());
+                saveData.setWoodStackCount(inventory.getWoodStackCount());
+                saveData.setPebbleCount(inventory.getPebbleCount());
+            }
             
             // Validate save data before writing
             if (!saveData.isValid()) {
@@ -200,7 +213,8 @@ public class WorldSaveManager {
             }
             
             System.out.println("World saved successfully: " + saveFile.getAbsolutePath());
-            System.out.println("Save contains " + saveData.getExistingTreeCount() + " trees and " + 
+            System.out.println("Save contains " + saveData.getExistingTreeCount() + " trees, " + 
+                             saveData.getExistingStoneCount() + " stones, and " + 
                              saveData.getUncollectedItemCount() + " items");
             
             return true;
@@ -271,7 +285,8 @@ public class WorldSaveManager {
             }
             
             System.out.println("World loaded successfully: " + saveFile.getAbsolutePath());
-            System.out.println("Loaded " + saveData.getExistingTreeCount() + " trees and " + 
+            System.out.println("Loaded " + saveData.getExistingTreeCount() + " trees, " + 
+                             saveData.getExistingStoneCount() + " stones, and " + 
                              saveData.getUncollectedItemCount() + " items");
             
             return saveData;

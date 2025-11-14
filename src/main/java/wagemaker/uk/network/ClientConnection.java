@@ -97,6 +97,7 @@ public class ClientConnection implements Runnable {
                 snapshot.getWorldSeed(),
                 snapshot.getPlayers(),
                 snapshot.getTrees(),
+                snapshot.getStones(),
                 snapshot.getItems(),
                 snapshot.getClearedPositions(),
                 snapshot.getRainZones()));
@@ -347,7 +348,32 @@ public class ClientConnection implements Runnable {
             return;
         }
         
-        // Target is not a player, continue with existing tree attack logic
+        // Check if target is a stone
+        StoneState stone = server.getWorldState().getStones().get(targetId);
+        
+        // If stone doesn't exist in server state, try to generate it deterministically
+        if (stone == null) {
+            // Parse stone coordinates from targetId (format: "x,y")
+            try {
+                String[] coords = targetId.split(",");
+                if (coords.length == 2) {
+                    int stoneX = Integer.parseInt(coords[0]);
+                    int stoneY = Integer.parseInt(coords[1]);
+                    
+                    // Try to generate the stone using deterministic logic
+                    stone = server.getWorldState().generateStoneAt(stoneX, stoneY);
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to parse stone coordinates from targetId: " + targetId);
+            }
+        }
+        
+        if (stone != null) {
+            handleStoneAttack(message, stone);
+            return;
+        }
+        
+        // Target is not a player or stone, continue with existing tree attack logic
         TreeState tree = server.getWorldState().getTrees().get(targetId);
         
         // If tree doesn't exist in server state, try to generate it deterministically
@@ -512,6 +538,63 @@ public class ClientConnection implements Runnable {
         } else {
             // Broadcast health update
             TreeHealthUpdateMessage healthMsg = new TreeHealthUpdateMessage("server", targetId, newHealth);
+            server.broadcastToAll(healthMsg);
+        }
+    }
+    
+    /**
+     * Handles a stone attack.
+     * @param message The attack message
+     * @param stone The stone being attacked
+     */
+    private void handleStoneAttack(AttackActionMessage message, StoneState stone) {
+        String targetId = message.getTargetId();
+        float damage = message.getDamage();
+        
+        // Validate stone position
+        if (!isValidPosition(stone.getX(), stone.getY())) {
+            System.err.println("Invalid stone position for " + targetId);
+            return;
+        }
+        
+        // Check attack range
+        float dx = stone.getX() - playerState.getX();
+        float dy = stone.getY() - playerState.getY();
+        float distance = (float) Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance > ATTACK_RANGE) {
+            System.out.println("Stone attack out of range from " + clientId + ": distance=" + distance);
+            logSecurityViolation("Stone attack range check failed: distance=" + distance);
+            return;
+        }
+        
+        // Apply damage
+        float newHealth = stone.getHealth() - damage;
+        stone.setHealth(newHealth);
+        
+        if (newHealth <= 0) {
+            // Stone destroyed
+            server.getWorldState().removeStone(targetId);
+            
+            // Quantize positions to reduce message size
+            float quantizedX = quantizePosition(stone.getX());
+            float quantizedY = quantizePosition(stone.getY());
+            
+            StoneDestroyedMessage destroyMsg = new StoneDestroyedMessage("server", targetId, quantizedX, quantizedY);
+            server.broadcastToAll(destroyMsg);
+            
+            // Spawn pebble at stone location
+            String pebbleId = UUID.randomUUID().toString();
+            ItemState pebble = new ItemState(pebbleId, ItemType.PEBBLE, quantizedX, quantizedY, false);
+            server.getWorldState().addOrUpdateItem(pebble);
+            
+            ItemSpawnMessage spawnMsg = new ItemSpawnMessage("server", pebbleId, ItemType.PEBBLE, quantizedX, quantizedY);
+            server.broadcastToAll(spawnMsg);
+            
+            System.out.println("Stone destroyed, pebble spawned at (" + quantizedX + ", " + quantizedY + ")");
+        } else {
+            // Broadcast health update
+            StoneHealthUpdateMessage healthMsg = new StoneHealthUpdateMessage("server", targetId, newHealth);
             server.broadcastToAll(healthMsg);
         }
     }
@@ -913,7 +996,8 @@ public class ClientConnection implements Runnable {
             playerState.getBananaCount(),
             playerState.getBabyBambooCount(),
             playerState.getBambooStackCount(),
-            playerState.getWoodStackCount()
+            playerState.getWoodStackCount(),
+            playerState.getPebbleCount()
         );
         sendMessage(syncMsg);
     }

@@ -22,6 +22,7 @@ import wagemaker.uk.items.Apple;
 import wagemaker.uk.items.BabyBamboo;
 import wagemaker.uk.items.BambooStack;
 import wagemaker.uk.items.Banana;
+import wagemaker.uk.items.Pebble;
 import wagemaker.uk.items.WoodStack;
 import wagemaker.uk.localization.LocalizationManager;
 import wagemaker.uk.planting.PlantedBamboo;
@@ -31,11 +32,13 @@ import wagemaker.uk.network.GameServer;
 import wagemaker.uk.network.ItemState;
 import wagemaker.uk.network.ItemType;
 import wagemaker.uk.network.PlayerJoinMessage;
+import wagemaker.uk.network.StoneState;
 import wagemaker.uk.network.TreeState;
 import wagemaker.uk.network.TreeType;
 import wagemaker.uk.network.WorldState;
 import wagemaker.uk.player.Player;
 import wagemaker.uk.player.RemotePlayer;
+import wagemaker.uk.objects.Stone;
 import wagemaker.uk.trees.AppleTree;
 import wagemaker.uk.trees.BambooTree;
 import wagemaker.uk.trees.BananaTree;
@@ -177,7 +180,10 @@ public class MyGdxGame extends ApplicationAdapter {
     Map<String, BambooStack> bambooStacks;
     Map<String, BabyBamboo> babyBamboos;
     Map<String, WoodStack> woodStacks;
+    Map<String, Pebble> pebbles;
     Map<String, PlantedBamboo> plantedBamboos;
+    Map<String, Stone> stones;
+    Map<String, Stone> stoneMap;
     Cactus cactus; // Single cactus near spawn
     Map<String, Boolean> clearedPositions;
     PlantingSystem plantingSystem;
@@ -259,7 +265,10 @@ public class MyGdxGame extends ApplicationAdapter {
         bambooStacks = new HashMap<>();
         babyBamboos = new HashMap<>();
         woodStacks = new HashMap<>();
+        pebbles = new HashMap<>();
         plantedBamboos = new HashMap<>();
+        stones = new HashMap<>();
+        stoneMap = new HashMap<>();
         clearedPositions = new HashMap<>();
         remotePlayers = new HashMap<>();
         random = new Random();
@@ -298,6 +307,8 @@ public class MyGdxGame extends ApplicationAdapter {
         player.setBambooStacks(bambooStacks);
         player.setBabyBamboos(babyBamboos);
         player.setWoodStacks(woodStacks);
+        player.setPebbles(pebbles);
+        player.setStones(stones);
         player.setCactus(cactus);
         player.setGameInstance(this);
         player.setClearedPositions(clearedPositions);
@@ -515,6 +526,11 @@ public class MyGdxGame extends ApplicationAdapter {
             cactus.update(deltaTime);
         }
         
+        // update stones
+        for (Stone stone : stones.values()) {
+            stone.update(deltaTime);
+        }
+        
         // update remote players in multiplayer mode
         if (gameMode != GameMode.SINGLEPLAYER) {
             for (RemotePlayer remotePlayer : remotePlayers.values()) {
@@ -541,11 +557,13 @@ public class MyGdxGame extends ApplicationAdapter {
         drawTrees();
         drawCoconutTrees();
         drawBambooTrees();
+        drawStones();
         drawApples();
         drawBananas();
         drawBambooStacks();
         drawBabyBamboos();
         drawWoodStacks();
+        drawPebbles();
         drawCactus();
         // draw player before apple trees so foliage appears in front
         batch.draw(player.getCurrentFrame(), player.getX(), player.getY(), 100, 100);
@@ -624,6 +642,8 @@ public class MyGdxGame extends ApplicationAdapter {
                 batch.draw(texture, x, y, 64, 64);
                 // randomly generate trees
                 generateTreeAt(x, y);
+                // randomly generate stones
+                generateStoneAt(x, y);
             }
         }
     }
@@ -829,6 +849,75 @@ public class MyGdxGame extends ApplicationAdapter {
         return false;
     }
     
+    /**
+     * Generates a stone at the specified world coordinates using deterministic procedural generation.
+     * Stones spawn only on sand biomes with approximately 1 stone per 500x500 pixels.
+     * Ensures minimum 100 pixel distance from trees to avoid overlap.
+     * 
+     * @param x The x-coordinate in world space (aligned to 64px grid)
+     * @param y The y-coordinate in world space (aligned to 64px grid)
+     */
+    private void generateStoneAt(int x, int y) {
+        String key = x + "," + y;
+        
+        // Don't spawn stones where they already exist or where positions are cleared
+        if (stones.containsKey(key) || stoneMap.containsKey(key) || clearedPositions.containsKey(key)) {
+            return;
+        }
+        
+        // Set deterministic random seed based on world seed and position
+        random.setSeed(worldSeed + x * 37L + y * 23L);
+        
+        // Stone spawn probability: reduced by 85% from original (70% + 50% of remaining)
+        // Original: 0.016 (1.6%), New: 0.0024 (0.24%)
+        // Approximately 1 stone per 2,357x2,357 pixels
+        if (random.nextFloat() < 0.0006f) {
+            // Add random offset to break grid pattern
+            float offsetX = (random.nextFloat() - 0.5f) * 64; // -32 to +32
+            float offsetY = (random.nextFloat() - 0.5f) * 64; // -32 to +32
+            float stoneX = x + offsetX;
+            float stoneY = y + offsetY;
+            
+            // Only spawn stones on sand biomes
+            wagemaker.uk.biome.BiomeType biome = biomeManager.getBiomeAtPosition(stoneX, stoneY);
+            if (biome != wagemaker.uk.biome.BiomeType.SAND) {
+                return;
+            }
+            
+            // Don't spawn stones too close to spawn point (within 200px)
+            float distanceFromSpawn = (float) Math.sqrt(stoneX * stoneX + stoneY * stoneY);
+            if (distanceFromSpawn < 200) {
+                return;
+            }
+            
+            // Ensure minimum 100 pixel distance from trees
+            if (isTreeTooClose(stoneX, stoneY, 100f)) {
+                return;
+            }
+            
+            // Check if any existing stone is too close (minimum 100 pixels)
+            for (Stone existingStone : stones.values()) {
+                float dx = existingStone.getX() - stoneX;
+                float dy = existingStone.getY() - stoneY;
+                if (Math.sqrt(dx * dx + dy * dy) < 100) {
+                    return;
+                }
+            }
+            for (Stone existingStone : stoneMap.values()) {
+                float dx = existingStone.getX() - stoneX;
+                float dy = existingStone.getY() - stoneY;
+                if (Math.sqrt(dx * dx + dy * dy) < 100) {
+                    return;
+                }
+            }
+            
+            // Create stone at the calculated position
+            Stone stone = new Stone(stoneX, stoneY);
+            stones.put(key, stone);
+            stoneMap.put(key, stone);
+        }
+    }
+    
     private boolean isWithinPlayerView(int x, int y) {
         // Get player position and camera view dimensions
         float playerX = player.getX();
@@ -1026,6 +1115,35 @@ public class MyGdxGame extends ApplicationAdapter {
             }
         }
     }
+    
+    private void drawStones() {
+        float camX = camera.position.x;
+        float camY = camera.position.y;
+        float viewWidth = viewport.getWorldWidth();
+        float viewHeight = viewport.getWorldHeight();
+        
+        for (Stone stone : stones.values()) {
+            // only draw stones near camera
+            if (Math.abs(stone.getX() - camX) < viewWidth && 
+                Math.abs(stone.getY() - camY) < viewHeight) {
+                batch.draw(stone.getTexture(), stone.getX(), stone.getY(), 64, 64);
+            }
+        }
+    }
+    
+    private void drawPebbles() {
+        float camX = camera.position.x;
+        float camY = camera.position.y;
+        float viewWidth = viewport.getWorldWidth() / 2;
+        float viewHeight = viewport.getWorldHeight() / 2;
+        
+        for (Pebble pebble : pebbles.values()) {
+            if (Math.abs(pebble.getX() - camX) < viewWidth && 
+                Math.abs(pebble.getY() - camY) < viewHeight) {
+                batch.draw(pebble.getTexture(), pebble.getX(), pebble.getY(), 32, 32);
+            }
+        }
+    }
 
     @Override
     public void resize(int width, int height) {
@@ -1161,6 +1279,25 @@ public class MyGdxGame extends ApplicationAdapter {
             float damagePercent = 1.0f - cactus.getHealthPercentage();
             shapeRenderer.setColor(1, 0, 0, 1);
             shapeRenderer.rect(barX, barY, barWidth * damagePercent, barHeight);
+        }
+        
+        // Draw stone health bars
+        for (Stone stone : stones.values()) {
+            if (stone.shouldShowHealthBar()) {
+                float barWidth = 32;
+                float barHeight = 4;
+                float barX = stone.getX() + 16;
+                float barY = stone.getY() + 70;  // Position above stone sprite
+                
+                // Green background
+                shapeRenderer.setColor(0, 1, 0, 1);
+                shapeRenderer.rect(barX, barY, barWidth, barHeight);
+                
+                // Red overlay based on damage
+                float damagePercent = 1.0f - stone.getHealthPercentage();
+                shapeRenderer.setColor(1, 0, 0, 1);
+                shapeRenderer.rect(barX, barY, barWidth * damagePercent, barHeight);
+            }
         }
         
         // Draw player health bar (fixed position on screen)
@@ -1494,6 +1631,14 @@ public class MyGdxGame extends ApplicationAdapter {
             // Then sync the server's trees
             for (TreeState treeState : state.getTrees().values()) {
                 updateTreeFromState(treeState);
+            }
+        }
+        
+        // Sync stone states
+        if (state.getStones() != null) {
+            System.out.println("  Stones to sync: " + state.getStones().size());
+            for (StoneState stoneState : state.getStones().values()) {
+                updateStoneFromState(stoneState);
             }
         }
         
@@ -1831,6 +1976,47 @@ public class MyGdxGame extends ApplicationAdapter {
     }
     
     /**
+     * Updates a stone's health from server state.
+     * 
+     * @param stoneState The stone state from the server
+     */
+    public void updateStoneFromState(StoneState stoneState) {
+        if (stoneState == null) {
+            return;
+        }
+        
+        String stoneId = stoneState.getStoneId();
+        float health = stoneState.getHealth();
+        
+        // Update health of existing stone
+        Stone stone = stoneMap.get(stoneId);
+        if (stone != null) {
+            stone.setHealth(health);
+        }
+        // If stone doesn't exist on client, it hasn't been generated yet - this is normal
+    }
+    
+    /**
+     * Removes a stone from the game world.
+     * Uses deferred operations for OpenGL context safety.
+     * 
+     * @param stoneId The stone ID to remove
+     */
+    public void removeStone(String stoneId) {
+        // Remove from map immediately (thread-safe)
+        Stone stone = stoneMap.remove(stoneId);
+        
+        if (stone != null) {
+            // Defer texture disposal to main thread
+            deferOperation(() -> {
+                stone.dispose();
+                stones.remove(stone);
+            });
+            System.out.println("Stone removed: " + stoneId);
+        }
+    }
+    
+    /**
      * Updates or creates an item based on server item state.
      * This method queues item creation to be processed on the main thread.
      * 
@@ -1953,6 +2139,9 @@ public class MyGdxGame extends ApplicationAdapter {
         if (woodStacks.containsKey(itemId)) {
             return wagemaker.uk.inventory.ItemType.WOOD_STACK;
         }
+        if (pebbles.containsKey(itemId)) {
+            return wagemaker.uk.inventory.ItemType.PEBBLE;
+        }
         return null;
     }
     
@@ -1990,6 +2179,13 @@ public class MyGdxGame extends ApplicationAdapter {
         if (woodStack != null) {
             // Defer texture disposal to render thread
             deferOperation(() -> woodStack.dispose());
+            return;
+        }
+        
+        Pebble pebble = pebbles.remove(itemId);
+        if (pebble != null) {
+            // Defer texture disposal to render thread
+            deferOperation(() -> pebble.dispose());
         }
     }
     
@@ -2524,6 +2720,20 @@ public class MyGdxGame extends ApplicationAdapter {
         
         worldState.setItems(itemStates);
         
+        // Extract stone states
+        Map<String, StoneState> stoneStates = new HashMap<>();
+        for (Map.Entry<String, Stone> entry : stones.entrySet()) {
+            Stone stone = entry.getValue();
+            StoneState stoneState = new StoneState(
+                entry.getKey(),
+                stone.getX(),
+                stone.getY(),
+                stone.getHealth()
+            );
+            stoneStates.put(entry.getKey(), stoneState);
+        }
+        worldState.setStones(stoneStates);
+        
         // Extract cleared positions
         worldState.setClearedPositions(new HashSet<>(clearedPositions.keySet()));
         
@@ -2565,6 +2775,12 @@ public class MyGdxGame extends ApplicationAdapter {
                 System.out.println("Restored " + saveData.getTrees().size() + " trees");
             }
             
+            // Restore stones
+            if (saveData.getStones() != null) {
+                restoreStonesFromSave(saveData.getStones());
+                System.out.println("Restored " + saveData.getStones().size() + " stones");
+            }
+            
             // Restore items
             if (saveData.getItems() != null) {
                 restoreItemsFromSave(saveData.getItems());
@@ -2595,6 +2811,20 @@ public class MyGdxGame extends ApplicationAdapter {
                 System.out.println("Restored player position from world save: (" + saveData.getPlayerX() + ", " + saveData.getPlayerY() + ")");
                 System.out.println("Restored player health from world save: " + saveData.getPlayerHealth());
                 System.out.println("Note: Position may be overridden by existing player position save system");
+            }
+            
+            // Restore inventory from world save
+            if (inventoryManager != null) {
+                wagemaker.uk.inventory.Inventory targetInventory = inventoryManager.getCurrentInventory();
+                if (targetInventory != null) {
+                    targetInventory.setAppleCount(saveData.getAppleCount());
+                    targetInventory.setBananaCount(saveData.getBananaCount());
+                    targetInventory.setBabyBambooCount(saveData.getBabyBambooCount());
+                    targetInventory.setBambooStackCount(saveData.getBambooStackCount());
+                    targetInventory.setWoodStackCount(saveData.getWoodStackCount());
+                    targetInventory.setPebbleCount(saveData.getPebbleCount());
+                    System.out.println("Restored inventory from world save (pebbles: " + saveData.getPebbleCount() + ")");
+                }
             }
             
             System.out.println("World state restoration completed successfully");
@@ -2746,6 +2976,26 @@ public class MyGdxGame extends ApplicationAdapter {
     }
     
     /**
+     * Restores stones from save data.
+     * Creates stone instances based on the saved stone states.
+     */
+    private void restoreStonesFromSave(Map<String, StoneState> savedStones) {
+        for (Map.Entry<String, StoneState> entry : savedStones.entrySet()) {
+            String stoneId = entry.getKey();
+            StoneState stoneState = entry.getValue();
+            
+            try {
+                Stone stone = new Stone(stoneState.getX(), stoneState.getY());
+                stone.setHealth(stoneState.getHealth());
+                stones.put(stoneId, stone);
+                stoneMap.put(stoneId, stone);
+            } catch (Exception e) {
+                System.err.println("Error restoring stone " + stoneId + ": " + e.getMessage());
+            }
+        }
+    }
+    
+    /**
      * Restores items from save data.
      * Creates item instances based on the saved item states.
      */
@@ -2769,6 +3019,11 @@ public class MyGdxGame extends ApplicationAdapter {
                     case BANANA:
                         Banana banana = new Banana(itemState.getX(), itemState.getY());
                         bananas.put(itemId, banana);
+                        break;
+                        
+                    case PEBBLE:
+                        Pebble pebble = new Pebble(itemState.getX(), itemState.getY());
+                        pebbles.put(itemId, pebble);
                         break;
                 }
             } catch (Exception e) {
@@ -2982,6 +3237,7 @@ public class MyGdxGame extends ApplicationAdapter {
         saveData.setSaveName("__rollback__");
         saveData.setWorldSeed(worldState.getWorldSeed());
         saveData.setTrees(worldState.getTrees());
+        saveData.setStones(worldState.getStones());
         saveData.setItems(worldState.getItems());
         saveData.setClearedPositions(worldState.getClearedPositions());
         saveData.setRainZones(worldState.getRainZones());
@@ -3103,12 +3359,20 @@ public class MyGdxGame extends ApplicationAdapter {
             // Save the world using WorldSaveManager
             // Determine if we're in multiplayer mode for saving
             boolean isMultiplayer = (this.gameMode != GameMode.SINGLEPLAYER);
+            
+            // Get current inventory from inventory manager
+            wagemaker.uk.inventory.Inventory currentInventory = null;
+            if (inventoryManager != null) {
+                currentInventory = inventoryManager.getCurrentInventory();
+            }
+            
             boolean saveSuccess = WorldSaveManager.saveWorld(
                 saveName, 
                 currentState, 
                 saveData.getPlayerX(), 
                 saveData.getPlayerY(), 
                 saveData.getPlayerHealth(),
+                currentInventory,
                 isMultiplayer
             );
             
@@ -3244,6 +3508,11 @@ public class MyGdxGame extends ApplicationAdapter {
                 case WOOD_STACK:
                     if (!woodStacks.containsKey(itemId)) {
                         woodStacks.put(itemId, new WoodStack(x, y));
+                    }
+                    break;
+                case PEBBLE:
+                    if (!pebbles.containsKey(itemId)) {
+                        pebbles.put(itemId, new Pebble(x, y));
                     }
                     break;
             }
@@ -3420,6 +3689,12 @@ public class MyGdxGame extends ApplicationAdapter {
         }
         for (PlantedBamboo planted : plantedBamboos.values()) {
             planted.dispose();
+        }
+        for (Stone stone : stones.values()) {
+            stone.dispose();
+        }
+        for (Pebble pebble : pebbles.values()) {
+            pebble.dispose();
         }
         if (cactus != null) {
             cactus.dispose();

@@ -63,6 +63,14 @@ public class DefaultMessageHandler implements MessageHandler {
                     handleTreeRemoval((TreeRemovalMessage) message);
                     break;
                     
+                case STONE_HEALTH_UPDATE:
+                    handleStoneHealthUpdate((StoneHealthUpdateMessage) message);
+                    break;
+                    
+                case STONE_DESTROYED:
+                    handleStoneDestroyed((StoneDestroyedMessage) message);
+                    break;
+                    
                 case ITEM_SPAWN:
                     handleItemSpawn((ItemSpawnMessage) message);
                     break;
@@ -206,6 +214,23 @@ public class DefaultMessageHandler implements MessageHandler {
      */
     protected void handleTreeDestroyed(TreeDestroyedMessage message) {
         System.out.println("Tree destroyed: " + message.getTreeId() + " at (" + 
+                         message.getX() + ", " + message.getY() + ")");
+    }
+    
+    /**
+     * Handles STONE_HEALTH_UPDATE message.
+     * Override this method to update stone health bars.
+     */
+    protected void handleStoneHealthUpdate(StoneHealthUpdateMessage message) {
+        System.out.println("Stone " + message.getStoneId() + " health: " + message.getHealth());
+    }
+    
+    /**
+     * Handles STONE_DESTROYED message.
+     * Override this method to remove stones from game world.
+     */
+    protected void handleStoneDestroyed(StoneDestroyedMessage message) {
+        System.out.println("Stone destroyed: " + message.getStoneId() + " at (" + 
                          message.getX() + ", " + message.getY() + ")");
     }
     

@@ -1,6 +1,7 @@
 package wagemaker.uk.world;
 
 import wagemaker.uk.network.TreeState;
+import wagemaker.uk.network.StoneState;
 import wagemaker.uk.network.ItemState;
 import wagemaker.uk.weather.RainZone;
 
@@ -23,6 +24,7 @@ public class WorldSaveData implements Serializable {
     // Core world data
     private long worldSeed;
     private Map<String, TreeState> trees;
+    private Map<String, StoneState> stones;
     private Map<String, ItemState> items;
     private Set<String> clearedPositions;
     private List<RainZone> rainZones;
@@ -31,6 +33,14 @@ public class WorldSaveData implements Serializable {
     private float playerX;
     private float playerY;
     private float playerHealth;
+    
+    // Player inventory at save time
+    private int appleCount;
+    private int bananaCount;
+    private int babyBambooCount;
+    private int bambooStackCount;
+    private int woodStackCount;
+    private int pebbleCount;
     
     // Save metadata
     private long saveTimestamp;
@@ -51,6 +61,7 @@ public class WorldSaveData implements Serializable {
      * 
      * @param worldSeed The world generation seed
      * @param trees Map of all tree states
+     * @param stones Map of all stone states
      * @param items Map of all item states
      * @param clearedPositions Set of cleared tree positions
      * @param rainZones List of rain zones
@@ -60,13 +71,14 @@ public class WorldSaveData implements Serializable {
      * @param saveName Name of this save
      * @param gameMode Game mode ("singleplayer" or "multiplayer")
      */
-    public WorldSaveData(long worldSeed, Map<String, TreeState> trees, Map<String, ItemState> items,
-                        Set<String> clearedPositions, List<RainZone> rainZones,
+    public WorldSaveData(long worldSeed, Map<String, TreeState> trees, Map<String, StoneState> stones,
+                        Map<String, ItemState> items, Set<String> clearedPositions, List<RainZone> rainZones,
                         float playerX, float playerY, float playerHealth,
                         String saveName, String gameMode) {
         this();
         this.worldSeed = worldSeed;
         this.trees = trees;
+        this.stones = stones;
         this.items = items;
         this.clearedPositions = clearedPositions;
         this.rainZones = rainZones;
@@ -75,6 +87,13 @@ public class WorldSaveData implements Serializable {
         this.playerHealth = playerHealth;
         this.saveName = saveName;
         this.gameMode = gameMode;
+        // Initialize inventory counts to 0 (will be set separately)
+        this.appleCount = 0;
+        this.bananaCount = 0;
+        this.babyBambooCount = 0;
+        this.bambooStackCount = 0;
+        this.woodStackCount = 0;
+        this.pebbleCount = 0;
     }
     
     /**
@@ -94,7 +113,7 @@ public class WorldSaveData implements Serializable {
         }
         
         // Check data collections are not null
-        if (trees == null || items == null || clearedPositions == null) {
+        if (trees == null || stones == null || items == null || clearedPositions == null) {
             return false;
         }
         
@@ -142,6 +161,19 @@ public class WorldSaveData implements Serializable {
     }
     
     /**
+     * Gets the number of existing stones in this save.
+     * 
+     * @return Count of stones that exist (not destroyed)
+     */
+    public int getExistingStoneCount() {
+        if (stones == null) {
+            return 0;
+        }
+        
+        return stones.size();
+    }
+    
+    /**
      * Checks if this save is compatible with the current game version.
      * 
      * @return true if compatible, false if version mismatch
@@ -166,6 +198,14 @@ public class WorldSaveData implements Serializable {
     
     public void setTrees(Map<String, TreeState> trees) {
         this.trees = trees;
+    }
+    
+    public Map<String, StoneState> getStones() {
+        return stones;
+    }
+    
+    public void setStones(Map<String, StoneState> stones) {
+        this.stones = stones;
     }
     
     public Map<String, ItemState> getItems() {
@@ -248,11 +288,60 @@ public class WorldSaveData implements Serializable {
         this.saveFormatVersion = saveFormatVersion;
     }
     
+    public int getAppleCount() {
+        return appleCount;
+    }
+    
+    public void setAppleCount(int appleCount) {
+        this.appleCount = Math.max(0, appleCount);
+    }
+    
+    public int getBananaCount() {
+        return bananaCount;
+    }
+    
+    public void setBananaCount(int bananaCount) {
+        this.bananaCount = Math.max(0, bananaCount);
+    }
+    
+    public int getBabyBambooCount() {
+        return babyBambooCount;
+    }
+    
+    public void setBabyBambooCount(int babyBambooCount) {
+        this.babyBambooCount = Math.max(0, babyBambooCount);
+    }
+    
+    public int getBambooStackCount() {
+        return bambooStackCount;
+    }
+    
+    public void setBambooStackCount(int bambooStackCount) {
+        this.bambooStackCount = Math.max(0, bambooStackCount);
+    }
+    
+    public int getWoodStackCount() {
+        return woodStackCount;
+    }
+    
+    public void setWoodStackCount(int woodStackCount) {
+        this.woodStackCount = Math.max(0, woodStackCount);
+    }
+    
+    public int getPebbleCount() {
+        return pebbleCount;
+    }
+    
+    public void setPebbleCount(int pebbleCount) {
+        this.pebbleCount = Math.max(0, pebbleCount);
+    }
+    
     @Override
     public String toString() {
-        return String.format("WorldSaveData[name=%s, mode=%s, seed=%d, trees=%d, items=%d, timestamp=%d]",
+        return String.format("WorldSaveData[name=%s, mode=%s, seed=%d, trees=%d, stones=%d, items=%d, timestamp=%d]",
             saveName, gameMode, worldSeed, 
             trees != null ? trees.size() : 0,
+            stones != null ? stones.size() : 0,
             items != null ? items.size() : 0,
             saveTimestamp);
     }

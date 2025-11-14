@@ -15,7 +15,7 @@ public class InventoryManager {
     private Player player;
     private boolean isMultiplayerMode;
     private GameClient gameClient;
-    private int selectedSlot; // 0-4 for slots, -1 for no selection
+    private int selectedSlot; // 0-5 for slots, -1 for no selection
     
     /**
      * Create a new InventoryManager for the given player.
@@ -122,6 +122,9 @@ public class InventoryManager {
             case WOOD_STACK:
                 inventory.addWoodStack(amount);
                 break;
+            case PEBBLE:
+                inventory.addPebble(amount);
+                break;
         }
         
         // Send inventory update to server in multiplayer mode
@@ -227,7 +230,8 @@ public class InventoryManager {
                 inventory.getBananaCount(),
                 inventory.getBabyBambooCount(),
                 inventory.getBambooStackCount(),
-                inventory.getWoodStackCount()
+                inventory.getWoodStackCount(),
+                inventory.getPebbleCount()
             );
             
             gameClient.sendMessage(message);
@@ -250,9 +254,10 @@ public class InventoryManager {
      * @param babyBambooCount The baby bamboo count from server
      * @param bambooStackCount The bamboo stack count from server
      * @param woodStackCount The wood stack count from server
+     * @param pebbleCount The pebble count from server
      */
     public void syncFromServer(int appleCount, int bananaCount, int babyBambooCount, 
-                                int bambooStackCount, int woodStackCount) {
+                                int bambooStackCount, int woodStackCount, int pebbleCount) {
         if (!isMultiplayerMode) {
             return; // Only sync in multiplayer mode
         }
@@ -263,20 +268,22 @@ public class InventoryManager {
         inventory.setBabyBambooCount(babyBambooCount);
         inventory.setBambooStackCount(bambooStackCount);
         inventory.setWoodStackCount(woodStackCount);
+        inventory.setPebbleCount(pebbleCount);
         
         System.out.println("Inventory synced from server: Apples=" + appleCount +
                          ", Bananas=" + bananaCount +
                          ", BabyBamboo=" + babyBambooCount +
                          ", BambooStack=" + bambooStackCount +
-                         ", WoodStack=" + woodStackCount);
+                         ", WoodStack=" + woodStackCount +
+                         ", Pebbles=" + pebbleCount);
     }
     
     /**
      * Set the selected inventory slot.
-     * @param slot The slot index (0-4 for valid slots, any other value clears selection)
+     * @param slot The slot index (0-5 for valid slots, any other value clears selection)
      */
     public void setSelectedSlot(int slot) {
-        if (slot >= 0 && slot <= 4) {
+        if (slot >= 0 && slot <= 5) {
             this.selectedSlot = slot;
         } else {
             this.selectedSlot = -1; // Clear selection
@@ -285,7 +292,7 @@ public class InventoryManager {
     
     /**
      * Get the currently selected inventory slot.
-     * @return The selected slot index (0-4), or -1 if no slot is selected
+     * @return The selected slot index (0-5), or -1 if no slot is selected
      */
     public int getSelectedSlot() {
         return selectedSlot;
@@ -309,6 +316,7 @@ public class InventoryManager {
             case 2: return ItemType.BABY_BAMBOO;
             case 3: return ItemType.BAMBOO_STACK;
             case 4: return ItemType.WOOD_STACK;
+            case 5: return ItemType.PEBBLE;
             default: return null;
         }
     }

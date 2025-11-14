@@ -13,6 +13,7 @@ public class InventoryUpdateMessage extends NetworkMessage {
     private int babyBambooCount;
     private int bambooStackCount;
     private int woodStackCount;
+    private int pebbleCount;
     
     public InventoryUpdateMessage() {
         super();
@@ -21,7 +22,7 @@ public class InventoryUpdateMessage extends NetworkMessage {
     public InventoryUpdateMessage(String senderId, String playerId, 
                                    int appleCount, int bananaCount, 
                                    int babyBambooCount, int bambooStackCount, 
-                                   int woodStackCount) {
+                                   int woodStackCount, int pebbleCount) {
         super(senderId);
         this.playerId = playerId;
         this.appleCount = appleCount;
@@ -29,6 +30,7 @@ public class InventoryUpdateMessage extends NetworkMessage {
         this.babyBambooCount = babyBambooCount;
         this.bambooStackCount = bambooStackCount;
         this.woodStackCount = woodStackCount;
+        this.pebbleCount = pebbleCount;
     }
     
     @Override
@@ -58,5 +60,9 @@ public class InventoryUpdateMessage extends NetworkMessage {
     
     public int getWoodStackCount() {
         return woodStackCount;
+    }
+    
+    public int getPebbleCount() {
+        return pebbleCount;
     }
 }

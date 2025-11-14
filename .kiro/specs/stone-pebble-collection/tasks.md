@@ -1,0 +1,213 @@
+# Implementation Plan
+
+- [x] 1. Create Stone object class with collision and health mechanics
+  - Create `src/main/java/wagemaker/uk/objects/Stone.java` class following the SmallTree pattern
+  - Implement constructor with x, y position parameters
+  - Implement texture loading from assets.png sprite sheet (coordinates TBD during implementation)
+  - Implement collision detection method `collidesWith()` with 32x32 pixel collision box
+  - Implement attack range detection method `isInAttackRange()` with 64 pixel range
+  - Implement health management: initial health 50, damage 10 per attack, regeneration after 5 seconds
+  - Implement `attack()` method that returns true when health reaches zero
+  - Implement `update()` method for health regeneration logic
+  - Implement health bar display methods: `shouldShowHealthBar()`, `getHealthPercentage()`
+  - Implement `dispose()` method for texture cleanup
+  - _Requirements: 1.3, 1.4, 1.5, 2.1, 2.2_
+
+- [x] 2. Create Pebble item class
+  - Create `src/main/java/wagemaker/uk/items/Pebble.java` class following the WoodStack pattern
+  - Implement constructor with x, y position parameters
+  - Implement texture loading from assets.png sprite sheet (coordinates TBD during implementation)
+  - Implement position getter methods: `getX()`, `getY()`
+  - Implement `getTexture()` method for rendering
+  - Implement `dispose()` method for texture cleanup
+  - _Requirements: 2.3, 2.4, 5.3_
+
+- [x] 3. Extend inventory system to support pebbles
+  - [x] 3.1 Add PEBBLE to ItemType enum
+    - Add `PEBBLE(false, 0)` entry to `src/main/java/wagemaker/uk/inventory/ItemType.java`
+    - _Requirements: 3.1, 3.2_
+  - [x] 3.2 Add pebble storage to Inventory class
+    - Add `pebbleCount` field to `src/main/java/wagemaker/uk/inventory/Inventory.java`
+    - Implement `getPebbleCount()` and `setPebbleCount(int)` methods
+    - Implement `addPebble(int)` and `removePebble(int)` methods with validation
+    - Update `clear()` method to reset pebble count to 0
+    - _Requirements: 3.1, 3.4_
+  - [x] 3.3 Update InventoryManager for pebble handling
+    - Update `addItemToInventory()` in `src/main/java/wagemaker/uk/inventory/InventoryManager.java` to handle PEBBLE case
+    - Update `setSelectedSlot()` to accept range 0-5 (was 0-4)
+    - Update `getSelectedItemType()` to return PEBBLE for slot 5
+    - _Requirements: 2.5, 3.2, 3.3_
+
+- [x] 4. Add network synchronization for pebbles
+  - [x] 4.1 Extend network ItemType enum
+    - Add `PEBBLE` entry to `src/main/java/wagemaker/uk/network/ItemType.java`
+    - _Requirements: 4.1, 4.3, 4.4_
+  - [x] 4.2 Update inventory network messages
+    - Add `pebbleCount` field to `src/main/java/wagemaker/uk/network/InventoryUpdateMessage.java`
+    - Update constructor to include pebbleCount parameter
+    - Add `getPebbleCount()` getter method
+    - Add `pebbleCount` field to `src/main/java/wagemaker/uk/network/InventorySyncMessage.java`
+    - Update constructor and getter for pebbleCount
+    - _Requirements: 4.5_
+  - [x] 4.3 Update InventoryManager network synchronization
+    - Update `sendInventoryUpdate()` in InventoryManager to include pebble count
+    - Update `syncFromServer()` in InventoryManager to handle pebble count
+    - _Requirements: 4.5_
+
+- [x] 5. Integrate stones into world generation and game loop
+  - [x] 5.1 Add stone collections to MyGdxGame
+    - Add `List<Stone> stones` field to `src/main/java/wagemaker/uk/gdx/MyGdxGame.java`
+    - Add `Map<String, Stone> stoneMap` field for multiplayer tracking
+    - Initialize collections in `create()` method
+    - _Requirements: 1.1, 1.2_
+  - [x] 5.2 Implement stone spawning logic
+    - Create method to spawn stones randomly during world generation
+    - Implement distribution across all biomes (approximately 1 stone per 500x500 pixels)
+    - Ensure minimum 100 pixel distance from trees to avoid overlap
+    - Call spawning method in `create()` or world initialization
+    - _Requirements: 1.1, 1.2_
+  - [x] 5.3 Add stone rendering to game loop
+    - Render stone sprites in the main render loop
+    - Render health bars for damaged stones
+    - Position health bars above stones similar to tree health bars
+    - _Requirements: 1.3, 5.1, 5.2_
+  - [x] 5.4 Implement stone collision detection
+    - Add collision check loop for stones in player movement logic
+    - Prevent player movement through stone collision boxes
+    - _Requirements: 1.4, 1.5_
+  - [x] 5.5 Implement stone attack mechanics
+    - Add stone attack detection in player attack input handling
+    - Check if player is in attack range of any stone
+    - Apply damage to stone and check for destruction
+    - Spawn pebble at stone location when destroyed
+    - Remove destroyed stone from collections
+    - Use deferred operations for texture disposal (threading safety)
+    - _Requirements: 2.1, 2.2, 2.3_
+  - [x] 5.6 Add stone update logic
+    - Call `update(deltaTime)` on all stones in game loop
+    - Handle health regeneration timing
+    - _Requirements: 2.1_
+
+- [x] 6. Implement pebble collection mechanics
+  - [x] 6.1 Add pebble collections to MyGdxGame
+    - Add `List<Pebble> pebbles` field to MyGdxGame
+    - Add `Map<String, Pebble> pebbleMap` field for multiplayer tracking
+    - Initialize collections in `create()` method
+    - _Requirements: 2.3, 2.4_
+  - [x] 6.2 Implement pebble spawning
+    - Create method to spawn pebble at specified x, y coordinates
+    - Call when stone is destroyed
+    - Generate unique pebble ID for multiplayer tracking
+    - _Requirements: 2.3_
+  - [x] 6.3 Implement pebble rendering
+    - Render pebble sprites in main render loop
+    - Position pebbles at their world coordinates
+    - _Requirements: 2.4, 5.3_
+  - [x] 6.4 Implement pebble collection
+    - Add collision detection loop for pebbles in player movement/update
+    - Check distance between player and pebbles (similar to apple/banana collection)
+    - Call `inventoryManager.collectItem(ItemType.PEBBLE)` when collected
+    - Remove collected pebble from collections
+    - Use deferred operations for texture disposal (threading safety)
+    - _Requirements: 2.5, 3.4_
+
+- [x] 7. Add multiplayer synchronization for stones
+  - [x] 7.1 Create stone network messages
+    - Create `src/main/java/wagemaker/uk/network/StoneState.java` class with stoneId, x, y, health fields
+    - Create `src/main/java/wagemaker/uk/network/StoneHealthUpdateMessage.java` following TreeHealthUpdateMessage pattern
+    - Create `src/main/java/wagemaker/uk/network/StoneDestroyedMessage.java` following TreeDestroyedMessage pattern
+    - Add STONE_HEALTH_UPDATE and STONE_DESTROYED to MessageType enum
+    - _Requirements: 4.2_
+  - [x] 7.2 Implement stone synchronization in GameServer
+    - Add stone state to WorldState and WorldStateMessage
+    - Broadcast stone health updates when stones are attacked
+    - Broadcast stone destruction messages
+    - Handle stone attack requests from clients
+    - _Requirements: 4.2_
+  - [x] 7.3 Implement stone synchronization in GameClient
+    - Handle incoming stone health update messages
+    - Handle incoming stone destroyed messages
+    - Update local stone state from server messages
+    - Send stone attack requests to server
+    - Use deferred operations for stone disposal (threading safety)
+    - _Requirements: 4.2_
+
+- [x] 8. Add multiplayer synchronization for pebbles
+  - [x] 8.1 Update pebble spawn synchronization
+    - Broadcast ItemSpawnMessage with ItemType.PEBBLE when stone is destroyed
+    - Handle pebble spawn messages in GameClient
+    - Create pebble objects on all clients when message received
+    - _Requirements: 4.3_
+  - [x] 8.2 Update pebble collection synchronization
+    - Broadcast ItemPickupMessage when pebble is collected
+    - Handle pebble pickup messages in GameClient
+    - Remove pebble from all clients when collected
+    - Update inventory on collecting client
+    - Use deferred operations for pebble disposal (threading safety)
+    - _Requirements: 4.4, 4.5_
+
+- [x] 9. Update inventory UI for pebble slot
+  - [x] 9.1 Extend inventory renderer for 6 slots
+    - Modify `src/main/java/wagemaker/uk/ui/InventoryRenderer.java` to render 6 slots instead of 5
+    - Adjust slot positioning to accommodate new slot
+    - _Requirements: 3.1, 5.4_
+  - [x] 9.2 Add pebble sprite to inventory UI
+    - Load pebble sprite for inventory slot display
+    - Render pebble icon in slot 6
+    - Display pebble count in slot 6
+    - _Requirements: 5.4_
+  - [x] 9.3 Implement key binding for slot 6
+    - Add key "6" input handling in MyGdxGame input processing
+    - Call `inventoryManager.setSelectedSlot(5)` when key "6" is pressed
+    - Highlight slot 6 in UI when selected
+    - Show pebble sprite when slot 6 is selected
+    - _Requirements: 3.2, 3.3, 5.5_
+
+- [x] 10. Add world save/load support for stones and pebbles
+  - [x] 10.1 Extend WorldSaveData for stones
+    - Add stone state list to `src/main/java/wagemaker/uk/world/WorldSaveData.java`
+    - Include stone positions and health in save data
+    - _Requirements: 1.1, 2.1_
+  - [x] 10.2 Extend WorldSaveData for pebbles
+    - Add pebble state list to WorldSaveData
+    - Include pebble positions in save data
+    - Update inventory save to include pebble count
+    - _Requirements: 2.3, 3.5_
+  - [x] 10.3 Update WorldSaveManager save logic
+    - Save stone states in `src/main/java/wagemaker/uk/world/WorldSaveManager.java`
+    - Save pebble states
+    - Save pebble inventory count
+    - _Requirements: 3.5_
+  - [x] 10.4 Update WorldSaveManager load logic
+    - Load stone states and recreate Stone objects
+    - Load pebble states and recreate Pebble objects
+    - Load pebble inventory count
+    - _Requirements: 3.5_
+
+- [ ] 11. Create placeholder sprite assets
+  - Create temporary placeholder sprites for stone and pebble in assets.png
+  - Document sprite coordinates for stone sprite (64x64 pixels)
+  - Document sprite coordinates for pebble sprite (64x64 pixels)
+  - Add comments in Stone.java and Pebble.java with sprite coordinates
+  - _Requirements: 1.3, 2.4, 5.1, 5.3_
+  - Note: Final art assets should be created by a designer, these are functional placeholders
+
+- [ ] 12. Write integration tests
+  - [ ] 12.1 Test stone-pebble lifecycle
+    - Write test in `src/test/java/wagemaker/uk/objects/StonePebbleIntegrationTest.java`
+    - Test stone spawning, damage, destruction, and pebble spawn
+    - Test pebble collection and inventory update
+    - _Requirements: 1.1, 2.1, 2.2, 2.3, 2.5_
+  - [ ] 12.2 Test multiplayer synchronization
+    - Write test in `src/test/java/wagemaker/uk/network/StoneMultiplayerIntegrationTest.java`
+    - Test stone health synchronization across clients
+    - Test stone destruction broadcast
+    - Test pebble spawn and collection synchronization
+    - Test inventory synchronization with pebbles
+    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
+  - [ ] 12.3 Test inventory UI integration
+    - Write test in `src/test/java/wagemaker/uk/ui/PebbleInventoryUITest.java`
+    - Test slot 6 rendering
+    - Test key "6" selection
+    - Test pebble count display
+    - _Requirements: 3.2, 3.3, 3.4, 5.4, 5.5_

@@ -20,6 +20,7 @@ public class InventoryRenderer {
     private Texture babyBambooIcon;
     private Texture bambooStackIcon;
     private Texture woodStackIcon;
+    private Texture pebbleIcon;
     
     // Background and UI elements
     private Texture woodenBackground;
@@ -35,7 +36,7 @@ public class InventoryRenderer {
     private static final int SLOT_SIZE = 40;
     private static final int SLOT_SPACING = 8;
     private static final int PANEL_PADDING = 8;
-    private static final int PANEL_WIDTH = (SLOT_SIZE * 5) + (SLOT_SPACING * 4) + (PANEL_PADDING * 2);
+    private static final int PANEL_WIDTH = (SLOT_SIZE * 6) + (SLOT_SPACING * 5) + (PANEL_PADDING * 2);
     private static final int PANEL_HEIGHT = SLOT_SIZE + (PANEL_PADDING * 2);
     private static final int ICON_SIZE = 32;
     
@@ -76,6 +77,9 @@ public class InventoryRenderer {
         
         // Load wood stack icon (256, 128, 64x64)
         woodStackIcon = extractIconFromSpriteSheet(256, 128, 64, 64);
+        
+        // Load pebble icon (320, 128, 64x64)
+        pebbleIcon = extractIconFromSpriteSheet(320, 128, 64, 64);
     }
     
     /**
@@ -147,7 +151,7 @@ public class InventoryRenderer {
      * @param camY Camera Y position
      * @param viewWidth Viewport width
      * @param viewHeight Viewport height
-     * @param selectedSlot The currently selected slot index (0-4), or -1 for no selection
+     * @param selectedSlot The currently selected slot index (0-5), or -1 for no selection
      */
     public void render(SpriteBatch batch, Inventory inventory, 
                       float camX, float camY, float viewWidth, float viewHeight, int selectedSlot) {
@@ -168,17 +172,18 @@ public class InventoryRenderer {
         float slotX = panelX + PANEL_PADDING;
         float slotY = panelY + PANEL_PADDING;
         
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 6; i++) {
             float x = slotX + i * (SLOT_SIZE + SLOT_SPACING);
             batch.draw(slotBorder, x, slotY, SLOT_SIZE, SLOT_SIZE);
         }
         
-        // Render slots with icons and counts in order: Apple, Banana, BabyBamboo, BambooStack, WoodStack
+        // Render slots with icons and counts in order: Apple, Banana, BabyBamboo, BambooStack, WoodStack, Pebble
         renderSlot(batch, appleIcon, inventory.getAppleCount(), slotX, slotY, selectedSlot == 0);
         renderSlot(batch, bananaIcon, inventory.getBananaCount(), slotX + (SLOT_SIZE + SLOT_SPACING), slotY, selectedSlot == 1);
         renderSlot(batch, babyBambooIcon, inventory.getBabyBambooCount(), slotX + 2 * (SLOT_SIZE + SLOT_SPACING), slotY, selectedSlot == 2);
         renderSlot(batch, bambooStackIcon, inventory.getBambooStackCount(), slotX + 3 * (SLOT_SIZE + SLOT_SPACING), slotY, selectedSlot == 3);
         renderSlot(batch, woodStackIcon, inventory.getWoodStackCount(), slotX + 4 * (SLOT_SIZE + SLOT_SPACING), slotY, selectedSlot == 4);
+        renderSlot(batch, pebbleIcon, inventory.getPebbleCount(), slotX + 5 * (SLOT_SIZE + SLOT_SPACING), slotY, selectedSlot == 5);
         
         batch.end();
     }
@@ -250,6 +255,7 @@ public class InventoryRenderer {
         if (babyBambooIcon != null) babyBambooIcon.dispose();
         if (bambooStackIcon != null) bambooStackIcon.dispose();
         if (woodStackIcon != null) woodStackIcon.dispose();
+        if (pebbleIcon != null) pebbleIcon.dispose();
         if (woodenBackground != null) woodenBackground.dispose();
         if (slotBorder != null) slotBorder.dispose();
         if (countFont != null) countFont.dispose();

@@ -16,6 +16,7 @@ public class WorldStateMessage extends NetworkMessage {
     private long worldSeed;
     private Map<String, PlayerState> players;
     private Map<String, TreeState> trees;
+    private Map<String, StoneState> stones;
     private Map<String, ItemState> items;
     private Set<String> clearedPositions;
     private List<RainZone> rainZones;
@@ -27,6 +28,7 @@ public class WorldStateMessage extends NetworkMessage {
     public WorldStateMessage(String senderId, long worldSeed, 
                             Map<String, PlayerState> players,
                             Map<String, TreeState> trees,
+                            Map<String, StoneState> stones,
                             Map<String, ItemState> items,
                             Set<String> clearedPositions,
                             List<RainZone> rainZones) {
@@ -34,6 +36,7 @@ public class WorldStateMessage extends NetworkMessage {
         this.worldSeed = worldSeed;
         this.players = players;
         this.trees = trees;
+        this.stones = stones;
         this.items = items;
         this.clearedPositions = clearedPositions;
         this.rainZones = rainZones;
@@ -54,6 +57,10 @@ public class WorldStateMessage extends NetworkMessage {
     
     public Map<String, TreeState> getTrees() {
         return trees;
+    }
+    
+    public Map<String, StoneState> getStones() {
+        return stones;
     }
     
     public Map<String, ItemState> getItems() {

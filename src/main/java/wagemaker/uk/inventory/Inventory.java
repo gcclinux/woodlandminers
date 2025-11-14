@@ -11,6 +11,7 @@ public class Inventory {
     private int babyBambooCount;
     private int bambooStackCount;
     private int woodStackCount;
+    private int pebbleCount;
     
     public Inventory() {
         this.appleCount = 0;
@@ -18,6 +19,7 @@ public class Inventory {
         this.babyBambooCount = 0;
         this.bambooStackCount = 0;
         this.woodStackCount = 0;
+        this.pebbleCount = 0;
     }
     
     // Apple methods
@@ -125,6 +127,27 @@ public class Inventory {
         return false;
     }
     
+    // Pebble methods
+    public int getPebbleCount() {
+        return pebbleCount;
+    }
+    
+    public void setPebbleCount(int count) {
+        this.pebbleCount = Math.max(0, count);
+    }
+    
+    public void addPebble(int amount) {
+        this.pebbleCount += amount;
+    }
+    
+    public boolean removePebble(int amount) {
+        if (pebbleCount >= amount) {
+            pebbleCount -= amount;
+            return true;
+        }
+        return false;
+    }
+    
     /**
      * Clear all items from inventory, resetting all counts to 0.
      */
@@ -134,5 +157,6 @@ public class Inventory {
         this.babyBambooCount = 0;
         this.bambooStackCount = 0;
         this.woodStackCount = 0;
+        this.pebbleCount = 0;
     }
 }

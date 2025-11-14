@@ -9,7 +9,8 @@ public enum ItemType {
     BANANA(true, 20),
     BABY_BAMBOO(false, 0),
     BAMBOO_STACK(false, 0),
-    WOOD_STACK(false, 0);
+    WOOD_STACK(false, 0),
+    PEBBLE(false, 0);
     
     private final boolean consumable;
     private final int healthRestore;

@@ -10,7 +10,9 @@ import wagemaker.uk.items.Apple;
 import wagemaker.uk.items.BabyBamboo;
 import wagemaker.uk.items.Banana;
 import wagemaker.uk.items.BambooStack;
+import wagemaker.uk.items.Pebble;
 import wagemaker.uk.items.WoodStack;
+import wagemaker.uk.objects.Stone;
 import wagemaker.uk.trees.SmallTree;
 import wagemaker.uk.trees.AppleTree;
 import wagemaker.uk.trees.BambooTree;
@@ -61,6 +63,8 @@ public class Player {
     private Map<String, wagemaker.uk.items.BambooStack> bambooStacks;
     private Map<String, wagemaker.uk.items.BabyBamboo> babyBamboos;
     private Map<String, WoodStack> woodStacks;
+    private Map<String, Pebble> pebbles;
+    private Map<String, Stone> stones;
     private Cactus cactus; // Single cactus reference
     private Object gameInstance; // Reference to MyGdxGame for cactus respawning
     private Map<String, Boolean> clearedPositions;
@@ -122,6 +126,14 @@ public class Player {
     
     public void setWoodStacks(Map<String, WoodStack> woodStacks) {
         this.woodStacks = woodStacks;
+    }
+    
+    public void setPebbles(Map<String, Pebble> pebbles) {
+        this.pebbles = pebbles;
+    }
+    
+    public void setStones(Map<String, Stone> stones) {
+        this.stones = stones;
     }
     
     public void setCactus(Cactus cactus) {
@@ -356,6 +368,9 @@ public class Player {
         // Check for wood stack pickups
         checkWoodStackPickups();
         
+        // Check for pebble pickups
+        checkPebblePickups();
+        
         // Check for health decrease and trigger auto-consumption
         if (inventoryManager != null && health < previousHealth) {
             inventoryManager.tryAutoConsume();
@@ -522,6 +537,15 @@ public class Player {
         if (cactus != null) {
             if (cactus.collidesWith(newX, newY, 64, 64)) {
                 return true;
+            }
+        }
+        
+        // Check collision with stones
+        if (stones != null) {
+            for (Stone stone : stones.values()) {
+                if (stone.collidesWith(newX, newY, 64, 64)) {
+                    return true;
+                }
             }
         }
         
@@ -826,6 +850,64 @@ public class Player {
             }
         }
         
+        // Attack stones within range (individual collision)
+        if (stones != null && !attackedSomething) {
+            Stone targetStone = null;
+            String targetKey = null;
+            
+            for (Map.Entry<String, Stone> entry : stones.entrySet()) {
+                Stone stone = entry.getValue();
+                
+                if (stone.isInAttackRange(x, y)) {
+                    targetStone = stone;
+                    targetKey = entry.getKey();
+                    break;
+                }
+            }
+            
+            if (targetStone != null) {
+                // Send attack action to server in multiplayer mode
+                if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+                    gameClient.sendAttackAction(targetKey);
+                    // In multiplayer, server handles stone destruction and pebble spawning
+                    attackedSomething = true;
+                } else {
+                    // Single-player mode: handle locally
+                    float healthBefore = targetStone.getHealth();
+                    boolean destroyed = targetStone.attack();
+                    if (destroyed) {
+                        System.out.println("Attacking stone, health before: " + healthBefore);
+                        System.out.println("Stone health after attack: " + targetStone.getHealth() + ", destroyed: " + destroyed);
+                    }
+                    attackedSomething = true;
+                    
+                    if (destroyed) {
+                        // Spawn pebble at stone position
+                        pebbles.put(targetKey + "-pebble", new Pebble(targetStone.getX(), targetStone.getY()));
+                        System.out.println("Pebble dropped at: " + targetStone.getX() + ", " + targetStone.getY());
+                        
+                        // Use deferred operation for texture disposal (threading safety)
+                        if (gameInstance != null) {
+                            try {
+                                final Stone stoneToDispose = targetStone;
+                                gameInstance.getClass().getMethod("deferOperation", Runnable.class)
+                                    .invoke(gameInstance, (Runnable) () -> stoneToDispose.dispose());
+                            } catch (Exception e) {
+                                // Fallback: dispose immediately if deferOperation not available
+                                targetStone.dispose();
+                            }
+                        } else {
+                            targetStone.dispose();
+                        }
+                        
+                        stones.remove(targetKey);
+                        clearedPositions.put(targetKey, true);
+                        System.out.println("Stone removed from world");
+                    }
+                }
+            }
+        }
+        
         if (!attackedSomething) {
             System.out.println("No trees in range to attack");
         }
@@ -858,6 +940,9 @@ public class Player {
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_5)) {
             // Toggle: if slot 4 is already selected, deselect it
             inventoryManager.setSelectedSlot(currentSelection == 4 ? -1 : 4);
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_6)) {
+            // Toggle: if slot 5 is already selected, deselect it
+            inventoryManager.setSelectedSlot(currentSelection == 5 ? -1 : 5);
         }
     }
     
@@ -1192,6 +1277,48 @@ public class Player {
                 woodStack.dispose();
                 woodStacks.remove(woodStackKey);
                 System.out.println("WoodStack removed from game");
+            }
+        }
+    }
+
+    private void checkPebblePickups() {
+        if (pebbles != null) {
+            // Check all pebbles for pickup
+            for (Map.Entry<String, Pebble> entry : pebbles.entrySet()) {
+                Pebble pebble = entry.getValue();
+                String pebbleKey = entry.getKey();
+                
+                // Check if player is close enough to pick up pebble (32px range)
+                float dx = Math.abs((x + 32) - (pebble.getX() + 16)); // Player center to pebble center
+                float dy = Math.abs((y + 32) - (pebble.getY() + 16)); // Pebble is 32x32, so center is +16
+                
+                if (dx <= 32 && dy <= 32) {
+                    // Pick up the pebble
+                    pickupPebble(pebbleKey);
+                    break; // Only pick up one pebble per frame
+                }
+            }
+        }
+    }
+    
+    private void pickupPebble(String pebbleKey) {
+        // Send pickup request to server in multiplayer mode
+        if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+            gameClient.sendItemPickup(pebbleKey);
+            // In multiplayer, server handles item removal
+            // The server will broadcast the pickup to all clients
+        } else {
+            // Single-player mode: handle locally via inventory manager
+            if (inventoryManager != null) {
+                inventoryManager.collectItem(wagemaker.uk.inventory.ItemType.PEBBLE);
+            }
+            
+            // Remove pebble from game
+            if (pebbles.containsKey(pebbleKey)) {
+                Pebble pebble = pebbles.get(pebbleKey);
+                pebble.dispose();
+                pebbles.remove(pebbleKey);
+                System.out.println("Pebble removed from game");
             }
         }
     }

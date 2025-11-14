@@ -23,6 +23,7 @@ public class WorldState implements Serializable {
     private long worldSeed;
     private Map<String, PlayerState> players;
     private Map<String, TreeState> trees;
+    private Map<String, StoneState> stones;
     private Map<String, ItemState> items;
     private Set<String> clearedPositions;
     private List<RainZone> rainZones;
@@ -31,6 +32,7 @@ public class WorldState implements Serializable {
     public WorldState() {
         this.players = new ConcurrentHashMap<>();
         this.trees = new ConcurrentHashMap<>();
+        this.stones = new ConcurrentHashMap<>();
         this.items = new ConcurrentHashMap<>();
         this.clearedPositions = ConcurrentHashMap.newKeySet();
         this.rainZones = new ArrayList<>();
@@ -396,6 +398,64 @@ public class WorldState implements Serializable {
     }
     
     /**
+     * Generates a stone at a specific position using deterministic logic.
+     * This uses the same algorithm as client-side generation to ensure consistency.
+     * 
+     * @param x The x-coordinate (must be aligned to 64px grid)
+     * @param y The y-coordinate (must be aligned to 64px grid)
+     * @return The generated StoneState, or null if no stone should exist at this position
+     */
+    public StoneState generateStoneAt(int x, int y) {
+        String key = x + "," + y;
+        
+        // Check if stone already exists or was cleared
+        if (stones.containsKey(key) || clearedPositions.contains(key)) {
+            return stones.get(key);
+        }
+        
+        // Use deterministic random seed (same as client-side generation)
+        java.util.Random random = new java.util.Random();
+        random.setSeed(worldSeed + x * 37L + y * 23L);
+        
+        // Stone spawn probability: 0.0006 (0.06%)
+        if (random.nextFloat() < 0.0006f) {
+            // Add random offset to break grid pattern
+            float offsetX = (random.nextFloat() - 0.5f) * 64; // -32 to +32
+            float offsetY = (random.nextFloat() - 0.5f) * 64; // -32 to +32
+            float stoneX = x + offsetX;
+            float stoneY = y + offsetY;
+            
+            // Only spawn stones on sand biomes
+            try {
+                wagemaker.uk.biome.BiomeManager biomeManager = new wagemaker.uk.biome.BiomeManager();
+                biomeManager.initialize();
+                wagemaker.uk.biome.BiomeType biome = biomeManager.getBiomeAtPosition(stoneX, stoneY);
+                biomeManager.dispose();
+                
+                if (biome != wagemaker.uk.biome.BiomeType.SAND) {
+                    return null;
+                }
+            } catch (Exception e) {
+                // If biome check fails, don't spawn stone
+                return null;
+            }
+            
+            // Don't spawn stones too close to spawn point (within 200px)
+            float distanceFromSpawn = (float) Math.sqrt(stoneX * stoneX + stoneY * stoneY);
+            if (distanceFromSpawn < 200) {
+                return null;
+            }
+            
+            // Create and store the stone
+            StoneState stone = new StoneState(key, stoneX, stoneY, 50.0f);
+            this.stones.put(key, stone);
+            return stone;
+        }
+        
+        return null;
+    }
+    
+    /**
      * Creates a complete snapshot of the current world state.
      * This is used when a new client connects to get the full state.
      * 
@@ -432,6 +492,18 @@ public class WorldState implements Serializable {
                 original.isExists()
             );
             snapshot.trees.put(entry.getKey(), copy);
+        }
+        
+        // Deep copy stones
+        for (Map.Entry<String, StoneState> entry : this.stones.entrySet()) {
+            StoneState original = entry.getValue();
+            StoneState copy = new StoneState(
+                original.getStoneId(),
+                original.getX(),
+                original.getY(),
+                original.getHealth()
+            );
+            snapshot.stones.put(entry.getKey(), copy);
         }
         
         // Deep copy items
@@ -587,6 +659,14 @@ public class WorldState implements Serializable {
         this.trees = trees;
     }
     
+    public Map<String, StoneState> getStones() {
+        return stones;
+    }
+    
+    public void setStones(Map<String, StoneState> stones) {
+        this.stones = stones;
+    }
+    
     public Map<String, ItemState> getItems() {
         return items;
     }
@@ -663,6 +743,24 @@ public class WorldState implements Serializable {
     }
     
     /**
+     * Adds or updates a stone in the world state.
+     */
+    public void addOrUpdateStone(StoneState stone) {
+        if (stone != null) {
+            this.stones.put(stone.getStoneId(), stone);
+            this.lastUpdateTimestamp = System.currentTimeMillis();
+        }
+    }
+    
+    /**
+     * Removes a stone from the world state (destroyed).
+     */
+    public void removeStone(String stoneId) {
+        this.stones.remove(stoneId);
+        this.lastUpdateTimestamp = System.currentTimeMillis();
+    }
+    
+    /**
      * Adds or updates an item in the world state.
      */
     public void addOrUpdateItem(ItemState item) {
@@ -710,6 +808,18 @@ public class WorldState implements Serializable {
             treesCopy.put(entry.getKey(), copy);
         }
         
+        Map<String, StoneState> stonesCopy = new HashMap<>();
+        for (Map.Entry<String, StoneState> entry : this.stones.entrySet()) {
+            StoneState original = entry.getValue();
+            StoneState copy = new StoneState(
+                original.getStoneId(),
+                original.getX(),
+                original.getY(),
+                original.getHealth()
+            );
+            stonesCopy.put(entry.getKey(), copy);
+        }
+        
         Map<String, ItemState> itemsCopy = new HashMap<>();
         for (Map.Entry<String, ItemState> entry : this.items.entrySet()) {
             ItemState original = entry.getValue();
@@ -743,6 +853,7 @@ public class WorldState implements Serializable {
         return new WorldSaveData(
             this.worldSeed,
             treesCopy,
+            stonesCopy,
             itemsCopy,
             clearedPositionsCopy,
             rainZonesCopy,
@@ -768,7 +879,7 @@ public class WorldState implements Serializable {
         }
         
         // Check collections are not null
-        if (trees == null || items == null || clearedPositions == null) {
+        if (trees == null || stones == null || items == null || clearedPositions == null) {
             System.err.println("World save validation failed: Null collections");
             return false;
         }
@@ -788,6 +899,25 @@ public class WorldState implements Serializable {
             
             if (tree.getHealth() < 0 || tree.getHealth() > 100) {
                 System.err.println("World save validation failed: Invalid tree health: " + tree.getHealth());
+                return false;
+            }
+        }
+        
+        // Validate stone states
+        for (Map.Entry<String, StoneState> entry : stones.entrySet()) {
+            StoneState stone = entry.getValue();
+            if (stone == null) {
+                System.err.println("World save validation failed: Null stone state for key: " + entry.getKey());
+                return false;
+            }
+            
+            if (stone.getStoneId() == null || !stone.getStoneId().equals(entry.getKey())) {
+                System.err.println("World save validation failed: Stone ID mismatch for key: " + entry.getKey());
+                return false;
+            }
+            
+            if (stone.getHealth() < 0 || stone.getHealth() > 50) {
+                System.err.println("World save validation failed: Invalid stone health: " + stone.getHealth());
                 return false;
             }
         }
@@ -848,6 +978,9 @@ public class WorldState implements Serializable {
         }
         metadata.put("existingTreeCount", existingTreeCount);
         metadata.put("destroyedTreeCount", destroyedTreeCount);
+        
+        // Stone counts
+        metadata.put("stoneCount", stones.size());
         
         int uncollectedItemCount = 0;
         int collectedItemCount = 0;
@@ -932,6 +1065,21 @@ public class WorldState implements Serializable {
                 }
             }
             
+            // Restore stones with deep copy
+            this.stones.clear();
+            if (saveData.getStones() != null) {
+                for (Map.Entry<String, StoneState> entry : saveData.getStones().entrySet()) {
+                    StoneState original = entry.getValue();
+                    StoneState copy = new StoneState(
+                        original.getStoneId(),
+                        original.getX(),
+                        original.getY(),
+                        original.getHealth()
+                    );
+                    this.stones.put(entry.getKey(), copy);
+                }
+            }
+            
             // Restore items with deep copy
             this.items.clear();
             if (saveData.getItems() != null) {
@@ -980,8 +1128,8 @@ public class WorldState implements Serializable {
             }
             
             System.out.println("Successfully restored world state from save: " + saveData.getSaveName());
-            System.out.println("Restored " + trees.size() + " trees, " + items.size() + " items, " + 
-                             clearedPositions.size() + " cleared positions");
+            System.out.println("Restored " + trees.size() + " trees, " + stones.size() + " stones, " + 
+                             items.size() + " items, " + clearedPositions.size() + " cleared positions");
             
             return true;
             
@@ -1002,6 +1150,12 @@ public class WorldState implements Serializable {
             this.trees.clear();
         } else {
             this.trees = new ConcurrentHashMap<>();
+        }
+        
+        if (this.stones != null) {
+            this.stones.clear();
+        } else {
+            this.stones = new ConcurrentHashMap<>();
         }
         
         if (this.items != null) {
@@ -1044,7 +1198,7 @@ public class WorldState implements Serializable {
         }
         
         // Check collections are not null
-        if (trees == null || items == null || clearedPositions == null || rainZones == null) {
+        if (trees == null || stones == null || items == null || clearedPositions == null || rainZones == null) {
             System.err.println("Restored state validation failed: Null collections after restoration");
             return false;
         }
@@ -1054,6 +1208,15 @@ public class WorldState implements Serializable {
             TreeState tree = entry.getValue();
             if (tree == null || !tree.getTreeId().equals(entry.getKey())) {
                 System.err.println("Restored state validation failed: Tree consistency error");
+                return false;
+            }
+        }
+        
+        // Validate stone consistency
+        for (Map.Entry<String, StoneState> entry : stones.entrySet()) {
+            StoneState stone = entry.getValue();
+            if (stone == null || !stone.getStoneId().equals(entry.getKey())) {
+                System.err.println("Restored state validation failed: Stone consistency error");
                 return false;
             }
         }

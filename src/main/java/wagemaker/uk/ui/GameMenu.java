@@ -331,6 +331,12 @@ public class GameMenu implements LanguageChangeListener {
                     int spBabyBamboo = parseJsonObjectInt(jsonContent, "\"singleplayerInventory\"", "babyBamboo");
                     int spBambooStack = parseJsonObjectInt(jsonContent, "\"singleplayerInventory\"", "bambooStack");
                     int spWoodStack = parseJsonObjectInt(jsonContent, "\"singleplayerInventory\"", "woodStack");
+                    int spPebble = 0;
+                    try {
+                        spPebble = parseJsonObjectInt(jsonContent, "\"singleplayerInventory\"", "pebble");
+                    } catch (Exception e) {
+                        // Pebble field doesn't exist in old saves
+                    }
                     
                     wagemaker.uk.inventory.Inventory spInv = inventoryManager.getSingleplayerInventory();
                     spInv.setAppleCount(spApple);
@@ -338,10 +344,12 @@ public class GameMenu implements LanguageChangeListener {
                     spInv.setBabyBambooCount(spBabyBamboo);
                     spInv.setBambooStackCount(spBambooStack);
                     spInv.setWoodStackCount(spWoodStack);
+                    spInv.setPebbleCount(spPebble);
                     
                     System.out.println("Singleplayer inventory loaded: Apple=" + spApple + 
                                       ", Banana=" + spBanana + ", BabyBamboo=" + spBabyBamboo + 
-                                      ", BambooStack=" + spBambooStack + ", WoodStack=" + spWoodStack);
+                                      ", BambooStack=" + spBambooStack + ", WoodStack=" + spWoodStack +
+                                      ", Pebble=" + spPebble);
                 } catch (Exception e) {
                     System.out.println("No singleplayer inventory data found, starting with empty inventory");
                 }
@@ -353,6 +361,12 @@ public class GameMenu implements LanguageChangeListener {
                     int mpBabyBamboo = parseJsonObjectInt(jsonContent, "\"multiplayerInventory\"", "babyBamboo");
                     int mpBambooStack = parseJsonObjectInt(jsonContent, "\"multiplayerInventory\"", "bambooStack");
                     int mpWoodStack = parseJsonObjectInt(jsonContent, "\"multiplayerInventory\"", "woodStack");
+                    int mpPebble = 0;
+                    try {
+                        mpPebble = parseJsonObjectInt(jsonContent, "\"multiplayerInventory\"", "pebble");
+                    } catch (Exception e) {
+                        // Pebble field doesn't exist in old saves
+                    }
                     
                     wagemaker.uk.inventory.Inventory mpInv = inventoryManager.getMultiplayerInventory();
                     mpInv.setAppleCount(mpApple);
@@ -360,10 +374,12 @@ public class GameMenu implements LanguageChangeListener {
                     mpInv.setBabyBambooCount(mpBabyBamboo);
                     mpInv.setBambooStackCount(mpBambooStack);
                     mpInv.setWoodStackCount(mpWoodStack);
+                    mpInv.setPebbleCount(mpPebble);
                     
                     System.out.println("Multiplayer inventory loaded: Apple=" + mpApple + 
                                       ", Banana=" + mpBanana + ", BabyBamboo=" + mpBabyBamboo + 
-                                      ", BambooStack=" + mpBambooStack + ", WoodStack=" + mpWoodStack);
+                                      ", BambooStack=" + mpBambooStack + ", WoodStack=" + mpWoodStack +
+                                      ", Pebble=" + mpPebble);
                 } catch (Exception e) {
                     System.out.println("No multiplayer inventory data found, starting with empty inventory");
                 }
@@ -971,12 +987,20 @@ public class GameMenu implements LanguageChangeListener {
             }
             
             boolean isMultiplayer = isCurrentlyMultiplayer();
+            
+            // Get current inventory from inventory manager
+            wagemaker.uk.inventory.Inventory currentInventory = null;
+            if (inventoryManager != null) {
+                currentInventory = inventoryManager.getCurrentInventory();
+            }
+            
             boolean success = WorldSaveManager.saveWorld(
                 saveName, 
                 currentWorldState,
                 player.getX(), 
                 player.getY(), 
                 player.getHealth(),
+                currentInventory,
                 isMultiplayer
             );
             
@@ -1250,7 +1274,8 @@ public class GameMenu implements LanguageChangeListener {
                 jsonBuilder.append(String.format("    \"banana\": %d,\n", spInv.getBananaCount()));
                 jsonBuilder.append(String.format("    \"babyBamboo\": %d,\n", spInv.getBabyBambooCount()));
                 jsonBuilder.append(String.format("    \"bambooStack\": %d,\n", spInv.getBambooStackCount()));
-                jsonBuilder.append(String.format("    \"woodStack\": %d\n", spInv.getWoodStackCount()));
+                jsonBuilder.append(String.format("    \"woodStack\": %d,\n", spInv.getWoodStackCount()));
+                jsonBuilder.append(String.format("    \"pebble\": %d\n", spInv.getPebbleCount()));
                 jsonBuilder.append("  },\n");
             }
             
@@ -1271,7 +1296,8 @@ public class GameMenu implements LanguageChangeListener {
                 jsonBuilder.append(String.format("    \"banana\": %d,\n", mpInv.getBananaCount()));
                 jsonBuilder.append(String.format("    \"babyBamboo\": %d,\n", mpInv.getBabyBambooCount()));
                 jsonBuilder.append(String.format("    \"bambooStack\": %d,\n", mpInv.getBambooStackCount()));
-                jsonBuilder.append(String.format("    \"woodStack\": %d\n", mpInv.getWoodStackCount()));
+                jsonBuilder.append(String.format("    \"woodStack\": %d,\n", mpInv.getWoodStackCount()));
+                jsonBuilder.append(String.format("    \"pebble\": %d\n", mpInv.getPebbleCount()));
                 jsonBuilder.append("  },\n");
             }
             

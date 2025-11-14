@@ -13,6 +13,9 @@ import wagemaker.uk.network.PlayerLeaveMessage;
 import wagemaker.uk.network.PlayerMovementMessage;
 import wagemaker.uk.network.PongMessage;
 import wagemaker.uk.network.PositionCorrectionMessage;
+import wagemaker.uk.network.StoneDestroyedMessage;
+import wagemaker.uk.network.StoneHealthUpdateMessage;
+import wagemaker.uk.network.StoneState;
 import wagemaker.uk.network.TreeDestroyedMessage;
 import wagemaker.uk.network.TreeHealthUpdateMessage;
 import wagemaker.uk.network.TreeRemovalMessage;
@@ -64,6 +67,7 @@ public class GameMessageHandler extends DefaultMessageHandler {
         WorldState worldState = new WorldState(message.getWorldSeed());
         worldState.setPlayers(message.getPlayers());
         worldState.setTrees(message.getTrees());
+        worldState.setStones(message.getStones());
         worldState.setItems(message.getItems());
         worldState.setClearedPositions(message.getClearedPositions());
         worldState.setRainZones(message.getRainZones());
@@ -193,6 +197,20 @@ public class GameMessageHandler extends DefaultMessageHandler {
     }
     
     @Override
+    protected void handleStoneHealthUpdate(StoneHealthUpdateMessage message) {
+        StoneState stoneState = new StoneState();
+        stoneState.setStoneId(message.getStoneId());
+        stoneState.setHealth(message.getHealth());
+        
+        game.updateStoneFromState(stoneState);
+    }
+    
+    @Override
+    protected void handleStoneDestroyed(StoneDestroyedMessage message) {
+        game.removeStone(message.getStoneId());
+    }
+    
+    @Override
     protected void handleItemSpawn(ItemSpawnMessage message) {
         ItemState itemState = new ItemState(
             message.getItemId(),
@@ -290,7 +308,8 @@ public class GameMessageHandler extends DefaultMessageHandler {
                 message.getBananaCount(),
                 message.getBabyBambooCount(),
                 message.getBambooStackCount(),
-                message.getWoodStackCount()
+                message.getWoodStackCount(),
+                message.getPebbleCount()
             );
         }
     }

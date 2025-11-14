@@ -69,8 +69,7 @@ jobs:
             --dest dist \
             --app-version 1.0.0 \
             --vendor "Wagemaker UK" \
-            --description "Woodlanders Game" \
-            --linux-shortcut
+            --description "Woodlanders Game"
       
       - name: Install AppImage tools
         run: |

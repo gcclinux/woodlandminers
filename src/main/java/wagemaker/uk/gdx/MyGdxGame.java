@@ -23,6 +23,7 @@ import wagemaker.uk.items.BabyBamboo;
 import wagemaker.uk.items.BambooStack;
 import wagemaker.uk.items.Banana;
 import wagemaker.uk.items.WoodStack;
+import wagemaker.uk.localization.LocalizationManager;
 import wagemaker.uk.network.GameClient;
 import wagemaker.uk.network.GameServer;
 import wagemaker.uk.network.ItemState;
@@ -223,6 +224,9 @@ public class MyGdxGame extends ApplicationAdapter {
 
     @Override
     public void create() {
+        // Initialize localization system first (before any UI components)
+        LocalizationManager.getInstance().initialize();
+        
         // Initialize game mode to single-player by default
         gameMode = GameMode.SINGLEPLAYER;
         

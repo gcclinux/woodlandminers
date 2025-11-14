@@ -20,22 +20,24 @@ import wagemaker.uk.client.PlayerConfig;
 import wagemaker.uk.player.Player;
 import wagemaker.uk.world.WorldSaveManager;
 import wagemaker.uk.world.WorldSaveData;
+import wagemaker.uk.localization.LocalizationManager;
+import wagemaker.uk.localization.LanguageChangeListener;
 
-public class GameMenu {
+public class GameMenu implements LanguageChangeListener {
     private boolean isOpen = false;
     private Texture woodenPlank;
     private BitmapFont font;
     private BitmapFont playerNameFont; // Custom font for player name
-    private String[] singleplayerMenuItems = {"Player Name", "Save World", "Load World", "Multiplayer", "Save Player", "Exit"};
-    private String[] multiplayerMenuItems = {"Player Name", "Save World", "Load World", "Save Player", "Disconnect", "Exit"};
+    private String[] singleplayerMenuItems;
+    private String[] multiplayerMenuItems;
     private int selectedIndex = 0;
     private float menuX, menuY;
     private Player player;
     private wagemaker.uk.gdx.MyGdxGame gameInstance;
     private wagemaker.uk.inventory.InventoryManager inventoryManager;
-    private static final float MENU_WIDTH = 250;
-    private static final float MENU_HEIGHT = 220; // Increased height for additional menu item
-    private static final float NAME_DIALOG_WIDTH = 320; // Wider for player name dialog
+    private static final float MENU_WIDTH = 400; // Increased by 60% (250 * 1.6 = 400)
+    private static final float MENU_HEIGHT = 280; // Increased to fit all 7 menu items comfortably
+    private static final float NAME_DIALOG_WIDTH = 384; // Increased by 20% (320 * 1.2 = 384)
     private static final float NAME_DIALOG_HEIGHT = 220;
     
     // Player name dialog
@@ -55,6 +57,9 @@ public class GameMenu {
     private WorldLoadDialog worldLoadDialog;
     private WorldManageDialog worldManageDialog;
     private WorldSaveManager worldSaveManager;
+    
+    // Language dialog
+    private LanguageDialog languageDialog;
 
 
     public GameMenu() {
@@ -78,6 +83,15 @@ public class GameMenu {
         worldSaveDialog = new WorldSaveDialog();
         worldLoadDialog = new WorldLoadDialog();
         worldManageDialog = new WorldManageDialog();
+        
+        // Initialize language dialog
+        languageDialog = new LanguageDialog();
+        
+        // Register as language change listener
+        LocalizationManager.getInstance().addLanguageChangeListener(this);
+        
+        // Initialize menu items with localized text
+        updateMenuItems();
     }
     
     private void createPlayerNameFont() {
@@ -115,6 +129,46 @@ public class GameMenu {
         this.inventoryManager = inventoryManager;
     }
     
+    /**
+     * Updates menu items with localized text.
+     * Called on initialization and when language changes.
+     */
+    private void updateMenuItems() {
+        LocalizationManager loc = LocalizationManager.getInstance();
+        
+        singleplayerMenuItems = new String[] {
+            loc.getText("menu.player_name"),
+            loc.getText("menu.save_world"),
+            loc.getText("menu.load_world"),
+            loc.getText("menu.multiplayer"),
+            loc.getText("menu.save_player"),
+            loc.getText("menu.language"),
+            loc.getText("menu.exit")
+        };
+        
+        multiplayerMenuItems = new String[] {
+            loc.getText("menu.player_name"),
+            loc.getText("menu.save_world"),
+            loc.getText("menu.load_world"),
+            loc.getText("menu.save_player"),
+            loc.getText("menu.disconnect"),
+            loc.getText("menu.language"),
+            loc.getText("menu.exit")
+        };
+    }
+    
+    /**
+     * Called when the application language changes.
+     * Refreshes menu items to display in the new language.
+     * 
+     * @param newLanguage The new language code
+     */
+    @Override
+    public void onLanguageChanged(String newLanguage) {
+        System.out.println("GameMenu: Language changed to " + newLanguage);
+        updateMenuItems();
+    }
+    
     private void openNameDialog() {
         nameDialogOpen = true;
         inputBuffer = playerName; // Start with current name
@@ -143,6 +197,7 @@ public class GameMenu {
                 nameDialogOpen = false;
                 System.out.println("Player name set to: " + playerName);
             } else {
+                // Validation message is displayed in the dialog, just log it
                 System.out.println("Name must be at least 3 characters long");
             }
         }
@@ -519,6 +574,12 @@ public class GameMenu {
             return;
         }
         
+        if (languageDialog.isVisible()) {
+            languageDialog.handleInput();
+            handleLanguageDialogResult();
+            return;
+        }
+        
         if (nameDialogOpen) {
             handleNameDialogInput();
             return;
@@ -595,6 +656,11 @@ public class GameMenu {
             return;
         }
         
+        if (languageDialog.isVisible()) {
+            languageDialog.render(batch, shapeRenderer, camX, camY);
+            return;
+        }
+        
         if (!isOpen && !nameDialogOpen && !multiplayerMenu.isOpen()) return;
 
         batch.begin();
@@ -606,9 +672,14 @@ public class GameMenu {
 
             batch.draw(nameDialogPlank, centerX, centerY, NAME_DIALOG_WIDTH, NAME_DIALOG_HEIGHT);
             
+            // Get localized strings
+            LocalizationManager loc = LocalizationManager.getInstance();
+            String title = loc.getText("player_name_dialog.title");
+            String minCharsText = loc.getText("player_name_dialog.min_characters");
+            String instructionsText = loc.getText("player_name_dialog.instructions");
+            
             // Title - centered (removed colon)
             playerNameFont.setColor(Color.WHITE);
-            String title = "Enter Player Name";
             com.badlogic.gdx.graphics.g2d.GlyphLayout titleLayout = new com.badlogic.gdx.graphics.g2d.GlyphLayout();
             titleLayout.setText(playerNameFont, title);
             float titleX = centerX + (NAME_DIALOG_WIDTH - titleLayout.width) / 2;
@@ -624,14 +695,12 @@ public class GameMenu {
             
             // Min characters warning - centered
             playerNameFont.setColor(Color.LIGHT_GRAY);
-            String minCharsText = "Min 3 Characters!!!";
             com.badlogic.gdx.graphics.g2d.GlyphLayout minCharsLayout = new com.badlogic.gdx.graphics.g2d.GlyphLayout();
             minCharsLayout.setText(playerNameFont, minCharsText);
             float minCharsX = centerX + (NAME_DIALOG_WIDTH - minCharsLayout.width) / 2;
             playerNameFont.draw(batch, minCharsText, minCharsX, centerY + 70);
             
             // Instructions - centered
-            String instructionsText = "Enter, or Esc to Cancel";
             com.badlogic.gdx.graphics.g2d.GlyphLayout instructionsLayout = new com.badlogic.gdx.graphics.g2d.GlyphLayout();
             instructionsLayout.setText(playerNameFont, instructionsText);
             float instructionsX = centerX + (NAME_DIALOG_WIDTH - instructionsLayout.width) / 2;
@@ -679,22 +748,34 @@ public class GameMenu {
         String[] currentMenuItems = getCurrentMenuItems();
         String selectedItem = currentMenuItems[index];
         
-        if (selectedItem.equals("Player Name")) {
+        LocalizationManager loc = LocalizationManager.getInstance();
+        
+        if (selectedItem.equals(loc.getText("menu.player_name"))) {
             openNameDialog();
-        } else if (selectedItem.equals("Save World")) {
+        } else if (selectedItem.equals(loc.getText("menu.save_world"))) {
             openWorldSaveDialog();
-        } else if (selectedItem.equals("Load World")) {
+        } else if (selectedItem.equals(loc.getText("menu.load_world"))) {
             openWorldLoadDialog();
-        } else if (selectedItem.equals("Multiplayer")) {
+        } else if (selectedItem.equals(loc.getText("menu.multiplayer"))) {
             openMultiplayerMenu();
-        } else if (selectedItem.equals("Disconnect")) {
+        } else if (selectedItem.equals(loc.getText("menu.disconnect"))) {
             disconnectFromMultiplayer();
-        } else if (selectedItem.equals("Save Player")) {
+        } else if (selectedItem.equals(loc.getText("menu.language"))) {
+            openLanguageDialog();
+        } else if (selectedItem.equals(loc.getText("menu.save_player"))) {
             savePlayerPosition();
-        } else if (selectedItem.equals("Exit")) {
+        } else if (selectedItem.equals(loc.getText("menu.exit"))) {
             savePlayerPosition(); // Auto-save before exit
             Gdx.app.exit();
         }
+    }
+    
+    /**
+     * Opens the language selection dialog.
+     */
+    private void openLanguageDialog() {
+        isOpen = false; // Close main menu
+        languageDialog.show();
     }
     
     /**
@@ -731,8 +812,10 @@ public class GameMenu {
      */
     private void openWorldSaveDialog() {
         if (!isWorldSaveAllowed()) {
+            LocalizationManager loc = LocalizationManager.getInstance();
             String errorMessage = getWorldSaveRestrictionMessage();
-            showError(errorMessage, "Save Restricted");
+            String errorTitle = loc.getText("messages.save_restricted");
+            showError(errorMessage, errorTitle);
             return;
         }
         
@@ -746,17 +829,19 @@ public class GameMenu {
      * @return The error message explaining why world save is not available
      */
     private String getWorldSaveRestrictionMessage() {
+        LocalizationManager loc = LocalizationManager.getInstance();
+        
         if (gameInstance == null) {
-            return "World save is not available: Game not initialized.";
+            return loc.getText("messages.world_save_not_available");
         }
         
         wagemaker.uk.gdx.MyGdxGame.GameMode currentMode = gameInstance.getGameMode();
         
         if (currentMode == wagemaker.uk.gdx.MyGdxGame.GameMode.MULTIPLAYER_CLIENT) {
-            return "World save is not available for multiplayer clients. Only the server host can save worlds.";
+            return loc.getText("messages.world_save_client_restricted");
         }
         
-        return "World save is only available in singleplayer mode or when hosting multiplayer games.";
+        return loc.getText("messages.world_save_mode_restricted");
     }
     
     /**
@@ -765,7 +850,9 @@ public class GameMenu {
      * @return true if the menu item should be disabled, false otherwise
      */
     private boolean isMenuItemDisabled(String menuItem) {
-        if (menuItem.equals("Save World")) {
+        LocalizationManager loc = LocalizationManager.getInstance();
+        
+        if (menuItem.equals(loc.getText("menu.save_world"))) {
             return !isWorldSaveAllowed();
         }
         
@@ -814,6 +901,19 @@ public class GameMenu {
     }
     
     /**
+     * Handles the result of the language dialog.
+     */
+    private void handleLanguageDialogResult() {
+        if (languageDialog.isConfirmed()) {
+            languageDialog.hide();
+            isOpen = true; // Return to main menu
+        } else if (!languageDialog.isVisible()) {
+            // Dialog was cancelled
+            isOpen = true; // Return to main menu
+        }
+    }
+    
+    /**
      * Handles the result of the world save dialog.
      */
     private void handleWorldSaveDialogResult() {
@@ -850,8 +950,11 @@ public class GameMenu {
      * @param saveName The name of the save
      */
     private void performWorldSave(String saveName) {
+        LocalizationManager loc = LocalizationManager.getInstance();
+        
         if (gameInstance == null || player == null) {
-            showError("Cannot save world: Game or player not initialized.", "Save Error");
+            showError(loc.getText("messages.cannot_save_not_initialized"), 
+                     loc.getText("error_dialog.save_error"));
             return;
         }
         
@@ -862,7 +965,8 @@ public class GameMenu {
             wagemaker.uk.network.WorldState currentWorldState = gameInstance.extractCurrentWorldState();
             
             if (currentWorldState == null) {
-                showError("Failed to extract world state. Please try again.", "Save Error");
+                showError(loc.getText("messages.failed_extract_state"), 
+                         loc.getText("error_dialog.save_error"));
                 return;
             }
             
@@ -880,12 +984,14 @@ public class GameMenu {
                 // World saved successfully - no confirmation dialog needed, just continue
                 System.out.println("World '" + saveName + "' saved successfully");
             } else {
-                showError("Failed to save world. Please try again.", "Save Failed");
+                showError(loc.getText("messages.save_failed"), 
+                         loc.getText("error_dialog.save_error"));
                 System.err.println("World save failed for: " + saveName);
             }
         } catch (Exception e) {
             System.err.println("Error saving world: " + e.getMessage());
-            showError("Error saving world: " + e.getMessage(), "Save Error");
+            showError(loc.getText("messages.save_error", e.getMessage()), 
+                     loc.getText("error_dialog.save_error"));
         }
     }
     
@@ -894,8 +1000,11 @@ public class GameMenu {
      * @param saveName The name of the save to load
      */
     private void performWorldLoad(String saveName) {
+        LocalizationManager loc = LocalizationManager.getInstance();
+        
         if (gameInstance == null) {
-            showError("Cannot load world: Game not initialized.", "Load Error");
+            showError(loc.getText("messages.cannot_load_not_initialized"), 
+                     loc.getText("error_dialog.load_error"));
             return;
         }
         
@@ -924,15 +1033,18 @@ public class GameMenu {
                     // World loaded successfully - no confirmation dialog needed, just continue
                     System.out.println("World '" + saveName + "' loaded successfully");
                 } else {
-                    showError("Failed to restore world state. Please try again.", "Load Failed");
+                    showError(loc.getText("messages.failed_restore_state"), 
+                             loc.getText("error_dialog.load_error"));
                     System.err.println("World state restoration failed for: " + saveName);
                 }
             } else {
-                showError("Failed to load world. Save file may not exist or be corrupted.", "Load Failed");
+                showError(loc.getText("messages.load_failed"), 
+                         loc.getText("error_dialog.load_error"));
             }
         } catch (Exception e) {
             System.err.println("Error loading world: " + e.getMessage());
-            showError("Error loading world: " + e.getMessage(), "Load Error");
+            showError(loc.getText("messages.load_error", e.getMessage()), 
+                     loc.getText("error_dialog.load_error"));
         }
     }
     
@@ -999,12 +1111,14 @@ public class GameMenu {
      * @param message The error message to display
      */
     public void showError(String message) {
+        LocalizationManager loc = LocalizationManager.getInstance();
+        
         // Determine appropriate title based on message content
-        String title = "Error";
+        String title = loc.getText("error_dialog.title");
         if (message.toLowerCase().contains("connect") || message.toLowerCase().contains("server")) {
-            title = "Connection Error";
+            title = loc.getText("error_dialog.connection_error");
         } else if (message.toLowerCase().contains("save") || message.toLowerCase().contains("load")) {
-            title = "World Save/Load";
+            title = loc.getText("error_dialog.title");
         }
         
         errorDialog.show(message, title);
@@ -1294,7 +1408,8 @@ public class GameMenu {
                serverHostDialog.isVisible() ||
                worldSaveDialog.isVisible() ||
                worldLoadDialog.isVisible() ||
-               worldManageDialog.isVisible();
+               worldManageDialog.isVisible() ||
+               languageDialog.isVisible();
     }
     
     /**
@@ -1368,6 +1483,14 @@ public class GameMenu {
     public WorldSaveManager getWorldSaveManager() {
         return worldSaveManager;
     }
+    
+    /**
+     * Gets the language dialog instance.
+     * @return The language dialog
+     */
+    public LanguageDialog getLanguageDialog() {
+        return languageDialog;
+    }
 
     public void dispose() {
         woodenPlank.dispose();
@@ -1399,5 +1522,11 @@ public class GameMenu {
         if (worldManageDialog != null) {
             worldManageDialog.dispose();
         }
+        if (languageDialog != null) {
+            languageDialog.dispose();
+        }
+        
+        // Unregister from language change listener
+        LocalizationManager.getInstance().removeLanguageChangeListener(this);
     }
 }

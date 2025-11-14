@@ -9,6 +9,8 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import wagemaker.uk.localization.LanguageChangeListener;
+import wagemaker.uk.localization.LocalizationManager;
 import wagemaker.uk.world.WorldSaveManager;
 
 /**
@@ -16,7 +18,7 @@ import wagemaker.uk.world.WorldSaveManager;
  * Players can type a save name, confirm overwrite if needed, and see save progress.
  * Validates save names and handles overwrite confirmation for existing saves.
  */
-public class WorldSaveDialog {
+public class WorldSaveDialog implements LanguageChangeListener {
     private boolean isVisible = false;
     private boolean confirmed = false;
     private boolean cancelled = false;
@@ -27,7 +29,7 @@ public class WorldSaveDialog {
     private String saveNameBuffer = "";
     private String errorMessage = "";
     private boolean isMultiplayer = false;
-    private static final float DIALOG_WIDTH = 450;
+    private static final float DIALOG_WIDTH = 540; // Increased by 20% (450 * 1.2 = 540)
     private static final float DIALOG_HEIGHT = 280;
     private static final int MAX_SAVE_NAME_LENGTH = 50;
     
@@ -37,6 +39,7 @@ public class WorldSaveDialog {
     public WorldSaveDialog() {
         woodenPlank = createWoodenPlank();
         createDialogFont();
+        LocalizationManager.getInstance().addLanguageChangeListener(this);
     }
     
     /**
@@ -200,15 +203,16 @@ public class WorldSaveDialog {
      */
     private void attemptSave() {
         String trimmedName = saveNameBuffer.trim();
+        LocalizationManager loc = LocalizationManager.getInstance();
         
         // Validate save name
         if (trimmedName.isEmpty()) {
-            errorMessage = "Save name cannot be empty";
+            errorMessage = loc.getText("world_save_dialog.error_empty_name");
             return;
         }
         
         if (!WorldSaveManager.isValidSaveName(trimmedName)) {
-            errorMessage = "Invalid save name. Use letters, numbers, spaces, - and _";
+            errorMessage = loc.getText("world_save_dialog.error_invalid_name");
             return;
         }
         
@@ -308,18 +312,20 @@ public class WorldSaveDialog {
      * Renders the save name input interface.
      */
     private void renderSaveNameInput(SpriteBatch batch, float dialogX, float dialogY) {
+        LocalizationManager loc = LocalizationManager.getInstance();
+        
         // Draw title
         dialogFont.setColor(Color.WHITE);
-        dialogFont.draw(batch, "Save World", dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
+        dialogFont.draw(batch, loc.getText("world_save_dialog.title"), dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
         
         // Draw game mode indicator
         dialogFont.setColor(Color.LIGHT_GRAY);
-        String modeText = isMultiplayer ? "Multiplayer Save" : "Singleplayer Save";
+        String modeText = isMultiplayer ? loc.getText("world_save_dialog.multiplayer_save") : loc.getText("world_save_dialog.singleplayer_save");
         dialogFont.draw(batch, modeText, dialogX + 20, dialogY + DIALOG_HEIGHT - 55);
         
         // Draw save name label
         dialogFont.setColor(Color.WHITE);
-        dialogFont.draw(batch, "Save Name:", dialogX + 20, dialogY + DIALOG_HEIGHT - 90);
+        dialogFont.draw(batch, loc.getText("world_save_dialog.save_name_label"), dialogX + 20, dialogY + DIALOG_HEIGHT - 90);
         
         // Draw save name input field with cursor
         dialogFont.setColor(Color.YELLOW);
@@ -328,7 +334,7 @@ public class WorldSaveDialog {
         
         // Draw character count
         dialogFont.setColor(Color.LIGHT_GRAY);
-        String countText = saveNameBuffer.length() + "/" + MAX_SAVE_NAME_LENGTH;
+        String countText = loc.getText("world_save_dialog.character_count", saveNameBuffer.length(), MAX_SAVE_NAME_LENGTH);
         dialogFont.draw(batch, countText, dialogX + DIALOG_WIDTH - 80, dialogY + DIALOG_HEIGHT - 115);
         
         // Draw error message if any
@@ -339,53 +345,57 @@ public class WorldSaveDialog {
         
         // Draw instructions
         dialogFont.setColor(Color.LIGHT_GRAY);
-        dialogFont.draw(batch, "Enter to save, ESC to cancel", dialogX + 20, dialogY + 60);
-        dialogFont.draw(batch, "Use letters, numbers, spaces, - and _", dialogX + 20, dialogY + 40);
+        dialogFont.draw(batch, loc.getText("world_save_dialog.confirm_instruction"), dialogX + 20, dialogY + 60);
+        dialogFont.draw(batch, loc.getText("world_save_dialog.valid_chars_instruction"), dialogX + 20, dialogY + 40);
     }
     
     /**
      * Renders the overwrite confirmation interface.
      */
     private void renderOverwriteConfirmation(SpriteBatch batch, float dialogX, float dialogY) {
+        LocalizationManager loc = LocalizationManager.getInstance();
+        
         // Draw title
         dialogFont.setColor(Color.YELLOW);
-        dialogFont.draw(batch, "Overwrite Existing Save?", dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
+        dialogFont.draw(batch, loc.getText("world_save_dialog.overwrite_title"), dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
         
         // Draw save name
         dialogFont.setColor(Color.WHITE);
-        dialogFont.draw(batch, "Save Name: " + saveNameBuffer.trim(), dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
+        dialogFont.draw(batch, loc.getText("world_save_dialog.save_name_label") + " " + saveNameBuffer.trim(), dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
         
         // Draw warning message
         dialogFont.setColor(Color.RED);
-        dialogFont.draw(batch, "This save already exists.", dialogX + 20, dialogY + DIALOG_HEIGHT - 110);
-        dialogFont.draw(batch, "Overwrite will replace it forever.", dialogX + 20, dialogY + DIALOG_HEIGHT - 135);
+        dialogFont.draw(batch, loc.getText("world_save_dialog.overwrite_warning_1"), dialogX + 20, dialogY + DIALOG_HEIGHT - 110);
+        dialogFont.draw(batch, loc.getText("world_save_dialog.overwrite_warning_2"), dialogX + 20, dialogY + DIALOG_HEIGHT - 135);
         
         // Draw confirmation options
         dialogFont.setColor(Color.YELLOW);
-        dialogFont.draw(batch, "Y - Yes, overwrite", dialogX + 50, dialogY + 80);
-        dialogFont.draw(batch, "N - No, go back", dialogX + 50, dialogY + 55);
+        dialogFont.draw(batch, loc.getText("world_save_dialog.yes_overwrite"), dialogX + 50, dialogY + 80);
+        dialogFont.draw(batch, loc.getText("world_save_dialog.no_go_back"), dialogX + 50, dialogY + 55);
         
         // Draw instructions
         dialogFont.setColor(Color.LIGHT_GRAY);
-        dialogFont.draw(batch, "Press Y to confirm or N to cancel", dialogX + 20, dialogY + 25);
+        dialogFont.draw(batch, loc.getText("world_save_dialog.confirm_overwrite_instruction"), dialogX + 20, dialogY + 25);
     }
     
     /**
      * Renders the save progress interface.
      */
     private void renderSaveProgress(SpriteBatch batch, float dialogX, float dialogY) {
+        LocalizationManager loc = LocalizationManager.getInstance();
+        
         // Draw title
         dialogFont.setColor(Color.WHITE);
-        dialogFont.draw(batch, "Saving World...", dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
+        dialogFont.draw(batch, loc.getText("world_save_dialog.saving_title"), dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
         
         // Draw save name
         dialogFont.setColor(Color.YELLOW);
-        dialogFont.draw(batch, "Save Name: " + saveNameBuffer.trim(), dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
+        dialogFont.draw(batch, loc.getText("world_save_dialog.save_name_label") + " " + saveNameBuffer.trim(), dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
         
         // Draw progress message
         dialogFont.setColor(Color.LIGHT_GRAY);
-        dialogFont.draw(batch, "Please wait while your world is being saved.", dialogX + 20, dialogY + DIALOG_HEIGHT - 110);
-        dialogFont.draw(batch, "This may take a moment for large worlds.", dialogX + 20, dialogY + DIALOG_HEIGHT - 135);
+        dialogFont.draw(batch, loc.getText("world_save_dialog.saving_message_1"), dialogX + 20, dialogY + DIALOG_HEIGHT - 110);
+        dialogFont.draw(batch, loc.getText("world_save_dialog.saving_message_2"), dialogX + 20, dialogY + DIALOG_HEIGHT - 135);
         
         // Draw animated dots for progress indication
         long time = System.currentTimeMillis();
@@ -395,7 +405,7 @@ public class WorldSaveDialog {
             dots += ".";
         }
         dialogFont.setColor(Color.WHITE);
-        dialogFont.draw(batch, "Saving" + dots, dialogX + 20, dialogY + DIALOG_HEIGHT - 170);
+        dialogFont.draw(batch, loc.getText("world_save_dialog.saving_progress") + dots, dialogX + 20, dialogY + DIALOG_HEIGHT - 170);
         
         // Draw cancel instruction
         dialogFont.setColor(Color.LIGHT_GRAY);
@@ -478,9 +488,31 @@ public class WorldSaveDialog {
     }
     
     /**
+     * Called when the language changes.
+     * Refreshes error messages if they are currently displayed.
+     */
+    @Override
+    public void onLanguageChanged(String newLanguage) {
+        // Refresh error messages if they are currently displayed
+        LocalizationManager loc = LocalizationManager.getInstance();
+        
+        if (!errorMessage.isEmpty()) {
+            // Try to match and refresh common error messages
+            if (errorMessage.contains("empty") || errorMessage.equals(loc.getText("world_save_dialog.error_empty_name"))) {
+                errorMessage = loc.getText("world_save_dialog.error_empty_name");
+            } else if (errorMessage.contains("Invalid") || errorMessage.equals(loc.getText("world_save_dialog.error_invalid_name"))) {
+                errorMessage = loc.getText("world_save_dialog.error_invalid_name");
+            }
+        }
+        // Note: The dialog text will be refreshed automatically on next render
+        // since all text is retrieved from LocalizationManager during rendering
+    }
+    
+    /**
      * Disposes of resources used by the dialog.
      */
     public void dispose() {
+        LocalizationManager.getInstance().removeLanguageChangeListener(this);
         if (woodenPlank != null) {
             woodenPlank.dispose();
         }

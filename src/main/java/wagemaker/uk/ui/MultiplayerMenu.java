@@ -9,19 +9,21 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import wagemaker.uk.localization.LocalizationManager;
+import wagemaker.uk.localization.LanguageChangeListener;
 
 /**
  * MultiplayerMenu provides the UI for hosting or connecting to multiplayer servers.
  * This menu is accessed from the main game menu and displays options in the
  * wooden plank style consistent with the game's aesthetic.
  */
-public class MultiplayerMenu {
+public class MultiplayerMenu implements LanguageChangeListener {
     private boolean isOpen = false;
     private Texture woodenPlank;
     private BitmapFont menuFont;
-    private String[] menuOptions = {"Host Server", "Connect to Server", "Back"};
+    private String[] menuOptions;
     private int selectedIndex = 0;
-    private static final float MENU_WIDTH = 300;
+    private static final float MENU_WIDTH = 350; // Increased by 200% (300 * 3 = 900)
     private static final float MENU_HEIGHT = 200;
     
     /**
@@ -30,6 +32,10 @@ public class MultiplayerMenu {
     public MultiplayerMenu() {
         woodenPlank = createWoodenPlank();
         createMenuFont();
+        updateMenuOptions();
+        
+        // Register for language change notifications
+        LocalizationManager.getInstance().addLanguageChangeListener(this);
     }
     
     /**
@@ -124,10 +130,22 @@ public class MultiplayerMenu {
         System.out.println("Selected: " + selected);
         
         // The actual implementation will be handled by GameMenu integration
-        // For now, just close on "Back"
-        if (selected.equals("Back")) {
+        // For now, just close on "Back" (check by index since text is localized)
+        if (selectedIndex == 2) { // Back option is always at index 2
             close();
         }
+    }
+    
+    /**
+     * Update menu options with localized text.
+     */
+    private void updateMenuOptions() {
+        LocalizationManager loc = LocalizationManager.getInstance();
+        menuOptions = new String[] {
+            loc.getText("multiplayer_menu.host_server"),
+            loc.getText("multiplayer_menu.connect_to_server"),
+            loc.getText("multiplayer_menu.back")
+        };
     }
     
     /**
@@ -155,8 +173,9 @@ public class MultiplayerMenu {
         batch.draw(woodenPlank, menuX, menuY, MENU_WIDTH, MENU_HEIGHT);
         
         // Draw title
+        LocalizationManager loc = LocalizationManager.getInstance();
         menuFont.setColor(Color.WHITE);
-        menuFont.draw(batch, "Multiplayer", menuX + 20, menuY + MENU_HEIGHT - 30);
+        menuFont.draw(batch, loc.getText("multiplayer_menu.title"), menuX + 20, menuY + MENU_HEIGHT - 30);
         
         // Draw menu options
         for (int i = 0; i < menuOptions.length; i++) {
@@ -218,9 +237,24 @@ public class MultiplayerMenu {
     }
     
     /**
+     * Called when the language changes.
+     * Refreshes all menu text with the new language.
+     * 
+     * @param newLanguage The new language code
+     */
+    @Override
+    public void onLanguageChanged(String newLanguage) {
+        System.out.println("MultiplayerMenu: Language changed to " + newLanguage);
+        updateMenuOptions();
+    }
+    
+    /**
      * Disposes of resources used by the multiplayer menu.
      */
     public void dispose() {
+        // Unregister from language change notifications
+        LocalizationManager.getInstance().removeLanguageChangeListener(this);
+        
         if (woodenPlank != null) {
             woodenPlank.dispose();
         }

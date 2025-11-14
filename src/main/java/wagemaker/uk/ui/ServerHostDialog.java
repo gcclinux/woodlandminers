@@ -9,12 +9,14 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import wagemaker.uk.localization.LocalizationManager;
+import wagemaker.uk.localization.LanguageChangeListener;
 
 /**
  * ServerHostDialog displays the server's IPv4 address after successfully hosting a server.
  * Players can share this IP address with others to allow them to connect.
  */
-public class ServerHostDialog {
+public class ServerHostDialog implements LanguageChangeListener {
     private boolean isVisible = false;
     private Texture woodenPlank;
     private BitmapFont dialogFont;
@@ -28,6 +30,9 @@ public class ServerHostDialog {
     public ServerHostDialog() {
         woodenPlank = createWoodenPlank();
         createDialogFont();
+        
+        // Register for language change notifications
+        LocalizationManager.getInstance().addLanguageChangeListener(this);
     }
     
     /**
@@ -131,13 +136,19 @@ public class ServerHostDialog {
         // Draw wooden plank background
         batch.draw(woodenPlank, dialogX, dialogY, DIALOG_WIDTH, DIALOG_HEIGHT);
         
+        // Get localized text
+        LocalizationManager loc = LocalizationManager.getInstance();
+        String title = loc.getText("server_host_dialog.title");
+        String ipLabel = loc.getText("server_host_dialog.ip_label");
+        String closeInstruction = loc.getText("server_host_dialog.close_instruction");
+        
         // Draw title
         dialogFont.setColor(Color.WHITE);
-        dialogFont.draw(batch, "Server Started", dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
+        dialogFont.draw(batch, title, dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
         
         // Draw server IP label
         dialogFont.setColor(Color.LIGHT_GRAY);
-        dialogFont.draw(batch, "Server IP Address:", dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
+        dialogFont.draw(batch, ipLabel, dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
         
         // Draw server IP address in center (highlighted in yellow)
         dialogFont.setColor(Color.YELLOW);
@@ -150,7 +161,7 @@ public class ServerHostDialog {
         
         // Draw instructions
         dialogFont.setColor(Color.LIGHT_GRAY);
-        dialogFont.draw(batch, "Press ESC to close", dialogX + 20, dialogY + 30);
+        dialogFont.draw(batch, closeInstruction, dialogX + 20, dialogY + 30);
         
         batch.end();
     }
@@ -172,9 +183,24 @@ public class ServerHostDialog {
     }
     
     /**
+     * Called when the language changes.
+     * The dialog will automatically use the new language on next render.
+     * 
+     * @param newLanguage The new language code
+     */
+    @Override
+    public void onLanguageChanged(String newLanguage) {
+        // No need to cache strings - they are retrieved fresh on each render
+        System.out.println("ServerHostDialog: Language changed to " + newLanguage);
+    }
+    
+    /**
      * Disposes of resources used by the dialog.
      */
     public void dispose() {
+        // Unregister from language change notifications
+        LocalizationManager.getInstance().removeLanguageChangeListener(this);
+        
         if (woodenPlank != null) {
             woodenPlank.dispose();
         }

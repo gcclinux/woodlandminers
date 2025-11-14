@@ -9,6 +9,8 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import wagemaker.uk.localization.LocalizationManager;
+import wagemaker.uk.localization.LanguageChangeListener;
 import wagemaker.uk.world.WorldSaveInfo;
 import wagemaker.uk.world.WorldSaveManager;
 
@@ -20,7 +22,7 @@ import java.util.ArrayList;
  * Displays saves with detailed statistics and allows deletion with confirmation.
  * Shows file sizes, creation dates, and world statistics for save management.
  */
-public class WorldManageDialog {
+public class WorldManageDialog implements LanguageChangeListener {
     private boolean isVisible = false;
     private boolean actionCompleted = false;
     private boolean cancelled = false;
@@ -45,6 +47,9 @@ public class WorldManageDialog {
     public WorldManageDialog() {
         woodenPlank = createWoodenPlank();
         createDialogFonts();
+        
+        // Register for language change notifications
+        LocalizationManager.getInstance().addLanguageChangeListener(this);
     }
     
     /**
@@ -140,14 +145,15 @@ public class WorldManageDialog {
         try {
             availableSaves = WorldSaveManager.listAvailableSaves(isMultiplayer);
             
+            LocalizationManager loc = LocalizationManager.getInstance();
             if (availableSaves.isEmpty()) {
-                statusMessage = "No saved worlds found";
+                statusMessage = loc.getText("world_manage_dialog.no_saves_title");
             } else {
                 // Ensure selected index is valid
                 if (selectedSaveIndex >= availableSaves.size()) {
                     selectedSaveIndex = 0;
                 }
-                statusMessage = availableSaves.size() + " save(s) found";
+                statusMessage = loc.getText("world_load_dialog.saves_found", availableSaves.size());
             }
             errorMessage = "";
         } catch (Exception e) {
@@ -271,8 +277,9 @@ public class WorldManageDialog {
         // Perform the actual delete operation
         boolean success = WorldSaveManager.deleteSave(saveInfo.getSaveName(), isMultiplayer);
         
+        LocalizationManager loc = LocalizationManager.getInstance();
         if (success) {
-            statusMessage = "Save deleted successfully: " + saveInfo.getSaveName();
+            statusMessage = loc.getText("world_manage_dialog.delete_success", saveInfo.getSaveName());
             errorMessage = "";
             
             // Remove from list and adjust selection
@@ -284,7 +291,7 @@ public class WorldManageDialog {
             
             actionCompleted = true;
         } else {
-            errorMessage = "Failed to delete save: " + saveInfo.getSaveName();
+            errorMessage = loc.getText("world_manage_dialog.delete_failed", saveInfo.getSaveName());
             statusMessage = "";
         }
         
@@ -328,13 +335,15 @@ public class WorldManageDialog {
      * Renders the main manage interface.
      */
     private void renderManageInterface(SpriteBatch batch, float dialogX, float dialogY) {
+        LocalizationManager loc = LocalizationManager.getInstance();
+        
         // Draw title
         dialogFont.setColor(Color.WHITE);
-        dialogFont.draw(batch, "Manage Saved Worlds", dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
+        dialogFont.draw(batch, loc.getText("world_manage_dialog.title"), dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
         
         // Draw game mode indicator
         smallFont.setColor(Color.LIGHT_GRAY);
-        String modeText = isMultiplayer ? "Multiplayer Saves" : "Singleplayer Saves";
+        String modeText = isMultiplayer ? loc.getText("world_manage_dialog.multiplayer_saves") : loc.getText("world_manage_dialog.singleplayer_saves");
         smallFont.draw(batch, modeText, dialogX + 20, dialogY + DIALOG_HEIGHT - 50);
         
         // Draw status or error message
@@ -356,19 +365,20 @@ public class WorldManageDialog {
         // Draw instructions
         smallFont.setColor(Color.LIGHT_GRAY);
         if (!availableSaves.isEmpty()) {
-            smallFont.draw(batch, "Up/Down to select, Delete key to delete save", dialogX + 20, dialogY + 60);
-            smallFont.draw(batch, "Page Up/Down for fast scroll", dialogX + 20, dialogY + 45);
+            smallFont.draw(batch, loc.getText("world_manage_dialog.select_instruction"), dialogX + 20, dialogY + 60);
+            smallFont.draw(batch, loc.getText("world_manage_dialog.scroll_instruction"), dialogX + 20, dialogY + 45);
         }
-        smallFont.draw(batch, "R to refresh, ESC to close", dialogX + 20, dialogY + 30);
+        smallFont.draw(batch, loc.getText("world_manage_dialog.refresh_instruction"), dialogX + 20, dialogY + 30);
     }
     
     /**
      * Renders the message when no saves are available.
      */
     private void renderNoSavesMessage(SpriteBatch batch, float dialogX, float dialogY) {
+        LocalizationManager loc = LocalizationManager.getInstance();
         dialogFont.setColor(Color.LIGHT_GRAY);
-        dialogFont.draw(batch, "No saved worlds found.", dialogX + 20, dialogY + DIALOG_HEIGHT / 2 + 20);
-        dialogFont.draw(batch, "Create saves using 'Save World' option.", dialogX + 20, dialogY + DIALOG_HEIGHT / 2 - 10);
+        dialogFont.draw(batch, loc.getText("world_manage_dialog.no_saves_title"), dialogX + 20, dialogY + DIALOG_HEIGHT / 2 + 20);
+        dialogFont.draw(batch, loc.getText("world_manage_dialog.no_saves_message"), dialogX + 20, dialogY + DIALOG_HEIGHT / 2 - 10);
     }
     
     /**
@@ -412,14 +422,15 @@ public class WorldManageDialog {
         }
         
         // Draw scroll indicators
+        LocalizationManager loc = LocalizationManager.getInstance();
         if (scrollOffset > 0) {
             smallFont.setColor(Color.YELLOW);
-            smallFont.draw(batch, "^ More above ^", dialogX + DIALOG_WIDTH / 2 - 50, startY + 15);
+            smallFont.draw(batch, loc.getText("world_manage_dialog.more_above"), dialogX + DIALOG_WIDTH / 2 - 50, startY + 15);
         }
         
         if (scrollOffset + SAVES_PER_PAGE < availableSaves.size()) {
             smallFont.setColor(Color.YELLOW);
-            smallFont.draw(batch, "v More below v", dialogX + DIALOG_WIDTH / 2 - 50, dialogY + 120);
+            smallFont.draw(batch, loc.getText("world_manage_dialog.more_below"), dialogX + DIALOG_WIDTH / 2 - 50, dialogY + 120);
         }
     }
     
@@ -430,6 +441,8 @@ public class WorldManageDialog {
         if (availableSaves.isEmpty()) {
             return;
         }
+        
+        LocalizationManager loc = LocalizationManager.getInstance();
         
         // Calculate totals
         long totalSize = 0;
@@ -454,11 +467,11 @@ public class WorldManageDialog {
         
         // Draw summary box
         smallFont.setColor(Color.LIGHT_GRAY);
-        smallFont.draw(batch, "--- Summary Statistics ---", dialogX + 20, dialogY + 110);
-        smallFont.draw(batch, String.format("Total Saves: %d | Total Size: %s", 
-                      availableSaves.size(), totalSizeFormatted), dialogX + 20, dialogY + 95);
-        smallFont.draw(batch, String.format("Total Trees: %d | Total Items: %d | Total Cleared: %d", 
-                      totalTrees, totalItems, totalCleared), dialogX + 20, dialogY + 80);
+        smallFont.draw(batch, loc.getText("world_manage_dialog.summary_title"), dialogX + 20, dialogY + 110);
+        smallFont.draw(batch, loc.getText("world_manage_dialog.total_saves", availableSaves.size(), totalSizeFormatted), 
+                      dialogX + 20, dialogY + 95);
+        smallFont.draw(batch, loc.getText("world_manage_dialog.total_stats", totalTrees, totalItems, totalCleared), 
+                      dialogX + 20, dialogY + 80);
     }
     
     /**
@@ -469,37 +482,38 @@ public class WorldManageDialog {
             return;
         }
         
+        LocalizationManager loc = LocalizationManager.getInstance();
         WorldSaveInfo saveInfo = availableSaves.get(selectedSaveIndex);
         
         // Draw title
         dialogFont.setColor(Color.RED);
-        dialogFont.draw(batch, "Delete Save?", dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
+        dialogFont.draw(batch, loc.getText("world_manage_dialog.delete_confirm_title"), dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
         
         // Draw save details
         dialogFont.setColor(Color.WHITE);
-        dialogFont.draw(batch, "Save Name: " + saveInfo.getSaveName(), dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
+        dialogFont.draw(batch, loc.getText("world_manage_dialog.save_name_label") + " " + saveInfo.getSaveName(), dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
         
         smallFont.setColor(Color.LIGHT_GRAY);
-        smallFont.draw(batch, "Created: " + saveInfo.getFormattedTimestamp(), dialogX + 20, dialogY + DIALOG_HEIGHT - 95);
-        smallFont.draw(batch, "File Size: " + saveInfo.getFormattedFileSize(), dialogX + 20, dialogY + DIALOG_HEIGHT - 115);
-        smallFont.draw(batch, "World Seed: " + saveInfo.getWorldSeed(), dialogX + 20, dialogY + DIALOG_HEIGHT - 135);
-        smallFont.draw(batch, String.format("Contains: %d trees, %d items, %d cleared areas", 
+        smallFont.draw(batch, loc.getText("world_manage_dialog.created_label") + " " + saveInfo.getFormattedTimestamp(), dialogX + 20, dialogY + DIALOG_HEIGHT - 95);
+        smallFont.draw(batch, loc.getText("world_manage_dialog.file_size_label") + " " + saveInfo.getFormattedFileSize(), dialogX + 20, dialogY + DIALOG_HEIGHT - 115);
+        smallFont.draw(batch, loc.getText("world_manage_dialog.world_seed_label") + " " + saveInfo.getWorldSeed(), dialogX + 20, dialogY + DIALOG_HEIGHT - 135);
+        smallFont.draw(batch, loc.getText("world_manage_dialog.contains_label", 
                       saveInfo.getTreeCount(), saveInfo.getItemCount(), saveInfo.getClearedPositionCount()),
                       dialogX + 20, dialogY + DIALOG_HEIGHT - 155);
         
         // Draw warning
         dialogFont.setColor(Color.RED);
-        dialogFont.draw(batch, "WARNING: This action cannot be undone!", dialogX + 20, dialogY + DIALOG_HEIGHT - 185);
-        dialogFont.draw(batch, "The save file will be permanently deleted.", dialogX + 20, dialogY + DIALOG_HEIGHT - 210);
+        dialogFont.draw(batch, loc.getText("world_manage_dialog.delete_warning_1"), dialogX + 20, dialogY + DIALOG_HEIGHT - 185);
+        dialogFont.draw(batch, loc.getText("world_manage_dialog.delete_warning_2"), dialogX + 20, dialogY + DIALOG_HEIGHT - 210);
         
         // Draw confirmation options
         dialogFont.setColor(Color.YELLOW);
-        dialogFont.draw(batch, "Y - Yes, delete permanently", dialogX + 50, dialogY + 80);
-        dialogFont.draw(batch, "N - No, keep the save", dialogX + 50, dialogY + 55);
+        dialogFont.draw(batch, loc.getText("world_manage_dialog.yes_delete"), dialogX + 50, dialogY + 80);
+        dialogFont.draw(batch, loc.getText("world_manage_dialog.no_keep"), dialogX + 50, dialogY + 55);
         
         // Draw instructions
         smallFont.setColor(Color.LIGHT_GRAY);
-        smallFont.draw(batch, "Press Y to confirm deletion or N to cancel", dialogX + 20, dialogY + 25);
+        smallFont.draw(batch, loc.getText("world_manage_dialog.confirm_delete_instruction"), dialogX + 20, dialogY + 25);
     }
     
     /**
@@ -510,19 +524,20 @@ public class WorldManageDialog {
             return;
         }
         
+        LocalizationManager loc = LocalizationManager.getInstance();
         WorldSaveInfo saveInfo = availableSaves.get(selectedSaveIndex);
         
         // Draw title
         dialogFont.setColor(Color.WHITE);
-        dialogFont.draw(batch, "Deleting Save...", dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
+        dialogFont.draw(batch, loc.getText("world_manage_dialog.deleting_title"), dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
         
         // Draw save name
         dialogFont.setColor(Color.YELLOW);
-        dialogFont.draw(batch, "Deleting: " + saveInfo.getSaveName(), dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
+        dialogFont.draw(batch, loc.getText("world_manage_dialog.deleting_title") + ": " + saveInfo.getSaveName(), dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
         
         // Draw progress message
         smallFont.setColor(Color.LIGHT_GRAY);
-        smallFont.draw(batch, "Please wait while the save file is being deleted.", dialogX + 20, dialogY + DIALOG_HEIGHT - 110);
+        smallFont.draw(batch, loc.getText("world_manage_dialog.deleting_message"), dialogX + 20, dialogY + DIALOG_HEIGHT - 110);
         
         // Draw animated dots for progress indication
         long time = System.currentTimeMillis();
@@ -532,7 +547,7 @@ public class WorldManageDialog {
             dots += ".";
         }
         dialogFont.setColor(Color.WHITE);
-        dialogFont.draw(batch, "Deleting" + dots, dialogX + 20, dialogY + DIALOG_HEIGHT - 150);
+        dialogFont.draw(batch, loc.getText("world_manage_dialog.deleting_progress") + dots, dialogX + 20, dialogY + DIALOG_HEIGHT - 150);
         
         // Draw cancel instruction
         smallFont.setColor(Color.LIGHT_GRAY);
@@ -637,9 +652,28 @@ public class WorldManageDialog {
     }
     
     /**
+     * Called when the language changes.
+     * Refreshes status messages to display in the new language.
+     * 
+     * @param newLanguage The new language code
+     */
+    @Override
+    public void onLanguageChanged(String newLanguage) {
+        // Refresh status message if showing no saves message
+        if (availableSaves.isEmpty() && !statusMessage.isEmpty()) {
+            LocalizationManager loc = LocalizationManager.getInstance();
+            statusMessage = loc.getText("world_manage_dialog.no_saves_title");
+        }
+        // Note: Other text is refreshed automatically during render
+    }
+    
+    /**
      * Disposes of resources used by the dialog.
      */
     public void dispose() {
+        // Unregister from language change notifications
+        LocalizationManager.getInstance().removeLanguageChangeListener(this);
+        
         if (woodenPlank != null) {
             woodenPlank.dispose();
         }

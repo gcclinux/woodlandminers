@@ -9,6 +9,8 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import wagemaker.uk.localization.LocalizationManager;
+import wagemaker.uk.localization.LanguageChangeListener;
 import wagemaker.uk.world.WorldSaveInfo;
 import wagemaker.uk.world.WorldSaveManager;
 
@@ -20,7 +22,7 @@ import java.util.ArrayList;
  * Shows save timestamps, game mode, world information, and allows save selection.
  * Provides load confirmation and handles cases where no saves are available.
  */
-public class WorldLoadDialog {
+public class WorldLoadDialog implements LanguageChangeListener {
     private boolean isVisible = false;
     private boolean confirmed = false;
     private boolean cancelled = false;
@@ -33,7 +35,7 @@ public class WorldLoadDialog {
     private int selectedSaveIndex = 0;
     private boolean isMultiplayer = false;
     private String errorMessage = "";
-    private static final float DIALOG_WIDTH = 600;
+    private static final float DIALOG_WIDTH = 720; // Increased by 20% (600 * 1.2 = 720)
     private static final float DIALOG_HEIGHT = 400;
     private static final int SAVES_PER_PAGE = 6;
     private int scrollOffset = 0;
@@ -44,6 +46,9 @@ public class WorldLoadDialog {
     public WorldLoadDialog() {
         woodenPlank = createWoodenPlank();
         createDialogFonts();
+        
+        // Register for language change notifications
+        LocalizationManager.getInstance().addLanguageChangeListener(this);
     }
     
     /**
@@ -139,7 +144,7 @@ public class WorldLoadDialog {
             availableSaves = WorldSaveManager.listAvailableSaves(isMultiplayer);
             
             if (availableSaves.isEmpty()) {
-                errorMessage = "No saved worlds found";
+                errorMessage = LocalizationManager.getInstance().getText("world_load_dialog.no_saves_title");
             } else {
                 // Ensure selected index is valid
                 if (selectedSaveIndex >= availableSaves.size()) {
@@ -148,7 +153,7 @@ public class WorldLoadDialog {
                 errorMessage = "";
             }
         } catch (Exception e) {
-            errorMessage = "Error loading saves: " + e.getMessage();
+            errorMessage = LocalizationManager.getInstance().getText("messages.load_error", e.getMessage());
             availableSaves.clear();
         }
     }
@@ -299,18 +304,32 @@ public class WorldLoadDialog {
      * Renders the save list interface.
      */
     private void renderSaveList(SpriteBatch batch, float dialogX, float dialogY) {
+        LocalizationManager loc = LocalizationManager.getInstance();
+        
         // Draw title
         dialogFont.setColor(Color.WHITE);
-        dialogFont.draw(batch, "Load World", dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
+        dialogFont.draw(batch, loc.getText("world_load_dialog.title"), dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
         
         // Draw game mode indicator
         smallFont.setColor(Color.LIGHT_GRAY);
-        String modeText = isMultiplayer ? "Multiplayer Saves" : "Singleplayer Saves";
+        String modeText = isMultiplayer ? 
+            loc.getText("world_load_dialog.multiplayer_saves") : 
+            loc.getText("world_load_dialog.singleplayer_saves");
         smallFont.draw(batch, modeText, dialogX + 20, dialogY + DIALOG_HEIGHT - 50);
         
-        // Draw save count
-        String countText = availableSaves.size() + " save(s) found";
-        smallFont.draw(batch, countText, dialogX + DIALOG_WIDTH - 150, dialogY + DIALOG_HEIGHT - 50);
+        // Draw save count with language-specific positioning
+        String countText = loc.getText("world_load_dialog.saves_found", availableSaves.size());
+        // Adjust position based on language (move inward/left for longer translations)
+        float countTextOffset = 150; // Default for English
+        String currentLang = loc.getCurrentLanguage();
+        if (currentLang.equals("nl")) {
+            countTextOffset = 210; // Dutch:
+        } else if (currentLang.equals("pl")) {
+            countTextOffset = 210; // Polish:
+        } else if (currentLang.equals("pt")) {
+            countTextOffset = 280; // Portuguese:
+        }
+        smallFont.draw(batch, countText, dialogX + DIALOG_WIDTH - countTextOffset, dialogY + DIALOG_HEIGHT - 50);
         
         if (availableSaves.isEmpty()) {
             renderNoSavesMessage(batch, dialogX, dialogY);
@@ -321,23 +340,25 @@ public class WorldLoadDialog {
         // Draw instructions
         smallFont.setColor(Color.LIGHT_GRAY);
         if (!availableSaves.isEmpty()) {
-            smallFont.draw(batch, "Up/Down to select, Enter to load", dialogX + 20, dialogY + 45);
-            smallFont.draw(batch, "Page Up/Down for fast scroll", dialogX + 20, dialogY + 30);
+            smallFont.draw(batch, loc.getText("world_load_dialog.select_instruction"), dialogX + 20, dialogY + 45);
+            smallFont.draw(batch, loc.getText("world_load_dialog.scroll_instruction"), dialogX + 20, dialogY + 30);
         }
-        smallFont.draw(batch, "R to refresh, ESC to cancel", dialogX + 20, dialogY + 15);
+        smallFont.draw(batch, loc.getText("world_load_dialog.refresh_instruction"), dialogX + 20, dialogY + 15);
     }
     
     /**
      * Renders the message when no saves are available.
      */
     private void renderNoSavesMessage(SpriteBatch batch, float dialogX, float dialogY) {
+        LocalizationManager loc = LocalizationManager.getInstance();
+        
         if (!errorMessage.isEmpty()) {
             dialogFont.setColor(Color.RED);
             dialogFont.draw(batch, errorMessage, dialogX + 20, dialogY + DIALOG_HEIGHT / 2);
         } else {
             dialogFont.setColor(Color.LIGHT_GRAY);
-            dialogFont.draw(batch, "No saved worlds found.", dialogX + 20, dialogY + DIALOG_HEIGHT / 2 + 20);
-            dialogFont.draw(batch, "Create a save first using 'Save World'.", dialogX + 20, dialogY + DIALOG_HEIGHT / 2 - 10);
+            dialogFont.draw(batch, loc.getText("world_load_dialog.no_saves_title"), dialogX + 20, dialogY + DIALOG_HEIGHT / 2 + 20);
+            dialogFont.draw(batch, loc.getText("world_load_dialog.no_saves_message"), dialogX + 20, dialogY + DIALOG_HEIGHT / 2 - 10);
         }
     }
     
@@ -381,14 +402,16 @@ public class WorldLoadDialog {
         }
         
         // Draw scroll indicators
+        LocalizationManager loc = LocalizationManager.getInstance();
+        
         if (scrollOffset > 0) {
             smallFont.setColor(Color.YELLOW);
-            smallFont.draw(batch, "^ More above ^", dialogX + DIALOG_WIDTH / 2 - 50, startY + 15);
+            smallFont.draw(batch, loc.getText("world_load_dialog.more_above"), dialogX + DIALOG_WIDTH / 2 - 50, startY + 15);
         }
         
         if (scrollOffset + SAVES_PER_PAGE < availableSaves.size()) {
             smallFont.setColor(Color.YELLOW);
-            smallFont.draw(batch, "v More below v", dialogX + DIALOG_WIDTH / 2 - 50, dialogY + 70);
+            smallFont.draw(batch, loc.getText("world_load_dialog.more_below"), dialogX + DIALOG_WIDTH / 2 - 50, dialogY + 70);
         }
     }
     
@@ -400,37 +423,42 @@ public class WorldLoadDialog {
             return;
         }
         
+        LocalizationManager loc = LocalizationManager.getInstance();
         WorldSaveInfo saveInfo = availableSaves.get(selectedSaveIndex);
         
         // Draw title
         dialogFont.setColor(Color.YELLOW);
-        dialogFont.draw(batch, "Load World?", dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
+        dialogFont.draw(batch, loc.getText("world_load_dialog.load_confirm_title"), dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
         
         // Draw save details
         dialogFont.setColor(Color.WHITE);
-        dialogFont.draw(batch, "Save Name: " + saveInfo.getSaveName(), dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
+        dialogFont.draw(batch, saveInfo.getSaveName(), dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
         
         smallFont.setColor(Color.LIGHT_GRAY);
-        smallFont.draw(batch, "Created: " + saveInfo.getFormattedTimestamp(), dialogX + 20, dialogY + DIALOG_HEIGHT - 95);
-        smallFont.draw(batch, "World Seed: " + saveInfo.getWorldSeed(), dialogX + 20, dialogY + DIALOG_HEIGHT - 115);
-        smallFont.draw(batch, "Trees: " + saveInfo.getTreeCount() + " | Items: " + saveInfo.getItemCount(), 
+        smallFont.draw(batch, loc.getText("world_load_dialog.created_label") + " " + saveInfo.getFormattedTimestamp(), 
+                      dialogX + 20, dialogY + DIALOG_HEIGHT - 95);
+        smallFont.draw(batch, loc.getText("world_load_dialog.world_seed_label") + " " + saveInfo.getWorldSeed(), 
+                      dialogX + 20, dialogY + DIALOG_HEIGHT - 115);
+        smallFont.draw(batch, loc.getText("world_load_dialog.trees_label") + " " + saveInfo.getTreeCount() + 
+                      " | " + loc.getText("world_load_dialog.items_label") + " " + saveInfo.getItemCount(), 
                       dialogX + 20, dialogY + DIALOG_HEIGHT - 135);
-        smallFont.draw(batch, "Player Position: " + saveInfo.getFormattedPlayerPosition(), 
+        smallFont.draw(batch, loc.getText("world_load_dialog.player_position_label") + " " + saveInfo.getFormattedPlayerPosition(), 
                       dialogX + 20, dialogY + DIALOG_HEIGHT - 155);
-        smallFont.draw(batch, "File Size: " + saveInfo.getFormattedFileSize(), dialogX + 20, dialogY + DIALOG_HEIGHT - 175);
+        smallFont.draw(batch, loc.getText("world_load_dialog.file_size_label") + " " + saveInfo.getFormattedFileSize(), 
+                      dialogX + 20, dialogY + DIALOG_HEIGHT - 175);
         
         // Draw warning
         dialogFont.setColor(Color.ORANGE);
-        dialogFont.draw(batch, "Loading will replace your current world!", dialogX + 20, dialogY + DIALOG_HEIGHT - 205);
+        dialogFont.draw(batch, loc.getText("world_load_dialog.load_warning"), dialogX + 20, dialogY + DIALOG_HEIGHT - 205);
         
         // Draw confirmation options
         dialogFont.setColor(Color.YELLOW);
-        dialogFont.draw(batch, "Y - Yes, load this world", dialogX + 50, dialogY + 80);
-        dialogFont.draw(batch, "N - No, go back", dialogX + 50, dialogY + 55);
+        dialogFont.draw(batch, loc.getText("world_load_dialog.yes_load"), dialogX + 50, dialogY + 80);
+        dialogFont.draw(batch, loc.getText("world_load_dialog.no_go_back"), dialogX + 50, dialogY + 55);
         
         // Draw instructions
         smallFont.setColor(Color.LIGHT_GRAY);
-        smallFont.draw(batch, "Press Y to confirm or N to cancel", dialogX + 20, dialogY + 25);
+        smallFont.draw(batch, loc.getText("world_load_dialog.confirm_load_instruction"), dialogX + 20, dialogY + 25);
     }
     
     /**
@@ -441,20 +469,21 @@ public class WorldLoadDialog {
             return;
         }
         
+        LocalizationManager loc = LocalizationManager.getInstance();
         WorldSaveInfo saveInfo = availableSaves.get(selectedSaveIndex);
         
         // Draw title
         dialogFont.setColor(Color.WHITE);
-        dialogFont.draw(batch, "Loading World...", dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
+        dialogFont.draw(batch, loc.getText("world_load_dialog.loading_title"), dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
         
         // Draw save name
         dialogFont.setColor(Color.YELLOW);
-        dialogFont.draw(batch, "Loading: " + saveInfo.getSaveName(), dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
+        dialogFont.draw(batch, saveInfo.getSaveName(), dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
         
         // Draw progress message
         smallFont.setColor(Color.LIGHT_GRAY);
-        smallFont.draw(batch, "Please wait while your world is being loaded.", dialogX + 20, dialogY + DIALOG_HEIGHT - 110);
-        smallFont.draw(batch, "This may take a moment for large worlds.", dialogX + 20, dialogY + DIALOG_HEIGHT - 130);
+        smallFont.draw(batch, loc.getText("world_load_dialog.loading_message_1"), dialogX + 20, dialogY + DIALOG_HEIGHT - 110);
+        smallFont.draw(batch, loc.getText("world_load_dialog.loading_message_2"), dialogX + 20, dialogY + DIALOG_HEIGHT - 130);
         
         // Draw animated dots for progress indication
         long time = System.currentTimeMillis();
@@ -464,11 +493,11 @@ public class WorldLoadDialog {
             dots += ".";
         }
         dialogFont.setColor(Color.WHITE);
-        dialogFont.draw(batch, "Loading" + dots, dialogX + 20, dialogY + DIALOG_HEIGHT - 170);
+        dialogFont.draw(batch, loc.getText("world_load_dialog.loading_progress") + dots, dialogX + 20, dialogY + DIALOG_HEIGHT - 170);
         
         // Draw cancel instruction
         smallFont.setColor(Color.LIGHT_GRAY);
-        smallFont.draw(batch, "ESC to cancel", dialogX + 20, dialogY + 30);
+        smallFont.draw(batch, loc.getText("world_load_dialog.refresh_instruction").split(",")[1].trim(), dialogX + 20, dialogY + 30);
     }
     
     /**
@@ -567,9 +596,28 @@ public class WorldLoadDialog {
     }
     
     /**
+     * Called when the language changes.
+     * Refreshes error messages if needed.
+     * 
+     * @param newLanguage The new language code
+     */
+    @Override
+    public void onLanguageChanged(String newLanguage) {
+        // Refresh error message if it was set
+        if (!errorMessage.isEmpty() && availableSaves.isEmpty()) {
+            errorMessage = LocalizationManager.getInstance().getText("world_load_dialog.no_saves_title");
+        }
+        // Note: The dialog text will be automatically refreshed on next render
+        // since all text is retrieved from LocalizationManager during rendering
+    }
+    
+    /**
      * Disposes of resources used by the dialog.
      */
     public void dispose() {
+        // Unregister from language change notifications
+        LocalizationManager.getInstance().removeLanguageChangeListener(this);
+        
         if (woodenPlank != null) {
             woodenPlank.dispose();
         }

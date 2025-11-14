@@ -9,12 +9,14 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import wagemaker.uk.localization.LocalizationManager;
+import wagemaker.uk.localization.LanguageChangeListener;
 
 /**
  * ErrorDialog displays error messages with retry and cancel options.
  * Used for connection failures and other error scenarios.
  */
-public class ErrorDialog {
+public class ErrorDialog implements LanguageChangeListener {
     private boolean isVisible = false;
     private boolean retrySelected = false;
     private boolean cancelled = false;
@@ -23,6 +25,7 @@ public class ErrorDialog {
     private BitmapFont dialogFont;
     private String errorMessage = "";
     private String dialogTitle = "Error";
+    private String dialogTitleKey = null; // Store the localization key for the title
     private boolean isSuccessMode = false; // true for success messages, false for errors
     private int selectedOption = 0; // 0 = Retry/OK, 1 = Cancel (only in error mode)
     private static final float DIALOG_WIDTH = 500;
@@ -34,6 +37,7 @@ public class ErrorDialog {
     public ErrorDialog() {
         woodenPlank = createWoodenPlank();
         createDialogFont();
+        LocalizationManager.getInstance().addLanguageChangeListener(this);
     }
     
     /**
@@ -101,7 +105,8 @@ public class ErrorDialog {
         this.cancelled = false;
         this.okSelected = false;
         this.errorMessage = message;
-        this.dialogTitle = "Error"; // Default title
+        this.dialogTitleKey = "error_dialog.title";
+        this.dialogTitle = LocalizationManager.getInstance().getText(this.dialogTitleKey);
         this.isSuccessMode = false; // Default to error mode
         this.selectedOption = 0;
     }
@@ -119,6 +124,7 @@ public class ErrorDialog {
         this.okSelected = false;
         this.errorMessage = message;
         this.dialogTitle = title;
+        this.dialogTitleKey = null; // Custom title, not a localization key
         this.isSuccessMode = false; // Default to error mode
         this.selectedOption = 0;
     }
@@ -136,7 +142,46 @@ public class ErrorDialog {
         this.okSelected = false;
         this.errorMessage = message;
         this.dialogTitle = title;
+        this.dialogTitleKey = null; // Custom title, not a localization key
         this.isSuccessMode = true; // Success mode shows only OK button
+        this.selectedOption = 0;
+    }
+    
+    /**
+     * Shows the error dialog with a localized title.
+     * 
+     * @param message The error message to display
+     * @param titleKey The localization key for the title
+     */
+    public void showWithLocalizedTitle(String message, String titleKey) {
+        this.isVisible = true;
+        this.retrySelected = false;
+        this.cancelled = false;
+        this.okSelected = false;
+        this.errorMessage = message;
+        this.dialogTitleKey = titleKey;
+        this.dialogTitle = LocalizationManager.getInstance().getText(titleKey);
+        this.isSuccessMode = false;
+        this.selectedOption = 0;
+    }
+    
+    /**
+     * Shows the error dialog with a localized title and message with parameters.
+     * 
+     * @param messageKey The localization key for the message
+     * @param titleKey The localization key for the title
+     * @param params Parameters to substitute in the message
+     */
+    public void showLocalizedError(String messageKey, String titleKey, Object... params) {
+        LocalizationManager loc = LocalizationManager.getInstance();
+        this.isVisible = true;
+        this.retrySelected = false;
+        this.cancelled = false;
+        this.okSelected = false;
+        this.errorMessage = loc.getText(messageKey, params);
+        this.dialogTitleKey = titleKey;
+        this.dialogTitle = loc.getText(titleKey);
+        this.isSuccessMode = false;
         this.selectedOption = 0;
     }
     
@@ -228,14 +273,18 @@ public class ErrorDialog {
         // Draw options based on mode
         float optionY = dialogY + 80;
         
+        LocalizationManager loc = LocalizationManager.getInstance();
+        
         if (isSuccessMode) {
             // Success mode: only OK button (centered)
             dialogFont.setColor(Color.YELLOW);
-            dialogFont.draw(batch, "OK", dialogX + DIALOG_WIDTH / 2 - 10, optionY);
+            String okText = loc.getText("error_dialog.ok");
+            dialogFont.draw(batch, okText, dialogX + DIALOG_WIDTH / 2 - 10, optionY);
             
             // Draw instructions for success mode
             dialogFont.setColor(Color.LIGHT_GRAY);
-            dialogFont.draw(batch, "Press Enter, Space, or ESC to continue", dialogX + 40, dialogY + 30);
+            String okInstruction = loc.getText("error_dialog.ok_instruction");
+            dialogFont.draw(batch, okInstruction, dialogX + 40, dialogY + 30);
         } else {
             // Error mode: Retry/Cancel buttons
             // Retry option
@@ -244,7 +293,8 @@ public class ErrorDialog {
             } else {
                 dialogFont.setColor(Color.LIGHT_GRAY);
             }
-            dialogFont.draw(batch, "Retry", dialogX + 150, optionY);
+            String retryText = loc.getText("error_dialog.retry");
+            dialogFont.draw(batch, retryText, dialogX + 150, optionY);
             
             // Cancel option
             if (selectedOption == 1) {
@@ -252,11 +302,13 @@ public class ErrorDialog {
             } else {
                 dialogFont.setColor(Color.LIGHT_GRAY);
             }
-            dialogFont.draw(batch, "Cancel", dialogX + 300, optionY);
+            String cancelText = loc.getText("error_dialog.cancel");
+            dialogFont.draw(batch, cancelText, dialogX + 300, optionY);
             
             // Draw instructions for error mode
             dialogFont.setColor(Color.LIGHT_GRAY);
-            dialogFont.draw(batch, "Arrow keys to select, Enter to confirm", dialogX + 80, dialogY + 30);
+            String arrowInstruction = loc.getText("error_dialog.arrow_instruction");
+            dialogFont.draw(batch, arrowInstruction, dialogX + 80, dialogY + 30);
         }
         
         batch.end();
@@ -350,6 +402,25 @@ public class ErrorDialog {
         retrySelected = false;
         cancelled = false;
         okSelected = false;
+    }
+    
+    /**
+     * Called when the language changes.
+     * Updates the dialog title if it was set using a localization key.
+     */
+    @Override
+    public void onLanguageChanged(String newLanguage) {
+        if (!isVisible) {
+            return;
+        }
+        
+        // If the title was set using a localization key, update it
+        if (dialogTitleKey != null) {
+            dialogTitle = LocalizationManager.getInstance().getText(dialogTitleKey);
+        }
+        
+        // Button labels and instructions will be automatically updated on next render
+        // since they are fetched from LocalizationManager each time
     }
     
     /**

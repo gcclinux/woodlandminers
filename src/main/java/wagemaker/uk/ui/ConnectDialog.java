@@ -9,12 +9,14 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import wagemaker.uk.localization.LocalizationManager;
+import wagemaker.uk.localization.LanguageChangeListener;
 
 /**
  * ConnectDialog provides separate input fields for entering a server IP address and port.
  * Players can type an IP address and port, then press Enter to connect, or ESC to cancel.
  */
-public class ConnectDialog {
+public class ConnectDialog implements LanguageChangeListener {
     private boolean isVisible = false;
     private boolean confirmed = false;
     private Texture woodenPlank;
@@ -33,6 +35,9 @@ public class ConnectDialog {
     public ConnectDialog() {
         woodenPlank = createWoodenPlank();
         createDialogFont();
+        
+        // Register for language change notifications
+        LocalizationManager.getInstance().addLanguageChangeListener(this);
     }
     
     /**
@@ -196,6 +201,7 @@ public class ConnectDialog {
                 isVisible = false;
                 System.out.println("Connecting to: " + ipAddressBuffer + ":" + portBuffer);
             } else {
+                // Validation message is now handled by the caller, not printed here
                 System.out.println("Invalid IP address or port");
             }
         }
@@ -317,6 +323,8 @@ public class ConnectDialog {
             return;
         }
         
+        LocalizationManager loc = LocalizationManager.getInstance();
+        
         batch.begin();
         
         // Center the dialog on screen
@@ -328,11 +336,11 @@ public class ConnectDialog {
         
         // Draw title
         dialogFont.setColor(Color.WHITE);
-        dialogFont.draw(batch, "Connect to Server", dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
+        dialogFont.draw(batch, loc.getText("connect_dialog.title"), dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
         
         // Draw IP Address label
         dialogFont.setColor(editingIpAddress ? Color.WHITE : Color.LIGHT_GRAY);
-        dialogFont.draw(batch, "IP Address:", dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
+        dialogFont.draw(batch, loc.getText("connect_dialog.ip_address_label"), dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
         
         // Draw IP Address input field with cursor
         dialogFont.setColor(editingIpAddress ? Color.YELLOW : Color.LIGHT_GRAY);
@@ -341,7 +349,7 @@ public class ConnectDialog {
         
         // Draw Port label
         dialogFont.setColor(!editingIpAddress ? Color.WHITE : Color.LIGHT_GRAY);
-        dialogFont.draw(batch, "Port Number:", dialogX + 20, dialogY + DIALOG_HEIGHT - 135);
+        dialogFont.draw(batch, loc.getText("connect_dialog.port_label"), dialogX + 20, dialogY + DIALOG_HEIGHT - 135);
         
         // Draw Port input field with cursor
         dialogFont.setColor(!editingIpAddress ? Color.YELLOW : Color.LIGHT_GRAY);
@@ -350,8 +358,8 @@ public class ConnectDialog {
         
         // Draw instructions
         dialogFont.setColor(Color.LIGHT_GRAY);
-        dialogFont.draw(batch, "Tab to switch fields", dialogX + 20, dialogY + 60);
-        dialogFont.draw(batch, "Enter to connect, ESC to cancel", dialogX + 20, dialogY + 40);
+        dialogFont.draw(batch, loc.getText("connect_dialog.tab_instruction"), dialogX + 20, dialogY + 60);
+        dialogFont.draw(batch, loc.getText("connect_dialog.confirm_instruction"), dialogX + 20, dialogY + 40);
         
         batch.end();
     }
@@ -404,11 +412,26 @@ public class ConnectDialog {
      * Disposes of resources used by the dialog.
      */
     public void dispose() {
+        // Unregister from language change notifications
+        LocalizationManager.getInstance().removeLanguageChangeListener(this);
+        
         if (woodenPlank != null) {
             woodenPlank.dispose();
         }
         if (dialogFont != null) {
             dialogFont.dispose();
         }
+    }
+    
+    /**
+     * Called when the language changes.
+     * The dialog will automatically use the new language on next render.
+     * 
+     * @param newLanguage The new language code
+     */
+    @Override
+    public void onLanguageChanged(String newLanguage) {
+        // No need to cache text - it's retrieved fresh on each render
+        System.out.println("ConnectDialog: Language changed to " + newLanguage);
     }
 }

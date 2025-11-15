@@ -4,6 +4,7 @@ import wagemaker.uk.network.TreeState;
 import wagemaker.uk.network.StoneState;
 import wagemaker.uk.network.ItemState;
 import wagemaker.uk.weather.RainZone;
+import wagemaker.uk.respawn.RespawnEntry;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -16,7 +17,7 @@ import java.util.List;
  * Implements version compatibility for future save format changes.
  */
 public class WorldSaveData implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
     
     // Version for save format compatibility
     private static final int SAVE_FORMAT_VERSION = 1;
@@ -28,6 +29,9 @@ public class WorldSaveData implements Serializable {
     private Map<String, ItemState> items;
     private Set<String> clearedPositions;
     private List<RainZone> rainZones;
+    
+    // Respawn system data
+    private List<RespawnEntry> pendingRespawns;
     
     // Player data at save time
     private float playerX;
@@ -334,6 +338,14 @@ public class WorldSaveData implements Serializable {
     
     public void setPebbleCount(int pebbleCount) {
         this.pebbleCount = Math.max(0, pebbleCount);
+    }
+    
+    public List<RespawnEntry> getPendingRespawns() {
+        return pendingRespawns;
+    }
+    
+    public void setPendingRespawns(List<RespawnEntry> pendingRespawns) {
+        this.pendingRespawns = pendingRespawns;
     }
     
     @Override

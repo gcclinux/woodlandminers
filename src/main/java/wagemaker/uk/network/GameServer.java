@@ -4,6 +4,9 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
+import wagemaker.uk.respawn.RespawnManager;
+import wagemaker.uk.respawn.RespawnEntry;
+import wagemaker.uk.respawn.ResourceType;
 
 /**
  * GameServer manages the authoritative game state and handles client connections.
@@ -19,6 +22,7 @@ public class GameServer {
     private ServerSocket serverSocket;
     private Map<String, ClientConnection> connectedClients;
     private WorldState worldState;
+    private RespawnManager respawnManager;
     private ExecutorService clientThreadPool;
     private Thread acceptThread;
     private boolean running;
@@ -154,6 +158,24 @@ public class GameServer {
         if (update != null) {
             worldState.applyUpdate(update);
         }
+    }
+    
+    /**
+     * Sets the respawn manager for this server.
+     * The respawn manager handles resource respawn timers and synchronization.
+     * @param respawnManager The respawn manager instance
+     */
+    public void setRespawnManager(RespawnManager respawnManager) {
+        this.respawnManager = respawnManager;
+        System.out.println("[GameServer] RespawnManager set");
+    }
+    
+    /**
+     * Gets the respawn manager for this server.
+     * @return The respawn manager instance, or null if not set
+     */
+    public RespawnManager getRespawnManager() {
+        return respawnManager;
     }
     
     /**
@@ -418,6 +440,50 @@ public class GameServer {
         // Clean up failed clients
         for (String clientId : failedClients) {
             disconnectClient(clientId);
+        }
+    }
+    
+    /**
+     * Broadcasts a resource respawn event to all connected clients.
+     * Called by the respawn manager when a resource respawns.
+     * @param resourceId Unique identifier for the resource
+     * @param resourceType Type of resource (TREE or STONE)
+     * @param treeType Type of tree (null for stones)
+     * @param x World X coordinate
+     * @param y World Y coordinate
+     */
+    public void broadcastResourceRespawn(String resourceId, ResourceType resourceType, 
+                                        TreeType treeType, float x, float y) {
+        ResourceRespawnMessage message = new ResourceRespawnMessage(
+            "server", resourceId, resourceType, treeType, x, y
+        );
+        
+        System.out.println("[GameServer] Broadcasting resource respawn: " + message);
+        broadcastToAll(message);
+    }
+    
+    /**
+     * Sends the current respawn state to a specific client.
+     * Called when a client joins to synchronize pending respawn timers.
+     * @param client The client connection to send the state to
+     */
+    public void sendRespawnStateToClient(ClientConnection client) {
+        if (respawnManager == null) {
+            System.out.println("[GameServer] No respawn manager, skipping respawn state sync");
+            return;
+        }
+        
+        List<RespawnEntry> pendingRespawns = respawnManager.getSaveData();
+        RespawnStateMessage message = new RespawnStateMessage("server", pendingRespawns);
+        
+        System.out.println("[GameServer] Sending respawn state to client " + client.getClientId() + 
+                         " (" + pendingRespawns.size() + " pending respawns)");
+        
+        try {
+            client.sendMessage(message);
+        } catch (Exception e) {
+            System.err.println("[GameServer] Error sending respawn state to client " + 
+                             client.getClientId() + ": " + e.getMessage());
         }
     }
     

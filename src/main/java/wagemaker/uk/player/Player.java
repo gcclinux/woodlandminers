@@ -619,6 +619,21 @@ public class Player {
                         
                         System.out.println("WoodStack dropped at: " + targetTree.getX() + ", " + targetTree.getY());
                         
+                        // Register for respawn before removing
+                        if (gameInstance != null && gameInstance instanceof wagemaker.uk.gdx.MyGdxGame) {
+                            wagemaker.uk.gdx.MyGdxGame game = (wagemaker.uk.gdx.MyGdxGame) gameInstance;
+                            wagemaker.uk.respawn.RespawnManager respawnManager = game.getRespawnManager();
+                            if (respawnManager != null) {
+                                respawnManager.registerDestruction(
+                                    targetKey,
+                                    wagemaker.uk.respawn.ResourceType.TREE,
+                                    targetTree.getX(),
+                                    targetTree.getY(),
+                                    wagemaker.uk.network.TreeType.SMALL
+                                );
+                            }
+                        }
+                        
                         targetTree.dispose();
                         trees.remove(targetKey);
                         clearedPositions.put(targetKey, true);
@@ -663,6 +678,22 @@ public class Player {
                         // Spawn apple at tree position
                         apples.put(targetKey, new Apple(targetAppleTree.getX(), targetAppleTree.getY()));
                         System.out.println("Apple dropped at: " + targetAppleTree.getX() + ", " + targetAppleTree.getY());
+                        
+                        // Register for respawn before removing
+                        if (gameInstance != null && gameInstance instanceof wagemaker.uk.gdx.MyGdxGame) {
+                            wagemaker.uk.gdx.MyGdxGame game = (wagemaker.uk.gdx.MyGdxGame) gameInstance;
+                            wagemaker.uk.respawn.RespawnManager respawnManager = game.getRespawnManager();
+                            if (respawnManager != null) {
+                                respawnManager.registerDestruction(
+                                    targetKey,
+                                    wagemaker.uk.respawn.ResourceType.TREE,
+                                    targetAppleTree.getX(),
+                                    targetAppleTree.getY(),
+                                    wagemaker.uk.network.TreeType.APPLE
+                                );
+                            }
+                        }
+                        
                         targetAppleTree.dispose();
                         appleTrees.remove(targetKey);
                         clearedPositions.put(targetKey, true);
@@ -703,6 +734,21 @@ public class Player {
                     attackedSomething = true;
                     
                     if (destroyed) {
+                        // Register for respawn before removing
+                        if (gameInstance != null && gameInstance instanceof wagemaker.uk.gdx.MyGdxGame) {
+                            wagemaker.uk.gdx.MyGdxGame game = (wagemaker.uk.gdx.MyGdxGame) gameInstance;
+                            wagemaker.uk.respawn.RespawnManager respawnManager = game.getRespawnManager();
+                            if (respawnManager != null) {
+                                respawnManager.registerDestruction(
+                                    targetKey,
+                                    wagemaker.uk.respawn.ResourceType.TREE,
+                                    targetCoconutTree.getX(),
+                                    targetCoconutTree.getY(),
+                                    wagemaker.uk.network.TreeType.COCONUT
+                                );
+                            }
+                        }
+                        
                         targetCoconutTree.dispose();
                         coconutTrees.remove(targetKey);
                         clearedPositions.put(targetKey, true);
@@ -774,6 +820,21 @@ public class Player {
                             System.out.println("2x BabyBamboo dropped at: " + targetBambooTree.getX() + ", " + targetBambooTree.getY());
                         }
                         
+                        // Register for respawn before removing
+                        if (gameInstance != null && gameInstance instanceof wagemaker.uk.gdx.MyGdxGame) {
+                            wagemaker.uk.gdx.MyGdxGame game = (wagemaker.uk.gdx.MyGdxGame) gameInstance;
+                            wagemaker.uk.respawn.RespawnManager respawnManager = game.getRespawnManager();
+                            if (respawnManager != null) {
+                                respawnManager.registerDestruction(
+                                    targetKey,
+                                    wagemaker.uk.respawn.ResourceType.TREE,
+                                    targetBambooTree.getX(),
+                                    targetBambooTree.getY(),
+                                    wagemaker.uk.network.TreeType.BAMBOO
+                                );
+                            }
+                        }
+                        
                         targetBambooTree.dispose();
                         bambooTrees.remove(targetKey);
                         clearedPositions.put(targetKey, true);
@@ -817,6 +878,22 @@ public class Player {
                         // Spawn banana at tree position
                         bananas.put(targetKey, new Banana(targetBananaTree.getX(), targetBananaTree.getY()));
                         System.out.println("Banana dropped at: " + targetBananaTree.getX() + ", " + targetBananaTree.getY());
+                        
+                        // Register for respawn before removing
+                        if (gameInstance != null && gameInstance instanceof wagemaker.uk.gdx.MyGdxGame) {
+                            wagemaker.uk.gdx.MyGdxGame game = (wagemaker.uk.gdx.MyGdxGame) gameInstance;
+                            wagemaker.uk.respawn.RespawnManager respawnManager = game.getRespawnManager();
+                            if (respawnManager != null) {
+                                respawnManager.registerDestruction(
+                                    targetKey,
+                                    wagemaker.uk.respawn.ResourceType.TREE,
+                                    targetBananaTree.getX(),
+                                    targetBananaTree.getY(),
+                                    wagemaker.uk.network.TreeType.BANANA
+                                );
+                            }
+                        }
+                        
                         targetBananaTree.dispose();
                         bananaTrees.remove(targetKey);
                         clearedPositions.put(targetKey, true);
@@ -834,16 +911,35 @@ public class Player {
                 if (destroyed) {
                     System.out.println("Attacking cactus, health before: " + healthBefore);
                     System.out.println("Cactus health after attack: " + cactus.getHealth() + ", destroyed: " + destroyed);
-                    System.out.println("Cactus destroyed! Spawning new cactus...");
+                    System.out.println("Cactus destroyed! Will respawn after timer...");
                     
-                    // Spawn new cactus at random location
-                    if (gameInstance != null) {
-                        try {
-                            // Use reflection to call spawnNewCactus method
-                            gameInstance.getClass().getMethod("spawnNewCactus").invoke(gameInstance);
-                        } catch (Exception e) {
-                            System.out.println("Error spawning new cactus: " + e.getMessage());
+                    // Register for respawn before removing
+                    if (gameInstance != null && gameInstance instanceof wagemaker.uk.gdx.MyGdxGame) {
+                        wagemaker.uk.gdx.MyGdxGame game = (wagemaker.uk.gdx.MyGdxGame) gameInstance;
+                        wagemaker.uk.respawn.RespawnManager respawnManager = game.getRespawnManager();
+                        if (respawnManager != null) {
+                            // Use a fixed key for the single cactus
+                            String cactusKey = "cactus-128,128";
+                            respawnManager.registerDestruction(
+                                cactusKey,
+                                wagemaker.uk.respawn.ResourceType.TREE,
+                                cactus.getX(),
+                                cactus.getY(),
+                                wagemaker.uk.network.TreeType.CACTUS
+                            );
                         }
+                        
+                        // Dispose the cactus
+                        try {
+                            final wagemaker.uk.trees.Cactus cactusToDispose = cactus;
+                            gameInstance.getClass().getMethod("deferOperation", Runnable.class)
+                                .invoke(gameInstance, (Runnable) () -> cactusToDispose.dispose());
+                        } catch (Exception e) {
+                            cactus.dispose();
+                        }
+                        
+                        // Set cactus to null so it's not rendered
+                        setCactus(null);
                     }
                 }
                 attackedSomething = true;
@@ -885,6 +981,21 @@ public class Player {
                         // Spawn pebble at stone position
                         pebbles.put(targetKey + "-pebble", new Pebble(targetStone.getX(), targetStone.getY()));
                         System.out.println("Pebble dropped at: " + targetStone.getX() + ", " + targetStone.getY());
+                        
+                        // Register for respawn before removing
+                        if (gameInstance != null && gameInstance instanceof wagemaker.uk.gdx.MyGdxGame) {
+                            wagemaker.uk.gdx.MyGdxGame game = (wagemaker.uk.gdx.MyGdxGame) gameInstance;
+                            wagemaker.uk.respawn.RespawnManager respawnManager = game.getRespawnManager();
+                            if (respawnManager != null) {
+                                respawnManager.registerDestruction(
+                                    targetKey,
+                                    wagemaker.uk.respawn.ResourceType.STONE,
+                                    targetStone.getX(),
+                                    targetStone.getY(),
+                                    null  // stones don't have a tree type
+                                );
+                            }
+                        }
                         
                         // Use deferred operation for texture disposal (threading safety)
                         if (gameInstance != null) {

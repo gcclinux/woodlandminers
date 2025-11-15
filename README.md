@@ -361,6 +361,16 @@ Woodlanders/
         └── ...
 ```
 
+### Resource Respawn Configuration
+
+Resource respawn behavior is configured with hardcoded values in the `RespawnConfig.java` class:
+
+- **Default respawn time**: 15 minutes (900,000 ms)
+- **Visual indicator threshold**: 1 minute (60,000 ms) before respawn
+- **Visual indicators**: Enabled by default
+
+To customize respawn durations, modify the constants in `src/main/java/wagemaker/uk/respawn/RespawnConfig.java` and recompile the game.
+
 ### 🚀 [Woodland Documentation](./docs/README.md)
 
 ### Universal LPC Spritesheet Character Generator

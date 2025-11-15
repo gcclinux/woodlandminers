@@ -99,6 +99,8 @@ Documentation on the last server connection feature.
 
 **Start here if**: You want to understand how the game remembers server connections.
 
+
+
 ### 🔄 [Multiplayer Configuration Update](MULTIPLAYER_CONFIG_UPDATE.md)
 Technical documentation on the multiplayer configuration system changes.
 

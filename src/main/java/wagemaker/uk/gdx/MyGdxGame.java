@@ -52,6 +52,8 @@ import wagemaker.uk.weather.RainSystem;
 import wagemaker.uk.world.WorldSaveData;
 import wagemaker.uk.world.WorldSaveManager;
 import wagemaker.uk.inventory.InventoryManager;
+import wagemaker.uk.respawn.RespawnManager;
+import wagemaker.uk.respawn.ResourceType;
 
 /**
  * Main game class for Woodlanders multiplayer game.
@@ -192,6 +194,7 @@ public class MyGdxGame extends ApplicationAdapter {
     GameMenu gameMenu;
     RainSystem rainSystem; // Weather system for localized rain effects
     wagemaker.uk.weather.DynamicRainManager dynamicRainManager; // Dynamic rain event manager
+    RespawnManager respawnManager; // Resource respawn timer system
     
     // Multiplayer fields
     private GameMode gameMode;
@@ -354,6 +357,9 @@ public class MyGdxGame extends ApplicationAdapter {
         
         // Note: We no longer initialize default rain zones
         // Rain will be managed dynamically by DynamicRainManager
+        
+        // Initialize respawn manager (starts in single-player mode)
+        respawnManager = new RespawnManager(this, true);
 
     }
 
@@ -464,6 +470,11 @@ public class MyGdxGame extends ApplicationAdapter {
         // Update rain system rendering
         rainSystem.update(deltaTime, playerCenterX, playerCenterY, camera);
         
+        // Update respawn manager (check for expired timers)
+        if (respawnManager != null) {
+            respawnManager.update(deltaTime);
+        }
+        
         if (!gameMenu.isAnyMenuOpen()) {
             // update player and camera
             player.update(deltaTime);
@@ -553,6 +564,12 @@ public class MyGdxGame extends ApplicationAdapter {
         drawInfiniteGrass();
         // draw planted bamboos (after terrain, before trees)
         drawPlantedBamboos();
+        // draw respawn indicators (after terrain, before trees)
+        if (respawnManager != null) {
+            respawnManager.renderIndicators(batch, deltaTime, 
+                                          camera.position.x, camera.position.y,
+                                          viewport.getWorldWidth(), viewport.getWorldHeight());
+        }
         // draw trees
         drawTrees();
         drawCoconutTrees();
@@ -3687,6 +3704,125 @@ public class MyGdxGame extends ApplicationAdapter {
         return inventoryManager;
     }
     
+    /**
+     * Creates a tree for respawn system.
+     * This method is called by RespawnManager when a tree needs to be respawned.
+     * Must be called on the render thread (via deferOperation).
+     * 
+     * @param treeId Unique identifier for the tree
+     * @param treeType Type of tree to create
+     * @param x World X coordinate
+     * @param y World Y coordinate
+     */
+    public void createTreeForRespawn(String treeId, TreeType treeType, float x, float y) {
+        // Check if tree already exists (avoid duplicates)
+        switch (treeType) {
+            case SMALL:
+                if (!trees.containsKey(treeId)) {
+                    SmallTree smallTree = new SmallTree(x, y);
+                    trees.put(treeId, smallTree);
+                }
+                break;
+            case APPLE:
+                if (!appleTrees.containsKey(treeId)) {
+                    AppleTree appleTree = new AppleTree(x, y);
+                    appleTrees.put(treeId, appleTree);
+                }
+                break;
+            case COCONUT:
+                if (!coconutTrees.containsKey(treeId)) {
+                    CoconutTree coconutTree = new CoconutTree(x, y);
+                    coconutTrees.put(treeId, coconutTree);
+                }
+                break;
+            case BAMBOO:
+                if (!bambooTrees.containsKey(treeId)) {
+                    BambooTree bambooTree = new BambooTree(x, y);
+                    bambooTrees.put(treeId, bambooTree);
+                }
+                break;
+            case BANANA:
+                if (!bananaTrees.containsKey(treeId)) {
+                    BananaTree bananaTree = new BananaTree(x, y);
+                    bananaTrees.put(treeId, bananaTree);
+                }
+                break;
+            case CACTUS:
+                // Cactus is handled separately as a single instance
+                if (cactus == null) {
+                    cactus = new Cactus(x, y);
+                    player.setCactus(cactus);
+                    System.out.println("[MyGdxGame] Cactus respawned at: " + x + ", " + y);
+                }
+                break;
+        }
+    }
+    
+    /**
+     * Creates a stone for respawn system.
+     * This method is called by RespawnManager when a stone needs to be respawned.
+     * Must be called on the render thread (via deferOperation).
+     * 
+     * @param stoneId Unique identifier for the stone
+     * @param x World X coordinate
+     * @param y World Y coordinate
+     */
+    public void createStoneForRespawn(String stoneId, float x, float y) {
+        // Check if stone already exists (avoid duplicates)
+        if (!stones.containsKey(stoneId) && !stoneMap.containsKey(stoneId)) {
+            Stone stone = new Stone(x, y);
+            stones.put(stoneId, stone);
+            stoneMap.put(stoneId, stone);
+        }
+    }
+    
+    /**
+     * Generates a unique resource ID for a tree or stone.
+     * Uses the resource's position as the key (same format as existing tree/stone keys).
+     * 
+     * @param x World X coordinate
+     * @param y World Y coordinate
+     * @return Unique resource identifier
+     */
+    public String generateResourceId(float x, float y) {
+        // Use grid-aligned coordinates for consistency with existing tree generation
+        int gridX = (int)(x / 64) * 64;
+        int gridY = (int)(y / 64) * 64;
+        return gridX + "," + gridY;
+    }
+    
+    /**
+     * Determines the TreeType for a given tree object.
+     * 
+     * @param tree The tree object (SmallTree, AppleTree, etc.)
+     * @return The corresponding TreeType enum value
+     */
+    public TreeType getTreeType(Object tree) {
+        if (tree instanceof wagemaker.uk.trees.SmallTree) {
+            return TreeType.SMALL;
+        } else if (tree instanceof wagemaker.uk.trees.AppleTree) {
+            return TreeType.APPLE;
+        } else if (tree instanceof wagemaker.uk.trees.CoconutTree) {
+            return TreeType.COCONUT;
+        } else if (tree instanceof wagemaker.uk.trees.BambooTree) {
+            return TreeType.BAMBOO;
+        } else if (tree instanceof wagemaker.uk.trees.BananaTree) {
+            return TreeType.BANANA;
+        } else if (tree instanceof wagemaker.uk.trees.Cactus) {
+            return TreeType.CACTUS;
+        }
+        return null;
+    }
+    
+    /**
+     * Gets the RespawnManager instance.
+     * 
+     * @return The respawn manager
+     */
+    public RespawnManager getRespawnManager() {
+        return respawnManager;
+    }
+    
     @Override
     public void dispose() {
         batch.dispose();
@@ -3764,5 +3900,10 @@ public class MyGdxGame extends ApplicationAdapter {
             remotePlayer.dispose();
         }
         remotePlayers.clear();
+        
+        // Dispose respawn indicators
+        if (respawnManager != null) {
+            respawnManager.disposeIndicators();
+        }
     }
 }

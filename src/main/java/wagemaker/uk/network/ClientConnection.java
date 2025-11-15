@@ -102,6 +102,9 @@ public class ClientConnection implements Runnable {
                 snapshot.getClearedPositions(),
                 snapshot.getRainZones()));
             
+            // Send respawn state to synchronize pending respawn timers
+            server.sendRespawnStateToClient(this);
+            
             // Add player to world state
             server.getWorldState().addOrUpdatePlayer(playerState);
             
@@ -241,6 +244,14 @@ public class ClientConnection implements Runnable {
                 
             case BAMBOO_TRANSFORM:
                 handleBambooTransform((BambooTransformMessage) message);
+                break;
+                
+            case RESOURCE_RESPAWN:
+            case RESPAWN_STATE:
+                // These messages are server-to-client only
+                // Clients should not send these to the server
+                System.err.println("Client " + clientId + " sent server-only message: " + message.getType());
+                logSecurityViolation("Attempted to send server-only message: " + message.getType());
                 break;
                 
             default:

@@ -25,6 +25,8 @@ import wagemaker.uk.network.TreeState;
 import wagemaker.uk.network.WorldState;
 import wagemaker.uk.network.WorldStateMessage;
 import wagemaker.uk.network.WorldStateUpdateMessage;
+import wagemaker.uk.network.ResourceRespawnMessage;
+import wagemaker.uk.network.RespawnStateMessage;
 import wagemaker.uk.player.RemotePlayer;
 
 /**
@@ -363,5 +365,31 @@ public class GameMessageHandler extends DefaultMessageHandler {
         
         // Update game with new stone
         game.updateStoneFromState(stoneState);
+    }
+    
+    @Override
+    protected void handleResourceRespawn(wagemaker.uk.network.ResourceRespawnMessage message) {
+        // Pass the respawn message to the respawn manager
+        if (game.getRespawnManager() != null) {
+            game.getRespawnManager().handleResourceRespawn(
+                message.getResourceId(),
+                message.getResourceType(),
+                message.getTreeType(),
+                message.getX(),
+                message.getY()
+            );
+        } else {
+            System.err.println("Cannot handle resource respawn: RespawnManager not initialized");
+        }
+    }
+    
+    @Override
+    protected void handleRespawnState(wagemaker.uk.network.RespawnStateMessage message) {
+        // Pass the respawn state to the respawn manager for synchronization
+        if (game.getRespawnManager() != null) {
+            game.getRespawnManager().handleRespawnStateSync(message.getPendingRespawns());
+        } else {
+            System.err.println("Cannot handle respawn state: RespawnManager not initialized");
+        }
     }
 }

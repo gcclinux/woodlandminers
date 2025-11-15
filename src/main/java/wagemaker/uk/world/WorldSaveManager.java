@@ -1,6 +1,8 @@
 package wagemaker.uk.world;
 
 import wagemaker.uk.network.WorldState;
+import wagemaker.uk.respawn.RespawnEntry;
+import wagemaker.uk.respawn.RespawnManager;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -121,8 +123,29 @@ public class WorldSaveManager {
     }
     
     /**
-     * Saves the current world state to a file.
+     * Saves the current world state to a file (without inventory or respawn data).
      * Creates a backup of existing save before overwriting.
+     * This is a backward-compatible overload for old code.
+     * 
+     * @param saveName The name for the save file
+     * @param worldState The current world state to save
+     * @param playerX Player X position at save time
+     * @param playerY Player Y position at save time
+     * @param playerHealth Player health at save time
+     * @param isMultiplayer true if this is a multiplayer save, false for singleplayer
+     * @return true if save was successful, false otherwise
+     */
+    public static boolean saveWorld(String saveName, WorldState worldState, 
+                                  float playerX, float playerY, float playerHealth,
+                                  boolean isMultiplayer) {
+        return saveWorld(saveName, worldState, playerX, playerY, playerHealth, 
+                        null, isMultiplayer, null);
+    }
+    
+    /**
+     * Saves the current world state to a file (without respawn data).
+     * Creates a backup of existing save before overwriting.
+     * This is a backward-compatible overload that doesn't include respawn data.
      * 
      * @param saveName The name for the save file
      * @param worldState The current world state to save
@@ -137,6 +160,29 @@ public class WorldSaveManager {
                                   float playerX, float playerY, float playerHealth,
                                   wagemaker.uk.inventory.Inventory inventory,
                                   boolean isMultiplayer) {
+        return saveWorld(saveName, worldState, playerX, playerY, playerHealth, 
+                        inventory, isMultiplayer, null);
+    }
+    
+    /**
+     * Saves the current world state to a file.
+     * Creates a backup of existing save before overwriting.
+     * 
+     * @param saveName The name for the save file
+     * @param worldState The current world state to save
+     * @param playerX Player X position at save time
+     * @param playerY Player Y position at save time
+     * @param playerHealth Player health at save time
+     * @param inventory Player inventory at save time (can be null)
+     * @param isMultiplayer true if this is a multiplayer save, false for singleplayer
+     * @param respawnManager The respawn manager containing pending respawn data (can be null)
+     * @return true if save was successful, false otherwise
+     */
+    public static boolean saveWorld(String saveName, WorldState worldState, 
+                                  float playerX, float playerY, float playerHealth,
+                                  wagemaker.uk.inventory.Inventory inventory,
+                                  boolean isMultiplayer,
+                                  RespawnManager respawnManager) {
         try {
             // Validate save name
             if (!isValidSaveName(saveName)) {
@@ -196,6 +242,23 @@ public class WorldSaveManager {
                 saveData.setBambooStackCount(inventory.getBambooStackCount());
                 saveData.setWoodStackCount(inventory.getWoodStackCount());
                 saveData.setPebbleCount(inventory.getPebbleCount());
+            }
+            
+            // Set respawn data if provided
+            if (respawnManager != null) {
+                try {
+                    List<RespawnEntry> respawnData = respawnManager.getSaveData();
+                    if (respawnData != null) {
+                        saveData.setPendingRespawns(respawnData);
+                        System.out.println("Saved " + respawnData.size() + " pending respawn entries");
+                    } else {
+                        System.err.println("WARNING: Respawn manager returned null save data");
+                    }
+                } catch (Exception e) {
+                    System.err.println("ERROR: Failed to get respawn data for save: " + e.getMessage());
+                    e.printStackTrace();
+                    // Continue with save even if respawn data fails
+                }
             }
             
             // Validate save data before writing
@@ -288,6 +351,42 @@ public class WorldSaveManager {
             System.out.println("Loaded " + saveData.getExistingTreeCount() + " trees, " + 
                              saveData.getExistingStoneCount() + " stones, and " + 
                              saveData.getUncollectedItemCount() + " items");
+            
+            // Log respawn data if present
+            try {
+                List<RespawnEntry> respawnData = saveData.getPendingRespawns();
+                if (respawnData != null && !respawnData.isEmpty()) {
+                    System.out.println("Loaded " + respawnData.size() + " pending respawn entries");
+                    
+                    // Check for expired respawns
+                    try {
+                        long currentTime = System.currentTimeMillis();
+                        long expiredCount = respawnData.stream()
+                            .filter(entry -> {
+                                try {
+                                    return entry != null && entry.isReadyToRespawn();
+                                } catch (Exception e) {
+                                    System.err.println("ERROR: Exception checking respawn entry: " + e.getMessage());
+                                    return false;
+                                }
+                            })
+                            .count();
+                        
+                        if (expiredCount > 0) {
+                            System.out.println(expiredCount + " respawn timers expired while game was closed (will respawn immediately)");
+                        }
+                    } catch (Exception e) {
+                        System.err.println("ERROR: Failed to check for expired respawns: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                } else {
+                    System.out.println("No pending respawn entries in save file");
+                }
+            } catch (Exception e) {
+                System.err.println("ERROR: Failed to process respawn data from save file: " + e.getMessage());
+                e.printStackTrace();
+                // Continue loading even if respawn data processing fails
+            }
             
             return saveData;
             

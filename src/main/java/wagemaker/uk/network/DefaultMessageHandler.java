@@ -119,6 +119,14 @@ public class DefaultMessageHandler implements MessageHandler {
                     handleStoneCreated((StoneCreatedMessage) message);
                     break;
                     
+                case RESOURCE_RESPAWN:
+                    handleResourceRespawn((ResourceRespawnMessage) message);
+                    break;
+                    
+                case RESPAWN_STATE:
+                    handleRespawnState((RespawnStateMessage) message);
+                    break;
+                    
                 default:
                     System.err.println("Unknown message type: " + message.getType());
             }
@@ -360,5 +368,25 @@ public class DefaultMessageHandler implements MessageHandler {
     protected void handleStoneCreated(StoneCreatedMessage message) {
         System.out.println("Stone created: " + message.getStoneId() + 
                          " at (" + message.getX() + ", " + message.getY() + ")");
+    }
+    
+    /**
+     * Handles RESOURCE_RESPAWN message.
+     * Override this method to respawn resources in game world.
+     */
+    protected void handleResourceRespawn(ResourceRespawnMessage message) {
+        System.out.println("Resource respawned: " + message.getResourceId() + 
+                         " (" + message.getResourceType() + ") at (" + 
+                         message.getX() + ", " + message.getY() + ")");
+    }
+    
+    /**
+     * Handles RESPAWN_STATE message.
+     * Override this method to synchronize respawn state from server.
+     */
+    protected void handleRespawnState(RespawnStateMessage message) {
+        System.out.println("Respawn state sync: " + 
+                         (message.getPendingRespawns() != null ? message.getPendingRespawns().size() : 0) + 
+                         " pending respawns");
     }
 }

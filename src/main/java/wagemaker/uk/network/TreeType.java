@@ -10,5 +10,6 @@ public enum TreeType implements Serializable {
     APPLE,
     COCONUT,
     BAMBOO,
-    BANANA
+    BANANA,
+    CACTUS
 }

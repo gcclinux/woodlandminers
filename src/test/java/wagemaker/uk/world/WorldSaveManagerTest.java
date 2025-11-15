@@ -9,6 +9,9 @@ import wagemaker.uk.network.TreeType;
 import wagemaker.uk.network.ItemState;
 import wagemaker.uk.network.ItemType;
 import wagemaker.uk.weather.RainZone;
+import wagemaker.uk.respawn.RespawnEntry;
+import wagemaker.uk.respawn.RespawnManager;
+import wagemaker.uk.respawn.ResourceType;
 
 import java.io.File;
 import java.io.IOException;
@@ -559,5 +562,178 @@ public class WorldSaveManagerTest {
         // Clean up
         WorldSaveManager.deleteSave(saveName1, false);
         WorldSaveManager.deleteSave(saveName2, false);
+    }
+    
+    // Test 9: Respawn data integration
+    
+    @Test
+    @Order(21)
+    public void testSaveAndLoadWithRespawnData() {
+        // Create mock respawn manager with test data
+        RespawnManager mockRespawnManager = new RespawnManager(null, true);
+        
+        // Register some destroyed resources
+        long currentTime = System.currentTimeMillis();
+        mockRespawnManager.registerDestruction("tree_123", ResourceType.TREE, 100.0f, 200.0f, TreeType.APPLE);
+        mockRespawnManager.registerDestruction("stone_456", ResourceType.STONE, 300.0f, 400.0f, null);
+        
+        // Save world with respawn data
+        assertTrue(WorldSaveManager.saveWorld("respawn-test", testWorldState, 
+                                            100, 200, 85, null, false, mockRespawnManager),
+                  "Save with respawn data should succeed");
+        
+        // Load the save
+        WorldSaveData loadedData = WorldSaveManager.loadWorld("respawn-test", false);
+        assertNotNull(loadedData, "Loaded data should not be null");
+        
+        // Verify respawn data was saved
+        List<RespawnEntry> respawnData = loadedData.getPendingRespawns();
+        assertNotNull(respawnData, "Respawn data should not be null");
+        assertEquals(2, respawnData.size(), "Should have 2 pending respawns");
+        
+        // Verify respawn entries
+        boolean foundTree = false;
+        boolean foundStone = false;
+        
+        for (RespawnEntry entry : respawnData) {
+            if ("tree_123".equals(entry.getResourceId())) {
+                foundTree = true;
+                assertEquals(ResourceType.TREE, entry.getResourceType(), "Resource type should be TREE");
+                assertEquals(100.0f, entry.getX(), 0.01f, "Tree X position should match");
+                assertEquals(200.0f, entry.getY(), 0.01f, "Tree Y position should match");
+                assertEquals(TreeType.APPLE, entry.getTreeType(), "Tree type should be APPLE");
+            } else if ("stone_456".equals(entry.getResourceId())) {
+                foundStone = true;
+                assertEquals(ResourceType.STONE, entry.getResourceType(), "Resource type should be STONE");
+                assertEquals(300.0f, entry.getX(), 0.01f, "Stone X position should match");
+                assertEquals(400.0f, entry.getY(), 0.01f, "Stone Y position should match");
+                assertNull(entry.getTreeType(), "Stone should have null tree type");
+            }
+        }
+        
+        assertTrue(foundTree, "Should find tree respawn entry");
+        assertTrue(foundStone, "Should find stone respawn entry");
+        
+        // Clean up
+        WorldSaveManager.deleteSave("respawn-test", false);
+    }
+    
+    @Test
+    @Order(22)
+    public void testSaveWithoutRespawnData() {
+        // Save without respawn manager (backward compatibility)
+        assertTrue(WorldSaveManager.saveWorld("no-respawn-test", testWorldState, 
+                                            100, 200, 85, null, false, null),
+                  "Save without respawn data should succeed");
+        
+        // Load the save
+        WorldSaveData loadedData = WorldSaveManager.loadWorld("no-respawn-test", false);
+        assertNotNull(loadedData, "Loaded data should not be null");
+        
+        // Verify respawn data is null or empty
+        List<RespawnEntry> respawnData = loadedData.getPendingRespawns();
+        assertTrue(respawnData == null || respawnData.isEmpty(), 
+                  "Respawn data should be null or empty when not provided");
+        
+        // Clean up
+        WorldSaveManager.deleteSave("no-respawn-test", false);
+    }
+    
+    @Test
+    @Order(23)
+    public void testLoadWithExpiredRespawnTimers() {
+        // Create mock respawn manager with expired timer
+        RespawnManager mockRespawnManager = new RespawnManager(null, true);
+        
+        // Register a resource that was destroyed in the past (expired timer)
+        long pastTime = System.currentTimeMillis() - (20 * 60 * 1000); // 20 minutes ago
+        RespawnEntry expiredEntry = new RespawnEntry(
+            "expired_tree",
+            ResourceType.TREE,
+            150.0f,
+            250.0f,
+            pastTime,
+            15 * 60 * 1000, // 15 minute respawn duration
+            TreeType.BANANA
+        );
+        
+        // Manually add expired entry to respawn manager's save data
+        List<RespawnEntry> testEntries = new ArrayList<>();
+        testEntries.add(expiredEntry);
+        
+        // Create save data with expired respawn entry
+        WorldSaveData saveData = new WorldSaveData(
+            TEST_WORLD_SEED,
+            testWorldState.getTrees(),
+            testWorldState.getStones(),
+            testWorldState.getItems(),
+            testWorldState.getClearedPositions(),
+            testWorldState.getRainZones(),
+            100, 200, 85,
+            "expired-respawn-test",
+            "singleplayer"
+        );
+        saveData.setPendingRespawns(testEntries);
+        
+        // Save manually
+        assertTrue(WorldSaveManager.saveWorld("expired-respawn-test", testWorldState, 
+                                            100, 200, 85, null, false, mockRespawnManager),
+                  "Save should succeed");
+        
+        // Manually set the expired entry
+        WorldSaveData loadedForUpdate = WorldSaveManager.loadWorld("expired-respawn-test", false);
+        loadedForUpdate.setPendingRespawns(testEntries);
+        
+        // Re-save with expired entry
+        try (java.io.FileOutputStream fos = new java.io.FileOutputStream(
+                new File(System.getProperty("user.home") + "/.config/woodlanders/world-saves/singleplayer/expired-respawn-test.wld"));
+             java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream(fos)) {
+            oos.writeObject(loadedForUpdate);
+        } catch (Exception e) {
+            fail("Failed to manually save expired respawn data: " + e.getMessage());
+        }
+        
+        // Load the save - should detect expired timer
+        WorldSaveData loadedData = WorldSaveManager.loadWorld("expired-respawn-test", false);
+        assertNotNull(loadedData, "Loaded data should not be null");
+        
+        List<RespawnEntry> respawnData = loadedData.getPendingRespawns();
+        assertNotNull(respawnData, "Respawn data should not be null");
+        assertEquals(1, respawnData.size(), "Should have 1 respawn entry");
+        
+        // Verify the entry is marked as ready to respawn
+        RespawnEntry entry = respawnData.get(0);
+        assertTrue(entry.isReadyToRespawn(), "Entry should be ready to respawn");
+        
+        // Clean up
+        WorldSaveManager.deleteSave("expired-respawn-test", false);
+    }
+    
+    @Test
+    @Order(24)
+    public void testBackwardCompatibilityWithOldSaves() {
+        // Test loading old saves that don't have respawn data
+        // This simulates loading a save file from before respawn system was added
+        
+        // Create a save without respawn data using the old method signature
+        assertTrue(WorldSaveManager.saveWorld("old-save-test", testWorldState, 
+                                            100, 200, 85, false),
+                  "Old-style save should succeed");
+        
+        // Load the save
+        WorldSaveData loadedData = WorldSaveManager.loadWorld("old-save-test", false);
+        assertNotNull(loadedData, "Old save should load successfully");
+        
+        // Verify basic data is intact
+        assertEquals(TEST_WORLD_SEED, loadedData.getWorldSeed(), "World seed should match");
+        assertEquals(100.0f, loadedData.getPlayerX(), 0.01f, "Player X should match");
+        
+        // Verify respawn data is handled gracefully (null or empty)
+        List<RespawnEntry> respawnData = loadedData.getPendingRespawns();
+        assertTrue(respawnData == null || respawnData.isEmpty(), 
+                  "Old saves should have null or empty respawn data");
+        
+        // Clean up
+        WorldSaveManager.deleteSave("old-save-test", false);
     }
 }

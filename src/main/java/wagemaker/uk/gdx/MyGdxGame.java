@@ -889,8 +889,8 @@ public class MyGdxGame extends ApplicationAdapter {
         random.setSeed(worldSeed + x * 37L + y * 23L);
         
         // Stone spawn probability: consistent for both singleplayer and multiplayer
-        // 0.005 (0.5%) - on sand biomes only, approximately 1 stone per 64x64 sand tiles
-        float spawnRate = 0.005f;
+        // Single-player: 0.001 (0.1%), Multiplayer: 0.005 (0.5%)
+        float spawnRate = 0.001f;
         if (random.nextFloat() < spawnRate) {
             // Add random offset to break grid pattern
             float offsetX = (random.nextFloat() - 0.5f) * 64; // -32 to +32
@@ -910,9 +910,9 @@ public class MyGdxGame extends ApplicationAdapter {
                 return;
             }
             
-            // Don't spawn stones near player (1024px minimum distance)
+            // Don't spawn stones near player (512px minimum distance)
             float distFromPlayer = (float) Math.sqrt((stoneX - player.getX()) * (stoneX - player.getX()) + (stoneY - player.getY()) * (stoneY - player.getY()));
-            if (distFromPlayer < 1024) {
+            if (distFromPlayer < 512) {
                 return;
             }
             
@@ -3773,6 +3773,8 @@ public class MyGdxGame extends ApplicationAdapter {
             Stone stone = new Stone(x, y);
             stones.put(stoneId, stone);
             stoneMap.put(stoneId, stone);
+            // Remove from cleared positions so it can be interacted with again
+            clearedPositions.remove(stoneId);
         }
     }
     

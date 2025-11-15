@@ -425,8 +425,8 @@ public class WorldState implements Serializable {
         java.util.Random random = new java.util.Random();
         random.setSeed(worldSeed + x * 37L + y * 23L);
         
-        // Stone spawn probability: 0.005 (0.5%) - on sand biomes only
-        if (random.nextFloat() < 0.005f) {
+        // Stone spawn probability: 0.002 (0.2%) - on sand biomes only
+        if (random.nextFloat() < 0.002f) {
             // Add random offset to break grid pattern
             float offsetX = (random.nextFloat() - 0.5f) * 64;
             float offsetY = (random.nextFloat() - 0.5f) * 64;
@@ -770,8 +770,13 @@ public class WorldState implements Serializable {
      * Removes a stone from the world state (destroyed).
      */
     public void removeStone(String stoneId) {
+        System.out.println("[WorldState] removeStone called for: " + stoneId);
         StoneState stone = this.stones.remove(stoneId);
         if (stone != null) {
+            // Add to cleared positions to prevent immediate regeneration
+            clearedPositions.add(stoneId);
+            System.out.println("[WorldState] Stone removed and position cleared: " + stoneId);
+            
             int stoneAreaX = (int)stone.getX() / 512;
             int stoneAreaY = (int)stone.getY() / 512;
             if (stoneAreaX == currentPlayerSandAreaX && stoneAreaY == currentPlayerSandAreaY) {

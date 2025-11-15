@@ -28,6 +28,10 @@ public class WorldState implements Serializable {
     private Set<String> clearedPositions;
     private List<RainZone> rainZones;
     private long lastUpdateTimestamp;
+    private Map<String, StoneState> queuedStoneSpawns;
+    private Map<String, Long> queuedBambooSpawns;
+    private int currentPlayerSandAreaX;
+    private int currentPlayerSandAreaY;
     
     public WorldState() {
         this.players = new ConcurrentHashMap<>();
@@ -37,6 +41,10 @@ public class WorldState implements Serializable {
         this.clearedPositions = ConcurrentHashMap.newKeySet();
         this.rainZones = new ArrayList<>();
         this.lastUpdateTimestamp = System.currentTimeMillis();
+        this.queuedStoneSpawns = new ConcurrentHashMap<>();
+        this.queuedBambooSpawns = new ConcurrentHashMap<>();
+        this.currentPlayerSandAreaX = Integer.MAX_VALUE;
+        this.currentPlayerSandAreaY = Integer.MAX_VALUE;
     }
     
     public WorldState(long worldSeed) {
@@ -405,7 +413,7 @@ public class WorldState implements Serializable {
      * @param y The y-coordinate (must be aligned to 64px grid)
      * @return The generated StoneState, or null if no stone should exist at this position
      */
-    public StoneState generateStoneAt(int x, int y) {
+    public StoneState generateStoneAt(int x, int y, float playerX, float playerY) {
         String key = x + "," + y;
         
         // Check if stone already exists or was cleared
@@ -417,13 +425,19 @@ public class WorldState implements Serializable {
         java.util.Random random = new java.util.Random();
         random.setSeed(worldSeed + x * 37L + y * 23L);
         
-        // Stone spawn probability: 0.15 (15%) - 50% of bamboo tree rate (30%)
-        if (random.nextFloat() < 0.15f) {
+        // Stone spawn probability: 0.005 (0.5%) - on sand biomes only
+        if (random.nextFloat() < 0.005f) {
             // Add random offset to break grid pattern
-            float offsetX = (random.nextFloat() - 0.5f) * 64; // -32 to +32
-            float offsetY = (random.nextFloat() - 0.5f) * 64; // -32 to +32
+            float offsetX = (random.nextFloat() - 0.5f) * 64;
+            float offsetY = (random.nextFloat() - 0.5f) * 64;
             float stoneX = x + offsetX;
             float stoneY = y + offsetY;
+            
+            // Check distance from player (512px minimum) - skip if too close
+            float distFromPlayer = (float) Math.sqrt((stoneX - playerX) * (stoneX - playerX) + (stoneY - playerY) * (stoneY - playerY));
+            if (distFromPlayer < 512) {
+                return null;
+            }
             
             // Only spawn stones on sand biomes
             try {
@@ -436,7 +450,6 @@ public class WorldState implements Serializable {
                     return null;
                 }
             } catch (Exception e) {
-                // If biome check fails, don't spawn stone
                 return null;
             }
             
@@ -449,12 +462,12 @@ public class WorldState implements Serializable {
             // Create and store the stone
             StoneState stone = new StoneState(key, stoneX, stoneY, 50.0f);
             this.stones.put(key, stone);
-            System.out.println("[STONE] Generated stone at " + key + " (" + stoneX + ", " + stoneY + ")");
             return stone;
         }
         
         return null;
     }
+
     
     /**
      * Creates a complete snapshot of the current world state.
@@ -757,7 +770,14 @@ public class WorldState implements Serializable {
      * Removes a stone from the world state (destroyed).
      */
     public void removeStone(String stoneId) {
-        this.stones.remove(stoneId);
+        StoneState stone = this.stones.remove(stoneId);
+        if (stone != null) {
+            int stoneAreaX = (int)stone.getX() / 512;
+            int stoneAreaY = (int)stone.getY() / 512;
+            if (stoneAreaX == currentPlayerSandAreaX && stoneAreaY == currentPlayerSandAreaY) {
+                queuedStoneSpawns.put(stoneId, stone);
+            }
+        }
         this.lastUpdateTimestamp = System.currentTimeMillis();
     }
     
@@ -1324,5 +1344,23 @@ public class WorldState implements Serializable {
             e.printStackTrace();
             return false;
         }
+    }
+    
+    public void updatePlayerSandArea(float playerX, float playerY) {
+        queuedStoneSpawns.entrySet().removeIf(entry -> {
+            StoneState stone = entry.getValue();
+            float dx = stone.getX() - playerX;
+            float dy = stone.getY() - playerY;
+            float distance = (float) Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > 1024) {
+                this.stones.put(entry.getKey(), stone);
+                return true;
+            }
+            return false;
+        });
+    }
+    
+    private void processQueuedSpawns() {
     }
 }

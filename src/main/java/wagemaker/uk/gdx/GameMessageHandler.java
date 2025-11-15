@@ -353,9 +353,6 @@ public class GameMessageHandler extends DefaultMessageHandler {
     
     @Override
     protected void handleStoneCreated(wagemaker.uk.network.StoneCreatedMessage message) {
-        System.out.println("[STONE] Client received stone: " + message.getStoneId() + 
-                         " at (" + message.getX() + ", " + message.getY() + ")");
-        
         // Create stone state from message
         StoneState stoneState = new StoneState(
             message.getStoneId(),

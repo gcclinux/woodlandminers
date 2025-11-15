@@ -309,6 +309,9 @@ public class ClientConnection implements Runnable {
         // Update in world state
         server.getWorldState().addOrUpdatePlayer(playerState);
         
+        // Update player sand area and process queued spawns
+        server.getWorldState().updatePlayerSandArea(message.getX(), message.getY());
+        
         // Generate chunks around this player's new position
         server.generateChunksAroundPlayers();
         
@@ -363,8 +366,8 @@ public class ClientConnection implements Runnable {
                     int stoneX = Integer.parseInt(coords[0]);
                     int stoneY = Integer.parseInt(coords[1]);
                     
-                    // Try to generate the stone using deterministic logic
-                    stone = server.getWorldState().generateStoneAt(stoneX, stoneY);
+                    // Try to generate the stone using deterministic logic with player position
+                    stone = server.getWorldState().generateStoneAt(stoneX, stoneY, playerState.getX(), playerState.getY());
                 }
             } catch (Exception e) {
                 System.err.println("Failed to parse stone coordinates from targetId: " + targetId);

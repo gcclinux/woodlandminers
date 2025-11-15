@@ -80,7 +80,6 @@ public class BiomeManager {
             // Not on OpenGL thread (e.g., server-side background thread or tests)
             // Biome zones are still initialized and functional
             headlessMode = true;
-            System.out.println("BiomeManager: Skipping texture generation (thread: " + threadName + ")");
         }
         
         initialized = true;
@@ -176,8 +175,8 @@ public class BiomeManager {
         float sandProbability = (combinedNoise * 0.5f + 0.5f) + distancePhase;
         
         // Threshold for sand (adjust to control sand coverage)
-        // 0.6 means roughly 40% of the world will be sand patches
-        return sandProbability > 0.6f;
+        // 0.45 means roughly 55% of the world will be sand patches (increased from 0.6)
+        return sandProbability > 0.45f;
     }
     
     /**

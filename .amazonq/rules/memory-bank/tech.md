@@ -1,267 +1,99 @@
-# Technology Stack
+# Woodlanders - Technology Stack
 
-## Programming Languages
+## Programming Language
+- **Java 21**: Source and target compatibility set to Java 21
+- **Build Tool**: Gradle 9.0.0+ with Java plugin and application plugin
 
-### Java 21
-- **Version**: Java 21 (LTS)
-- **Source Compatibility**: JavaVersion.VERSION_21
-- **Target Compatibility**: JavaVersion.VERSION_21
-- Modern Java features and performance improvements
+## Core Dependencies
 
-## Core Framework
+### Game Framework
+- **libGDX 1.12.1**: Cross-platform game development framework
+  - `gdx`: Core framework
+  - `gdx-backend-lwjgl3`: Desktop rendering backend
+  - `gdx-platform`: Platform-specific natives
+  - `gdx-freetype`: Font rendering support
 
-### libGDX 1.12.1
-- **Purpose**: Cross-platform game development framework
-- **Components Used**:
-  - `gdx-core`: Core game engine
-  - `gdx-backend-lwjgl3`: Desktop backend (LWJGL 3)
-  - `gdx-platform`: Native libraries for desktop
-  - `gdx-freetype`: TrueType font rendering
-  - `gdx-backend-headless`: Headless backend for server and testing
+### Testing
+- **JUnit Jupiter 5.10.0**: Unit testing framework
+- **Mockito 5.5.0**: Mocking framework for tests
+- **libGDX Headless Backend**: Headless testing support
 
-### Key libGDX Features
-- Sprite rendering and texture management
-- Input handling (keyboard, mouse)
-- Asset management
-- Batch rendering for performance
-- Delta-time based game loop
+## Build Configuration
 
-## Build System
+### Main Application
+- **Main Class**: `wagemaker.uk.desktop.DesktopLauncher`
+- **JAR Output**: `woodlanders-client.jar` (full game with rendering)
+- **Working Directory**: Project root (for asset access)
 
-### Gradle
-- **Build Tool**: Gradle with Groovy DSL
-- **Plugins**:
-  - `java`: Java compilation
-  - `application`: Application packaging
-- **Version**: Project version 0.0.8
+### Dedicated Server
+- **Main Class**: `wagemaker.uk.server.DedicatedServerLauncher`
+- **JAR Output**: `woodlanders-server.jar` (headless, no rendering)
+- **Excluded Dependencies**: LWJGL, rendering backends, platform natives, freetype
 
-### Build Configuration
-```gradle
-sourceCompatibility = JavaVersion.VERSION_21
-targetCompatibility = JavaVersion.VERSION_21
+### Asset Configuration
+- **Asset Directory**: `assets/` (configured as resource source)
+- **Fonts**: `assets/fonts/` (slkscr.ttf, slkscrb.ttf)
+- **Localization**: `assets/localization/` (en.json, pl.json, pt.json, nl.json)
+- **Sprites**: `assets/sprites/` (player animations, assets.png)
+- **UI Assets**: `assets/ui/` (compass_background.png, compass_needle.png)
+
+## Build Commands
+
+### Development
+```bash
+./gradlew run                    # Run game client
+./gradlew build                  # Build both client and server JARs
+./gradlew test                   # Run all tests
+./gradlew clean                  # Clean build artifacts
 ```
 
-## Testing Framework
-
-### JUnit 5 (Jupiter)
-- **Version**: 5.10.0
-- **Purpose**: Unit and integration testing
-- **Test Platform**: junit-platform-launcher
-
-### Mockito
-- **Version**: 5.5.0
-- **Purpose**: Mocking framework for unit tests
-- **Extensions**: mockito-junit-jupiter for JUnit 5 integration
-
-### Test Configuration
-```gradle
-test {
-    useJUnitPlatform()
-    testLogging {
-        events = ["passed", "skipped", "failed"]
-        exceptionFormat = "full"
-    }
-}
+### Production
+```bash
+./gradlew jar                    # Build client JAR
+./gradlew serverJar              # Build server JAR
+java -jar woodlanders-client.jar # Run client
+java -jar woodlanders-server.jar # Run server
 ```
 
-## Dependencies
+## Project Version
+- **Current Version**: 0.0.8
+- **Version Management**: Defined in build.gradle
 
-### Runtime Dependencies
-```gradle
-implementation "com.badlogicgames.gdx:gdx:1.12.1"
-implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:1.12.1"
-implementation "com.badlogicgames.gdx:gdx-platform:1.12.1:natives-desktop"
-implementation "com.badlogicgames.gdx:gdx-freetype:1.12.1"
-implementation "com.badlogicgames.gdx:gdx-freetype-platform:1.12.1:natives-desktop"
-```
-
-### Test Dependencies
-```gradle
-testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
-testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-testImplementation 'org.mockito:mockito-core:5.5.0'
-testImplementation 'org.mockito:mockito-junit-jupiter:5.5.0'
-testImplementation "com.badlogicgames.gdx:gdx-backend-headless:1.12.1"
-testImplementation "com.badlogicgames.gdx:gdx-platform:1.12.1:natives-desktop"
-```
+## Test Configuration
+- **Test Framework**: JUnit Platform
+- **Test Logging**: Shows passed, skipped, and failed tests with full exception format
+- **Test Execution**: `./gradlew test`
 
 ## Networking
-
-### Custom TCP Protocol
-- **Transport**: Java Socket API (TCP)
-- **Architecture**: Server-authoritative with client prediction
-- **Message Format**: Custom serializable message classes
-- **Heartbeat**: 5-second keepalive with 15-second timeout
-
-### Network Components
-- `java.net.ServerSocket`: Server listening
-- `java.net.Socket`: Client connections
-- `java.io.DataInputStream/DataOutputStream`: Message serialization
-- Thread-based client handling
-
-## Data Formats
-
-### JSON
-- **Library**: Built-in Java JSON handling (likely using libGDX's JSON utilities)
-- **Usage**:
-  - World save files (.wld)
-  - Player configuration (woodlanders.json)
-  - Localization files (en.json, nl.json, pl.json, pt.json)
-
-### Binary
-- **Format**: Custom binary protocol for network messages
-- **Serialization**: DataInputStream/DataOutputStream
-
-## Asset Management
-
-### Sprites & Textures
-- **Format**: PNG images
-- **Main Atlas**: assets.png (sprite sheet)
-- **Organization**: Texture regions for efficient rendering
-- **Player Sprites**: Directional animation frames
-
-### Fonts
-- **Format**: TrueType Font (.ttf)
-- **Font**: Silkscreen (slkscr.ttf, slkscrb.ttf)
-- **Rendering**: libGDX FreeType for runtime font rendering
-- **Style**: Retro pixel font for authentic game feel
-
-### Localization
-- **Format**: JSON
-- **Languages**: English (en), Polish (pl), Portuguese (pt), Dutch (nl)
-- **Structure**: Key-value pairs for UI strings
-
-## Development Commands
-
-### Build Commands
-```bash
-# Build the project (creates both client and server JARs)
-./gradlew build
-
-# Build only client JAR
-./gradlew jar
-
-# Build only server JAR
-./gradlew serverJar
-
-# Clean build artifacts
-./gradlew clean
-```
-
-### Run Commands
-```bash
-# Run the game client
-./gradlew run
-
-# Run with specific working directory
-./gradlew run --args="<arguments>"
-```
-
-### Test Commands
-```bash
-# Run all tests
-./gradlew test
-
-# Run tests with detailed output
-./gradlew test --info
-
-# Run specific test class
-./gradlew test --tests "wagemaker.uk.localization.LocalizationManagerTest"
-
-# Run tests continuously
-./gradlew test --continuous
-```
-
-### JAR Execution
-```bash
-# Run client JAR
-java -jar build/libs/woodlanders-client.jar
-
-# Run server JAR
-java -jar build/libs/woodlanders-server.jar
-```
-
-### Gradle Wrapper
-```bash
-# Update Gradle wrapper
-./gradlew wrapper --gradle-version=9.2.0
-
-# Check Gradle version
-./gradlew --version
-```
-
-## Development Environment
-
-### IDE Support
-- **Primary**: Kiro IDE (AI-assisted development)
-- **Compatible**: IntelliJ IDEA, Eclipse, VS Code with Java extensions
-
-### Version Control
-- **System**: Git
-- **Hosting**: GitHub
-- **CI/CD**: GitHub Actions for releases
-
-### Operating Systems
-- **Development**: Linux, macOS, Windows
-- **Target**: Cross-platform (Java)
-
-## Configuration Directories
-
-### Player Data Storage
-- **Windows**: `%APPDATA%/Woodlanders/`
-- **macOS**: `~/Library/Application Support/Woodlanders/`
-- **Linux**: `~/.config/woodlanders/`
-
-### Files
-- `woodlanders.json`: Player configuration
-- `world-saves/singleplayer/`: Singleplayer world saves
-- `world-saves/multiplayer/`: Multiplayer world saves
+- **Protocol**: Custom TCP-based protocol
+- **Message Format**: Serialized Java objects
+- **Default Port**: 25565 (configurable)
+- **Max Clients**: 20 (configurable)
+- **Heartbeat Interval**: 5 seconds
+- **Connection Timeout**: 15 seconds
 
 ## Performance Optimizations
+- **Chunk-Based Rendering**: Only visible chunks rendered
+- **Spatial Partitioning**: Optimized collision detection
+- **Message Batching**: Network message rate limiting
+- **Delta-Time Physics**: Frame-rate independent movement
+- **Texture Atlas**: Sprite management efficiency
+- **Memory-Efficient Generation**: Procedural world generation
 
-### Rendering
-- Chunk-based rendering (only visible areas)
-- Texture atlases for sprite batching
-- Efficient sprite batch management
-- Delta-time based animations
+## Platform Support
+- **Windows**: Full support with LWJGL3 backend
+- **macOS**: Full support with LWJGL3 backend
+- **Linux**: Full support with LWJGL3 backend
 
-### Collision Detection
-- Spatial partitioning
-- Bounding box optimization
-- Distance-based checks before detailed collision
+## Configuration Files
+- **server.properties**: Server configuration (port, max clients, logging)
+- **woodlanders.json**: Player configuration (OS-specific config directory)
+- **World Saves**: Stored in OS-specific directories
+  - Windows: `%APPDATA%/Woodlanders/`
+  - macOS: `~/Library/Application Support/Woodlanders/`
+  - Linux: `~/.config/woodlanders/`
 
-### Networking
-- Message batching
-- Rate limiting per client
-- Efficient serialization
-- Heartbeat-based connection management
-
-### Memory Management
-- Texture disposal on entity removal
-- Deferred operations for thread safety
-- Efficient world generation (chunk-based)
-
-## Build Artifacts
-
-### Client JAR
-- **Name**: woodlanders-client.jar
-- **Size**: ~30-40 MB (includes all dependencies and assets)
-- **Main Class**: wagemaker.uk.desktop.DesktopLauncher
-- **Includes**: All rendering libraries, assets, fonts, sprites
-
-### Server JAR
-- **Name**: woodlanders-server.jar
-- **Size**: ~5-10 MB (minimal dependencies)
-- **Main Class**: wagemaker.uk.server.DedicatedServerLauncher
-- **Excludes**: Rendering libraries, LWJGL, native libraries, assets
-
-## External Resources
-
-### Repositories
-- **Maven Central**: Primary dependency repository
-- **GitHub**: Source code hosting
-
-### Documentation
-- libGDX Wiki: https://libgdx.com/wiki/
-- Java 21 Documentation: https://docs.oracle.com/en/java/javase/21/
-- JUnit 5 User Guide: https://junit.org/junit5/docs/current/user-guide/
+## Development Environment
+- **IDE Support**: IntelliJ IDEA, Eclipse, VS Code (with Java extensions)
+- **Gradle Wrapper**: Included for consistent builds
+- **Git Integration**: GitHub Actions for CI/CD (release workflows)

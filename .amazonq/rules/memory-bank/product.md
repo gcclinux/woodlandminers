@@ -1,104 +1,71 @@
-# Product Overview
+# Woodlanders - Product Overview
 
 ## Project Purpose
-
-Woodlanders is a 2D multiplayer adventure game built entirely through AI-assisted development. It serves as both an entertaining game and a proof-of-concept demonstrating that complex software can be built through conversational AI without manual coding. The project showcases the capabilities of AI-driven development using the Kiro IDE.
+Woodlanders is a fully functional 2D multiplayer adventure game built with libGDX and Java, demonstrating AI-assisted game development through conversational prompts. The project showcases complete game systems including procedural world generation, multiplayer networking, inventory management, and environmental mechanics.
 
 ## Value Proposition
-
-- **Zero-Code Development**: Complete game built using only natural language prompts and AI assistance
-- **Multiplayer Experience**: Real-time networked gameplay with dedicated server support
-- **Infinite Exploration**: Procedurally generated worlds with multiple biomes
-- **Resource Management**: Inventory, crafting, and survival mechanics
-- **Cross-Platform**: Java-based game runs on Windows, macOS, and Linux
+- **Complete Multiplayer Experience**: Full-featured networking with server-client architecture supporting 20+ concurrent players
+- **Infinite World Exploration**: Procedurally generated terrain with multiple biomes (grass, sand)
+- **Rich Game Systems**: Combat, inventory, health management, weather, and resource collection
+- **Cross-Platform**: Runs on Windows, macOS, and Linux with consistent gameplay
+- **Localization Support**: Multi-language UI (English, Polish, Portuguese, Dutch)
+- **Persistent World**: Save/load system with separate singleplayer and multiplayer saves
 
 ## Key Features
 
 ### World & Environment
-- Infinite procedurally generated worlds with chunk-based rendering
-- Multiple biomes (grass, sand) with distinct visual styles
-- Dynamic weather system with random rain events
-- Compass navigation pointing to spawn point
-- Complete world save/load system with separate singleplayer/multiplayer saves
+- Infinite procedurally generated world with chunk-based rendering
+- Multiple biomes with distinct visual styles and generation patterns
+- Dynamic rain system with random events (120s duration, 2-8 minute intervals)
+- Compass navigation pointing toward spawn point
+- Environmental hazards (cacti) with damage mechanics
 
 ### Character & Gameplay
 - Animated player character with directional sprites
 - Health system with damage and restoration mechanics
-- Precise collision detection for all game objects
-- Combat system for attacking trees and environmental objects
-- Planting system for bamboo cultivation
-
-### Resources & Inventory
-- 6-slot inventory system with multiple item types
-- Collectible items: apples, bananas, baby bamboo, bamboo stacks, wood stacks, pebbles
+- Precise collision detection with optimized hitboxes
+- Smooth movement with delta-time based physics
 - Auto-consumption of items when health is low
-- Item drops from destroyed trees
-- Network-synchronized inventory across multiplayer sessions
 
-### Trees & Objects
-- 6 tree types: small trees, regular trees, apple trees, banana trees, bamboo trees, coconut trees
-- Health bars and regeneration for damaged trees
-- Environmental hazards (cacti) that damage players
-- Stone objects that can be destroyed to collect pebbles
-- Growth mechanics for planted bamboo
+### Trees & Resources
+- 6 tree types: Small trees, Apple trees, Banana trees, Bamboo trees, Coconut trees, Cacti
+- Combat system with visual health bars
+- Health regeneration for damaged trees
+- Resource drops (apples, bananas, wood, bamboo)
+- Bamboo planting system on sand tiles with growth mechanics
+
+### Inventory & Items
+- 5-slot inventory system with item selection
+- Collectible items: Apples, Bananas, Baby Bamboo, Bamboo Stacks, Wood Stacks
+- Auto-pickup within 32-pixel radius
+- Separate inventories for singleplayer and multiplayer modes
+- Network synchronization across multiplayer sessions
 
 ### Multiplayer
-- Dedicated server with configurable settings (port, max clients)
-- Real-time synchronization of player positions, actions, and world state
-- 22+ network message types for complete game state sync
+- Dedicated server with configurable port and max clients
+- Real-time player synchronization
+- 22+ network message types for complete state sync
 - Connection quality indicator
-- Separate player positions for singleplayer and multiplayer modes
-- Graceful disconnect/reconnect with last server memory
+- Graceful disconnect/reconnect handling
+- Last server memory for quick reconnection
 
 ### User Interface
 - Wooden plank themed menu system
+- In-game menu accessible via ESC key
+- World save/load management
 - Player name customization (3-15 characters)
-- HUD elements: health bar, inventory display, compass, connection status
-- Multi-language support: English, Polish, Portuguese, Dutch
-- Automatic system language detection
-- World management: save, load, and manage multiple world saves
+- Language selection with auto-detection
+- HUD elements: Health bar, inventory, compass, connection status
 
 ## Target Users
-
-### Primary Users
-- **Gamers**: Players looking for a casual 2D multiplayer adventure experience
-- **Indie Game Enthusiasts**: Players interested in procedurally generated worlds and survival mechanics
-- **Multiplayer Fans**: Groups wanting to play together in a shared world
-
-### Secondary Users
-- **AI Development Researchers**: Studying AI-assisted software development capabilities
-- **Game Developers**: Learning from an AI-built game architecture
-- **Educators**: Teaching game development concepts through a complete example
-- **Open Source Contributors**: Extending and improving the game
+- Game developers learning multiplayer architecture
+- Players interested in exploration and resource gathering
+- Developers exploring AI-assisted development workflows
+- Educators teaching game development concepts
 
 ## Use Cases
-
-### Single Player
-- Explore infinite procedurally generated worlds
-- Gather resources and manage inventory
-- Plant and harvest bamboo
-- Survive environmental hazards
-- Save and load multiple worlds
-
-### Multiplayer
-- Host a server for friends to join
-- Connect to remote servers
-- Collaborate on resource gathering
-- Share a persistent world state
-- See other players in real-time
-
-### Development & Learning
-- Study AI-assisted game development techniques
-- Examine libGDX framework implementation
-- Learn multiplayer networking patterns
-- Understand procedural generation algorithms
-- Contribute new features through AI prompts
-
-## Technical Highlights
-
-- **Performance**: Chunk-based rendering, spatial partitioning, texture atlases
-- **Network**: Custom TCP protocol with server-authoritative architecture
-- **Architecture**: Clean separation of concerns (client, server, network, world, UI)
-- **Testing**: JUnit 5 with Mockito for unit and integration tests
-- **Build**: Gradle with separate client and server JAR outputs
-- **Version**: Java 21 with libGDX 1.12.1
+- Multiplayer cooperative exploration and resource gathering
+- Single-player world exploration and survival
+- Testing and demonstrating multiplayer networking
+- Learning libGDX game development patterns
+- Experimenting with procedural world generation

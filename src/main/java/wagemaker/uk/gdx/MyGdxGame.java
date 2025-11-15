@@ -871,10 +871,9 @@ public class MyGdxGame extends ApplicationAdapter {
         // Set deterministic random seed based on world seed and position
         random.setSeed(worldSeed + x * 37L + y * 23L);
         
-        // Stone spawn probability: different for singleplayer vs multiplayer
-        // Singleplayer: 0.0006 (0.06%) - rare stones
-        // Multiplayer: 0.005 (0.5%) - reduced for rarer stones
-        float spawnRate = (gameMode == GameMode.SINGLEPLAYER) ? 0.0006f : 0.005f;
+        // Stone spawn probability: consistent for both singleplayer and multiplayer
+        // 0.005 (0.5%) - on sand biomes only, approximately 1 stone per 64x64 sand tiles
+        float spawnRate = 0.005f;
         if (random.nextFloat() < spawnRate) {
             // Add random offset to break grid pattern
             float offsetX = (random.nextFloat() - 0.5f) * 64; // -32 to +32
@@ -891,6 +890,12 @@ public class MyGdxGame extends ApplicationAdapter {
             // Don't spawn stones too close to spawn point (within 200px)
             float distanceFromSpawn = (float) Math.sqrt(stoneX * stoneX + stoneY * stoneY);
             if (distanceFromSpawn < 200) {
+                return;
+            }
+            
+            // Don't spawn stones near player (1024px minimum distance)
+            float distFromPlayer = (float) Math.sqrt((stoneX - player.getX()) * (stoneX - player.getX()) + (stoneY - player.getY()) * (stoneY - player.getY()));
+            if (distFromPlayer < 1024) {
                 return;
             }
             
@@ -1988,7 +1993,7 @@ public class MyGdxGame extends ApplicationAdapter {
     }
     
     /**
-     * Updates a stone's health from server state.
+     * Updates a stone's health from server state or creates it if it doesn't exist.
      * 
      * @param stoneState The stone state from the server
      */
@@ -2000,12 +2005,24 @@ public class MyGdxGame extends ApplicationAdapter {
         String stoneId = stoneState.getStoneId();
         float health = stoneState.getHealth();
         
-        // Update health of existing stone
+        // Check if stone already exists
         Stone stone = stoneMap.get(stoneId);
         if (stone != null) {
+            // Update health of existing stone
             stone.setHealth(health);
+        } else {
+            // Queue stone creation to render thread (texture creation requires OpenGL context)
+            deferOperation(() -> {
+                // Double-check it wasn't created while waiting for render thread
+                if (!stoneMap.containsKey(stoneId)) {
+                    Stone newStone = new Stone(stoneState.getX(), stoneState.getY());
+                    newStone.setHealth(health);
+                    stones.put(stoneId, newStone);
+                    stoneMap.put(stoneId, newStone);
+                    System.out.println("[STONE] Created stone on client: " + stoneId + " at (" + stoneState.getX() + ", " + stoneState.getY() + ")");
+                }
+            });
         }
-        // If stone doesn't exist on client, it hasn't been generated yet - this is normal
     }
     
     /**

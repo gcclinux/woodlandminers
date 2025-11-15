@@ -477,7 +477,7 @@ public class GameServer {
                 }
                 
                 // Generate stone at this position (if it should exist)
-                StoneState stone = worldState.generateStoneAt(x, y);
+                StoneState stone = worldState.generateStoneAt(x, y, centerX, centerY);
                 if (stone != null && stone.getHealth() > 0) {
                     // Broadcast new stone to all clients (only if not destroyed)
                     StoneCreatedMessage message = new StoneCreatedMessage(
@@ -488,7 +488,6 @@ public class GameServer {
                         stone.getHealth()
                     );
                     broadcastToAll(message);
-                    System.out.println("[STONE] Broadcast stone to clients: " + stone.getStoneId());
                 }
             }
         }

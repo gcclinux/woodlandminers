@@ -1,190 +1,154 @@
-# Project Structure
+# Woodlanders - Project Structure
 
 ## Directory Organization
 
 ```
 Woodlanders/
-├── .amazonq/rules/memory-bank/    # AI context and project memory
-├── .github/workflows/             # CI/CD pipelines for releases
-├── .kiro/specs/                   # Feature specifications (19 specs)
-├── assets/                        # Game resources
-│   ├── fonts/                     # Pixel fonts (slkscr.ttf)
-│   ├── localization/              # Language files (en, nl, pl, pt)
-│   ├── sprites/                   # Game sprites and textures
-│   └── ui/                        # UI elements (compass)
-├── docs/                          # Technical documentation
-├── screenshots/                   # Game screenshots
-├── src/main/java/wagemaker/uk/   # Source code
-│   ├── biome/                     # Biome generation and management
-│   ├── client/                    # Game client networking
-│   ├── desktop/                   # Desktop launcher
-│   ├── gdx/                       # Main game loop and core logic
-│   ├── inventory/                 # Inventory management
-│   ├── items/                     # Item definitions and logic
-│   ├── localization/              # Localization system
-│   ├── network/                   # Network protocol and messages
-│   ├── objects/                   # Game objects (stones, pebbles)
-│   ├── planting/                  # Planting mechanics
-│   ├── player/                    # Player entity and logic
-│   ├── server/                    # Dedicated server
-│   ├── trees/                     # Tree entities and types
-│   ├── ui/                        # User interface components
-│   ├── weather/                   # Weather system
-│   └── world/                     # World generation and persistence
-└── src/test/java/wagemaker/uk/   # Unit and integration tests
+├── src/main/java/wagemaker/uk/
+│   ├── biome/              # Biome generation and management
+│   ├── client/             # Client-side configuration
+│   ├── desktop/            # Desktop launcher entry point
+│   ├── gdx/                # Core game loop and rendering
+│   ├── inventory/          # Inventory system
+│   ├── items/              # Item definitions and types
+│   ├── localization/       # Multi-language support
+│   ├── network/            # Networking and message protocol
+│   ├── objects/            # Game objects (stones, etc.)
+│   ├── planting/           # Bamboo planting system
+│   ├── player/             # Player and remote player logic
+│   ├── server/             # Dedicated server implementation
+│   ├── trees/              # Tree types and mechanics
+│   ├── ui/                 # Menu and UI systems
+│   ├── weather/            # Rain and weather systems
+│   └── world/              # World save/load management
+├── src/test/java/          # Unit and integration tests
+├── assets/
+│   ├── fonts/              # Game fonts (slkscr.ttf, slkscrb.ttf)
+│   ├── localization/       # Language JSON files (en, pl, pt, nl)
+│   ├── sprites/            # Player and entity sprites
+│   ├── textures/           # Terrain and object textures
+│   └── ui/                 # UI assets (compass, etc.)
+├── docs/                   # Documentation and guides
+├── .kiro/specs/            # Kiro AI specification files
+├── .amazonq/rules/         # Amazon Q rules and memory bank
+├── build.gradle            # Gradle build configuration
+├── settings.gradle         # Gradle settings
+└── server.properties       # Server configuration
 ```
 
 ## Core Components
 
-### Game Core (gdx/)
-- **MyGdxGame**: Main game class, render loop, input handling, game state management
-- Central coordinator for all game systems
-- Manages collections of entities (players, trees, items, stones)
-- Handles both singleplayer and multiplayer modes
+### Game Loop (gdx/)
+- **MyGdxGame.java**: Main game loop, rendering pipeline, game state management
+- **GameMessageHandler.java**: Handles incoming network messages during gameplay
 
 ### Player System (player/)
-- **Player**: Player entity with position, health, animation, inventory
-- Movement and collision detection
-- Attack mechanics
-- Network synchronization
+- **Player.java**: Local player with movement, animation, combat, health
+- **RemotePlayer.java**: Remote player representation in multiplayer
 
-### World System (world/)
-- **WorldGenerator**: Procedural world generation with biomes
-- **WorldSaveManager**: Save/load world state to JSON
-- **WorldSaveData**: Data structure for world persistence
-- Chunk-based rendering for infinite worlds
-
-### Biome System (biome/)
-- **BiomeType**: Enum defining biome types (GRASS, SAND)
-- **BiomeManager**: Biome generation and tile management
-- Biome-specific textures and generation rules
+### World Generation (biome/)
+- **BiomeManager.java**: Generates and manages biome zones
+- **BiomeType.java**: Enum for grass and sand biomes
+- **BiomeTextureGenerator.java**: Dynamic texture generation per biome
+- **BiomeConfig.java**: Biome configuration parameters
 
 ### Tree System (trees/)
-- **Tree**: Base tree entity with health, collision, regeneration
-- **TreeType**: Enum for tree varieties (SMALL, REGULAR, APPLE, BANANA, BAMBOO, COCONUT)
-- Health bars and damage mechanics
-- Item drops on destruction
+- **SmallTree.java**: Small decorative trees
+- **AppleTree.java**: Fruit-bearing trees with apple drops
+- **BananaTree.java**: Fruit-bearing trees with banana drops
+- **BambooTree.java**: Bamboo with unique collision
+- **CoconutTree.java**: Coconut trees
+- **Cactus.java**: Environmental hazard with damage
 
-### Object System (objects/)
-- **Stone**: Destructible stone objects that drop pebbles
-- **Pebble**: Collectible resource items
-- Health and collision mechanics similar to trees
-
-### Inventory System (inventory/)
-- **InventoryManager**: Manages player inventory (6 slots)
-- **ItemType**: Enum for item types (APPLE, BANANA, BABY_BAMBOO, BAMBOO_STACK, WOOD_STACK, PEBBLE)
-- Auto-consumption logic
-- Network synchronization
-
-### Items System (items/)
-- **Apple, Banana, BabyBamboo, BambooStack, WoodStack**: Collectible item entities
-- Pickup mechanics and health restoration
-- Sprite rendering
+### Inventory & Items (inventory/, items/)
+- **Inventory.java**: 5-slot inventory data structure
+- **InventoryManager.java**: Inventory operations and auto-consumption
+- **ItemType.java**: Item type enumeration
+- **Apple.java, Banana.java, BabyBamboo.java, BambooStack.java, WoodStack.java**: Item implementations
 
 ### Planting System (planting/)
-- **PlantingManager**: Handles bamboo planting mechanics
-- Growth timers and transformation logic
-- Biome-specific planting rules (bamboo on sand)
+- **PlantingSystem.java**: Core planting logic and validation
+- **PlantedBamboo.java**: Planted bamboo entity with growth timer
 
 ### Weather System (weather/)
-- **WeatherManager**: Dynamic rain events
-- Random timing and duration
-- Zone-based rendering that follows player
+- **DynamicRainManager.java**: Rain event management and scheduling
+- **RainSystem.java**: Rain particle system
+- **RainRenderer.java**: Rain rendering
+- **RainZoneManager.java**: Rain zone tracking
+- **RainConfig.java**: Rain configuration
 
-### UI System (ui/)
-- **MenuManager**: Game menu system with wooden plank theme
-- **InventoryRenderer**: Renders inventory slots and items
-- **CompassRenderer**: Compass pointing to spawn
-- Health bars and HUD elements
+### Networking (network/)
+- **GameServer.java**: Multiplayer server implementation
+- **GameClient.java**: Multiplayer client implementation
+- **ClientConnection.java**: Individual client connection handler
+- **NetworkMessage.java**: Base message class
+- **MessageType.java**: Enum of 22+ message types
+- **PlayerState.java, TreeState.java, ItemState.java, WorldState.java**: Network data structures
 
-### Localization System (localization/)
-- **LocalizationManager**: Multi-language support
-- JSON-based language files
-- Automatic system language detection
-- Supports English, Polish, Portuguese, Dutch
+### User Interface (ui/)
+- **GameMenu.java**: Main in-game menu system
+- **MultiplayerMenu.java**: Multiplayer connection options
+- **ConnectDialog.java**: Server connection dialog
+- **ServerHostDialog.java**: Server hosting dialog
+- **WorldSaveDialog.java, WorldLoadDialog.java**: World management
+- **Compass.java**: Navigation compass UI
+- **InventoryRenderer.java**: Inventory display
+- **ConnectionQualityIndicator.java**: Network status display
 
-### Network System (network/)
-- **GameServer**: Dedicated server with client management
-- **GameClient**: Client-side networking
-- **WorldState**: Complete world state synchronization
-- **Message Types**: 22+ message types for full game sync
-  - Player messages (position, health, attack)
-  - Tree messages (health, destruction)
-  - Stone messages (health, destruction)
-  - Item messages (spawn, pickup)
-  - Inventory messages (update, sync)
-  - World messages (state, sync)
+### World Persistence (world/)
+- **WorldSaveManager.java**: Save/load operations
+- **WorldSaveData.java**: Complete world state structure
+- **WorldSaveInfo.java**: Save metadata
 
-### Server System (server/)
-- **DedicatedServerLauncher**: Standalone server entry point
-- Headless operation (no rendering)
-- Configurable via server.properties
+### Server (server/)
+- **DedicatedServerLauncher.java**: Standalone server entry point
+- **ServerConfig.java**: Server configuration management
+- **ServerLogger.java**: Server logging
+- **ServerMonitor.java**: Server statistics and monitoring
 
-### Desktop System (desktop/)
-- **DesktopLauncher**: Game client entry point
-- Window configuration
-- LibGDX initialization
+### Localization (localization/)
+- **LocalizationManager.java**: Multi-language support
+- **LanguageChangeListener.java**: Language change notifications
 
 ## Architectural Patterns
 
-### Entity-Component Pattern
-- Entities (Player, Tree, Stone, Item) have position, sprite, collision
-- Components handle specific behaviors (health, inventory, animation)
-
-### Server-Authoritative Networking
-- Server validates all actions
-- Clients send requests, server broadcasts state
-- Prevents cheating and ensures consistency
-
-### Message-Based Communication
-- All network communication via typed messages
-- Serializable message classes
-- Message type enum for routing
+### Message-Driven Architecture
+Network communication uses a message-based protocol with 22+ message types:
+- Player movement, health, attacks
+- Tree creation, destruction, health updates
+- Item spawning and pickup
+- Inventory synchronization
+- World state updates
+- Connection management (heartbeat, ping/pong)
 
 ### Chunk-Based Rendering
-- Only render visible world sections
-- Spatial partitioning for collision detection
-- Efficient memory usage for infinite worlds
+Only visible world chunks are rendered, optimizing performance for infinite worlds.
 
-### Save/Load System
-- JSON-based world persistence
-- Separate saves for singleplayer/multiplayer
-- Automatic backups on save
-- OS-specific config directories
+### Server-Authoritative Design
+Server validates all actions and broadcasts state changes to clients.
 
-### Localization Pattern
-- Key-based string lookup
-- JSON language files
-- Fallback to English for missing keys
-- Runtime language switching
+### Separate State Management
+- Singleplayer: Local world state
+- Multiplayer: Server-managed world state with client prediction
 
-## Key Relationships
+### Component-Based Entity System
+Trees, items, and players are independent components with collision and rendering.
 
-- **MyGdxGame** orchestrates all systems
-- **Player** interacts with **InventoryManager**, **WorldGenerator**, **Trees**, **Stones**
-- **GameServer** manages **WorldState** and broadcasts to **GameClient** instances
-- **MenuManager** controls game flow and triggers save/load via **WorldSaveManager**
-- **BiomeManager** influences **WorldGenerator** and **PlantingManager**
-- **WeatherManager** affects rendering but not gameplay mechanics
-- **LocalizationManager** provides strings to **MenuManager** and **UI** components
+## Data Flow
 
-## Build Outputs
+### Singleplayer
+```
+Player Input → MyGdxGame → Local World State → Rendering
+```
 
-### Client JAR (woodlanders-client.jar)
-- Full game with rendering
-- Includes all assets and dependencies
-- Main class: DesktopLauncher
-
-### Server JAR (woodlanders-server.jar)
-- Headless server only
-- Excludes rendering libraries and assets
-- Smaller file size
-- Main class: DedicatedServerLauncher
+### Multiplayer
+```
+Player Input → GameClient → NetworkMessage → GameServer → 
+World State Update → Broadcast to Clients → GameClient → 
+Local Rendering
+```
 
 ## Configuration Files
-
-- **build.gradle**: Build configuration, dependencies, JAR tasks
-- **settings.gradle**: Project name
-- **server.properties**: Server configuration (port, max clients)
-- **woodlanders.json**: Player data (position, health, inventory, name)
-- **world-saves/**: World save files (.wld format)
+- **build.gradle**: Java 21, libGDX 1.12.1, JUnit 5, Mockito
+- **server.properties**: Server port, max clients, logging level
+- **assets/localization/*.json**: Language strings

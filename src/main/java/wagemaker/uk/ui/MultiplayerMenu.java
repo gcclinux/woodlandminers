@@ -43,7 +43,7 @@ public class MultiplayerMenu implements LanguageChangeListener {
      */
     private void createMenuFont() {
         try {
-            FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/slkscr.ttf"));
+            FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/Saira_SemiExpanded-MediumItalic.ttf"));
             FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
             parameter.size = 18;
             parameter.color = Color.WHITE;

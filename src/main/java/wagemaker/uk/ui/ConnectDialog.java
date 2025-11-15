@@ -45,7 +45,7 @@ public class ConnectDialog implements LanguageChangeListener {
      */
     private void createDialogFont() {
         try {
-            FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/slkscr.ttf"));
+            FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/Saira_SemiExpanded-MediumItalic.ttf"));
             FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
             parameter.size = 16;
             parameter.color = Color.WHITE;

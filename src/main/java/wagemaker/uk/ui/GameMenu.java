@@ -96,7 +96,7 @@ public class GameMenu implements LanguageChangeListener {
     
     private void createPlayerNameFont() {
         try {
-            FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/slkscr.ttf"));
+            FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/Saira_SemiExpanded-MediumItalic.ttf"));
             FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
             parameter.size = 16; // Font size for player name
             parameter.color = Color.WHITE;

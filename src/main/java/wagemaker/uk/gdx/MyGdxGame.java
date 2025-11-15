@@ -640,10 +640,13 @@ public class MyGdxGame extends ApplicationAdapter {
                 // Get appropriate texture for this position based on biome
                 Texture texture = biomeManager.getTextureForPosition(x, y);
                 batch.draw(texture, x, y, 64, 64);
-                // randomly generate trees
-                generateTreeAt(x, y);
-                // randomly generate stones
-                generateStoneAt(x, y);
+                
+                // Only generate trees/stones in singleplayer mode
+                // In multiplayer, server is authoritative and sends all entities
+                if (gameMode == GameMode.SINGLEPLAYER) {
+                    generateTreeAt(x, y);
+                    generateStoneAt(x, y);
+                }
             }
         }
     }
@@ -667,7 +670,7 @@ public class MyGdxGame extends ApplicationAdapter {
      * 
      * <p><b>Randomness Sources:</b></p>
      * <ul>
-     *   <li>Spawn probability: {@code random.nextFloat() < 0.02f} (seeded)</li>
+     *   <li>Spawn probability: {@code random.nextFloat() < 0.005f} (seeded)</li>
      *   <li>Tree type selection: {@code random.nextFloat()} (seeded)</li>
      *   <li>Biome query: {@code biomeManager.getBiomeAtPosition(x, y)} (deterministic, NO randomness)</li>
      * </ul>
@@ -694,7 +697,7 @@ public class MyGdxGame extends ApplicationAdapter {
             
             // STEP 2: Check spawn probability (2% chance)
             // Uses the seeded random to ensure same coordinates always get same spawn decision
-            if (random.nextFloat() < 0.02f) {
+            if (random.nextFloat() < 0.005f) {
                 // STEP 3: Add random offset to break grid pattern (±32px in each direction)
                 // Try multiple times to find a position without overlapping trees
                 float treeX = 0, treeY = 0;
@@ -868,10 +871,11 @@ public class MyGdxGame extends ApplicationAdapter {
         // Set deterministic random seed based on world seed and position
         random.setSeed(worldSeed + x * 37L + y * 23L);
         
-        // Stone spawn probability: reduced by 85% from original (70% + 50% of remaining)
-        // Original: 0.016 (1.6%), New: 0.0024 (0.24%)
-        // Approximately 1 stone per 2,357x2,357 pixels
-        if (random.nextFloat() < 0.0006f) {
+        // Stone spawn probability: different for singleplayer vs multiplayer
+        // Singleplayer: 0.0006 (0.06%) - rare stones
+        // Multiplayer: 0.005 (0.5%) - reduced for rarer stones
+        float spawnRate = (gameMode == GameMode.SINGLEPLAYER) ? 0.0006f : 0.005f;
+        if (random.nextFloat() < spawnRate) {
             // Add random offset to break grid pattern
             float offsetX = (random.nextFloat() - 0.5f) * 64; // -32 to +32
             float offsetY = (random.nextFloat() - 0.5f) * 64; // -32 to +32
@@ -1934,6 +1938,8 @@ public class MyGdxGame extends ApplicationAdapter {
      * @return true if the tree was found and removed, false otherwise
      */
     private boolean removeTreeImmediate(String treeId) {
+        System.out.println("[DEBUG] Attempting to remove tree: " + treeId);
+        
         // Try to remove from all tree maps
         SmallTree smallTree = trees.remove(treeId);
         if (smallTree != null) {
@@ -1958,6 +1964,7 @@ public class MyGdxGame extends ApplicationAdapter {
         
         BambooTree bambooTree = bambooTrees.remove(treeId);
         if (bambooTree != null) {
+            System.out.println("[DEBUG] Bamboo tree removed: " + treeId);
             bambooTree.dispose();
             clearedPositions.put(treeId, true);
             return true;
@@ -1971,7 +1978,12 @@ public class MyGdxGame extends ApplicationAdapter {
         }
         
         // Tree not found in any map
-        System.out.println("Attempted to remove non-existent tree: " + treeId);
+        System.out.println("[DEBUG] Tree not found in any map: " + treeId);
+        System.out.println("[DEBUG] Current tree counts - Small: " + trees.size() + 
+                         ", Apple: " + appleTrees.size() + 
+                         ", Coconut: " + coconutTrees.size() + 
+                         ", Bamboo: " + bambooTrees.size() + 
+                         ", Banana: " + bananaTrees.size());
         return false;
     }
     
@@ -2003,14 +2015,17 @@ public class MyGdxGame extends ApplicationAdapter {
      * @param stoneId The stone ID to remove
      */
     public void removeStone(String stoneId) {
-        // Remove from map immediately (thread-safe)
+        // Remove from both maps immediately (thread-safe)
         Stone stone = stoneMap.remove(stoneId);
+        stones.remove(stoneId);
+        
+        // Add to cleared positions to prevent regeneration
+        clearedPositions.put(stoneId, true);
         
         if (stone != null) {
             // Defer texture disposal to main thread
             deferOperation(() -> {
                 stone.dispose();
-                stones.remove(stone);
             });
             System.out.println("Stone removed: " + stoneId);
         }

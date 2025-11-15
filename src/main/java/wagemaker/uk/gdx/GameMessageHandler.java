@@ -13,9 +13,11 @@ import wagemaker.uk.network.PlayerLeaveMessage;
 import wagemaker.uk.network.PlayerMovementMessage;
 import wagemaker.uk.network.PongMessage;
 import wagemaker.uk.network.PositionCorrectionMessage;
+import wagemaker.uk.network.StoneCreatedMessage;
 import wagemaker.uk.network.StoneDestroyedMessage;
 import wagemaker.uk.network.StoneHealthUpdateMessage;
 import wagemaker.uk.network.StoneState;
+import wagemaker.uk.network.TreeCreatedMessage;
 import wagemaker.uk.network.TreeDestroyedMessage;
 import wagemaker.uk.network.TreeHealthUpdateMessage;
 import wagemaker.uk.network.TreeRemovalMessage;
@@ -186,6 +188,7 @@ public class GameMessageHandler extends DefaultMessageHandler {
     
     @Override
     protected void handleTreeDestroyed(TreeDestroyedMessage message) {
+        System.out.println("[DEBUG] Received TreeDestroyedMessage for: " + message.getTreeId());
         game.removeTree(message.getTreeId());
     }
     
@@ -330,5 +333,38 @@ public class GameMessageHandler extends DefaultMessageHandler {
     protected void handleBambooTransform(wagemaker.uk.network.BambooTransformMessage message) {
         // Queue bamboo transformation to be processed on the main thread
         game.queueBambooTransform(message);
+    }
+    
+    @Override
+    protected void handleTreeCreated(wagemaker.uk.network.TreeCreatedMessage message) {
+        // Create tree state from message
+        TreeState treeState = new TreeState(
+            message.getTreeId(),
+            message.getTreeType(),
+            message.getX(),
+            message.getY(),
+            message.getHealth(),
+            true
+        );
+        
+        // Update game with new tree
+        game.updateTreeFromState(treeState);
+    }
+    
+    @Override
+    protected void handleStoneCreated(wagemaker.uk.network.StoneCreatedMessage message) {
+        System.out.println("[STONE] Client received stone: " + message.getStoneId() + 
+                         " at (" + message.getX() + ", " + message.getY() + ")");
+        
+        // Create stone state from message
+        StoneState stoneState = new StoneState(
+            message.getStoneId(),
+            message.getX(),
+            message.getY(),
+            message.getHealth()
+        );
+        
+        // Update game with new stone
+        game.updateStoneFromState(stoneState);
     }
 }

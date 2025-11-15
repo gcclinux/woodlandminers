@@ -309,6 +309,9 @@ public class ClientConnection implements Runnable {
         // Update in world state
         server.getWorldState().addOrUpdatePlayer(playerState);
         
+        // Generate chunks around this player's new position
+        server.generateChunksAroundPlayers();
+        
         // Broadcast to other clients
         server.broadcastToAllExcept(message, clientId);
     }
@@ -951,7 +954,8 @@ public class ClientConnection implements Runnable {
             !isValidInventoryCount(message.getBananaCount()) ||
             !isValidInventoryCount(message.getBabyBambooCount()) ||
             !isValidInventoryCount(message.getBambooStackCount()) ||
-            !isValidInventoryCount(message.getWoodStackCount())) {
+            !isValidInventoryCount(message.getWoodStackCount()) ||
+            !isValidInventoryCount(message.getPebbleCount())) {
             System.err.println("Invalid inventory counts from " + clientId);
             logSecurityViolation("Invalid inventory counts");
             return;
@@ -963,6 +967,7 @@ public class ClientConnection implements Runnable {
         playerState.setBabyBambooCount(message.getBabyBambooCount());
         playerState.setBambooStackCount(message.getBambooStackCount());
         playerState.setWoodStackCount(message.getWoodStackCount());
+        playerState.setPebbleCount(message.getPebbleCount());
         
         // Update in world state
         server.getWorldState().addOrUpdatePlayer(playerState);

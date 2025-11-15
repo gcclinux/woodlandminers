@@ -111,6 +111,14 @@ public class DefaultMessageHandler implements MessageHandler {
                     handleBambooTransform((BambooTransformMessage) message);
                     break;
                     
+                case TREE_CREATED:
+                    handleTreeCreated((TreeCreatedMessage) message);
+                    break;
+                    
+                case STONE_CREATED:
+                    handleStoneCreated((StoneCreatedMessage) message);
+                    break;
+                    
                 default:
                     System.err.println("Unknown message type: " + message.getType());
             }
@@ -332,6 +340,25 @@ public class DefaultMessageHandler implements MessageHandler {
     protected void handleBambooTransform(BambooTransformMessage message) {
         System.out.println("Bamboo transformed: " + message.getPlantedBambooId() + 
                          " -> " + message.getBambooTreeId() + 
+                         " at (" + message.getX() + ", " + message.getY() + ")");
+    }
+    
+    /**
+     * Handles TREE_CREATED message.
+     * Override this method to add newly generated trees to game world.
+     */
+    protected void handleTreeCreated(TreeCreatedMessage message) {
+        System.out.println("Tree created: " + message.getTreeId() + 
+                         " (" + message.getTreeType() + ") at (" + 
+                         message.getX() + ", " + message.getY() + ")");
+    }
+    
+    /**
+     * Handles STONE_CREATED message.
+     * Override this method to add newly generated stones to game world.
+     */
+    protected void handleStoneCreated(StoneCreatedMessage message) {
+        System.out.println("Stone created: " + message.getStoneId() + 
                          " at (" + message.getX() + ", " + message.getY() + ")");
     }
 }

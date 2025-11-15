@@ -420,4 +420,77 @@ public class GameServer {
             disconnectClient(clientId);
         }
     }
+    
+    /**
+     * Generates chunks around all players.
+     * Called when players move to ensure trees/stones exist in their vicinity.
+     * Only generates entities that don't already exist.
+     */
+    public void generateChunksAroundPlayers() {
+        if (worldState == null) {
+            return;
+        }
+        
+        Map<String, PlayerState> players = worldState.getPlayers();
+        if (players == null || players.isEmpty()) {
+            return;
+        }
+        
+        // Generate chunks around each player
+        for (PlayerState player : players.values()) {
+            generateChunksAroundPosition(player.getX(), player.getY());
+        }
+    }
+    
+    /**
+     * Generates chunks around a specific position.
+     * Creates trees and stones in a grid pattern around the position.
+     * 
+     * @param centerX The center X coordinate
+     * @param centerY The center Y coordinate
+     */
+    private void generateChunksAroundPosition(float centerX, float centerY) {
+        // Generate in a 3x3 chunk area around player (approximately 1920x1920 pixels)
+        int chunkSize = 64; // Same as grass tile size
+        int chunksRadius = 15; // Generate 15 chunks in each direction (960 pixels)
+        
+        int startX = ((int)centerX / chunkSize - chunksRadius) * chunkSize;
+        int startY = ((int)centerY / chunkSize - chunksRadius) * chunkSize;
+        int endX = ((int)centerX / chunkSize + chunksRadius) * chunkSize;
+        int endY = ((int)centerY / chunkSize + chunksRadius) * chunkSize;
+        
+        for (int x = startX; x <= endX; x += chunkSize) {
+            for (int y = startY; y <= endY; y += chunkSize) {
+                // Generate tree at this position (if it should exist)
+                TreeState tree = worldState.generateTreeAt(x, y);
+                if (tree != null && tree.isExists()) {
+                    // Broadcast new tree to all clients (only if it exists)
+                    TreeCreatedMessage message = new TreeCreatedMessage(
+                        "server",
+                        tree.getTreeId(),
+                        tree.getType(),
+                        tree.getX(),
+                        tree.getY(),
+                        tree.getHealth()
+                    );
+                    broadcastToAll(message);
+                }
+                
+                // Generate stone at this position (if it should exist)
+                StoneState stone = worldState.generateStoneAt(x, y);
+                if (stone != null && stone.getHealth() > 0) {
+                    // Broadcast new stone to all clients (only if not destroyed)
+                    StoneCreatedMessage message = new StoneCreatedMessage(
+                        "server",
+                        stone.getStoneId(),
+                        stone.getX(),
+                        stone.getY(),
+                        stone.getHealth()
+                    );
+                    broadcastToAll(message);
+                    System.out.println("[STONE] Broadcast stone to clients: " + stone.getStoneId());
+                }
+            }
+        }
+    }
 }

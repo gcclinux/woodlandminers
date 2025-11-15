@@ -417,8 +417,8 @@ public class WorldState implements Serializable {
         java.util.Random random = new java.util.Random();
         random.setSeed(worldSeed + x * 37L + y * 23L);
         
-        // Stone spawn probability: 0.0006 (0.06%)
-        if (random.nextFloat() < 0.0006f) {
+        // Stone spawn probability: 0.15 (15%) - 50% of bamboo tree rate (30%)
+        if (random.nextFloat() < 0.15f) {
             // Add random offset to break grid pattern
             float offsetX = (random.nextFloat() - 0.5f) * 64; // -32 to +32
             float offsetY = (random.nextFloat() - 0.5f) * 64; // -32 to +32
@@ -449,6 +449,7 @@ public class WorldState implements Serializable {
             // Create and store the stone
             StoneState stone = new StoneState(key, stoneX, stoneY, 50.0f);
             this.stones.put(key, stone);
+            System.out.println("[STONE] Generated stone at " + key + " (" + stoneX + ", " + stoneY + ")");
             return stone;
         }
         

@@ -18,7 +18,7 @@ public class LocalizationManager {
     private Map<String, String> fallbackTranslations;
     private String currentLanguage;
     private static final String DEFAULT_LANGUAGE = "en";
-    private static final String[] SUPPORTED_LANGUAGES = {"en", "pl", "pt", "nl"};
+    private static final String[] SUPPORTED_LANGUAGES = {"en", "pl", "pt", "nl", "de"};
     private List<LanguageChangeListener> listeners;
     
     // Language display names in their native language
@@ -27,6 +27,7 @@ public class LocalizationManager {
         put("pl", "Polski");
         put("pt", "Português");
         put("nl", "Nederlands");
+        put("de", "Deutsch");
     }};
     
     private LocalizationManager() {
@@ -96,6 +97,8 @@ public class LocalizationManager {
                     return "pt";
                 case "nl":
                     return "nl";
+                case "de":
+                    return "de";
                 default:
                     System.out.println("Unsupported system locale: " + language + ", falling back to English");
                     return DEFAULT_LANGUAGE;

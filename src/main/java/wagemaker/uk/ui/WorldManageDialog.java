@@ -57,11 +57,12 @@ public class WorldManageDialog implements LanguageChangeListener {
      */
     private void createDialogFonts() {
         try {
-            FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/Saira_SemiExpanded-MediumItalic.ttf"));
+            FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/Sancreek-Regular.ttf"));
             
             // Main dialog font
             FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
             parameter.size = 16;
+            parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS + "ąćęłńóśźżĄĆĘŁŃÓŚŹŻãõâêôáéíóúàçÃÕÂÊÔÁÉÍÓÚÀÇäöüßÄÖÜ";
             parameter.color = Color.WHITE;
             parameter.borderWidth = 1;
             parameter.borderColor = Color.BLACK;

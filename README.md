@@ -243,6 +243,7 @@ Access the main menu at any time by pressing the Escape key. The menu adapts bas
 │     Polski                 │
 │     Português              │
 │     Nederlands             │
+│     German                 │
 │                            │
 │   Enter to Select          │
 │   Esc to Cancel            │

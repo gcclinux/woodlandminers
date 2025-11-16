@@ -461,4 +461,224 @@ public class TargetingSystemTest {
         coords = targetingSystem.getTargetCoordinates();
         assertEquals(192, coords[0], "RIGHT should move to X=192");
     }
+    
+    // ===== Range Enforcement Tests =====
+    
+    @Test
+    public void testCursorMovementWithinRange() {
+        // Set max range to 256 pixels (4 tiles)
+        targetingSystem.setMaxRange(256);
+        targetingSystem.activate(512, 512, TargetingMode.ADJACENT, callback);
+        
+        // Move 2 tiles right (128 pixels) - within range
+        targetingSystem.moveTarget(Direction.RIGHT);
+        targetingSystem.moveTarget(Direction.RIGHT);
+        
+        float[] coords = targetingSystem.getTargetCoordinates();
+        assertEquals(640, coords[0], "Target X should move freely within range");
+        assertEquals(512, coords[1], "Target Y should remain unchanged");
+        assertTrue(targetingSystem.isWithinMaxRange(), "Target should be within max range");
+    }
+    
+    @Test
+    public void testCursorMovementBeyondRangeShouldClamp() {
+        // Set max range to 192 pixels (3 tiles)
+        targetingSystem.setMaxRange(192);
+        targetingSystem.activate(512, 512, TargetingMode.ADJACENT, callback);
+        
+        // Try to move 5 tiles right (320 pixels) - beyond range
+        targetingSystem.moveTarget(Direction.RIGHT);
+        targetingSystem.moveTarget(Direction.RIGHT);
+        targetingSystem.moveTarget(Direction.RIGHT);
+        targetingSystem.moveTarget(Direction.RIGHT);
+        targetingSystem.moveTarget(Direction.RIGHT);
+        
+        float[] coords = targetingSystem.getTargetCoordinates();
+        
+        // Calculate expected clamped position
+        float dx = coords[0] - 512;
+        float dy = coords[1] - 512;
+        double distance = Math.sqrt(dx * dx + dy * dy);
+        
+        assertTrue(distance <= 192, "Target should be clamped to max range (192 pixels)");
+        assertTrue(coords[0] > 512, "Target should still be to the right of player");
+    }
+    
+    @Test
+    public void testClampingAccuracyOnBoundary() {
+        // Set max range to 256 pixels
+        targetingSystem.setMaxRange(256);
+        targetingSystem.activate(512, 512, TargetingMode.ADJACENT, callback);
+        
+        // Try to move far beyond range
+        for (int i = 0; i < 10; i++) {
+            targetingSystem.moveTarget(Direction.RIGHT);
+        }
+        
+        float[] coords = targetingSystem.getTargetCoordinates();
+        float dx = coords[0] - 512;
+        float dy = coords[1] - 512;
+        double distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Distance should be at or very close to max range (within tile size tolerance)
+        assertTrue(distance <= 256, "Clamped distance should not exceed max range");
+        assertTrue(distance >= 192, "Clamped distance should be near max range boundary");
+    }
+    
+    @Test
+    public void testTileGridSnappingAfterClamping() {
+        // Set max range to 200 pixels (between 3 and 4 tiles)
+        targetingSystem.setMaxRange(200);
+        targetingSystem.activate(512, 512, TargetingMode.ADJACENT, callback);
+        
+        // Try to move beyond range
+        for (int i = 0; i < 6; i++) {
+            targetingSystem.moveTarget(Direction.RIGHT);
+        }
+        
+        float[] coords = targetingSystem.getTargetCoordinates();
+        
+        // Verify coordinates are snapped to tile grid (multiples of 64)
+        assertEquals(0, coords[0] % 64, "Clamped X coordinate should be snapped to tile grid");
+        assertEquals(0, coords[1] % 64, "Clamped Y coordinate should be snapped to tile grid");
+    }
+    
+    @Test
+    public void testUnlimitedRangeMode() {
+        // Set max range to -1 (unlimited)
+        targetingSystem.setMaxRange(-1);
+        targetingSystem.activate(512, 512, TargetingMode.ADJACENT, callback);
+        
+        // Move very far from player
+        for (int i = 0; i < 20; i++) {
+            targetingSystem.moveTarget(Direction.RIGHT);
+        }
+        
+        float[] coords = targetingSystem.getTargetCoordinates();
+        
+        // Should be able to move 20 tiles (1280 pixels) without clamping
+        assertEquals(1792, coords[0], "Target should move freely with unlimited range");
+        assertEquals(512, coords[1], "Target Y should remain unchanged");
+        assertTrue(targetingSystem.isWithinMaxRange(), "Should always be within range when unlimited");
+    }
+    
+    @Test
+    public void testDiagonalMovementClamping() {
+        // Set max range to 256 pixels
+        targetingSystem.setMaxRange(256);
+        targetingSystem.activate(512, 512, TargetingMode.ADJACENT, callback);
+        
+        // Move diagonally (right and up) beyond range
+        for (int i = 0; i < 6; i++) {
+            targetingSystem.moveTarget(Direction.RIGHT);
+            targetingSystem.moveTarget(Direction.UP);
+        }
+        
+        float[] coords = targetingSystem.getTargetCoordinates();
+        float dx = coords[0] - 512;
+        float dy = coords[1] - 512;
+        double distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Diagonal distance should be clamped to max range
+        assertTrue(distance <= 256, "Diagonal movement should be clamped to max range");
+        assertTrue(coords[0] > 512, "Target should be to the right of player");
+        assertTrue(coords[1] > 512, "Target should be above player");
+    }
+    
+    @Test
+    public void testIsWithinMaxRangeValidation() {
+        targetingSystem.setMaxRange(256);
+        targetingSystem.activate(512, 512, TargetingMode.ADJACENT, callback);
+        
+        // Initially at player position - within range
+        assertTrue(targetingSystem.isWithinMaxRange(), "Target at player position should be within range");
+        
+        // Move within range
+        targetingSystem.moveTarget(Direction.RIGHT);
+        targetingSystem.moveTarget(Direction.RIGHT);
+        assertTrue(targetingSystem.isWithinMaxRange(), "Target within range should return true");
+        
+        // Try to move beyond range (will be clamped)
+        for (int i = 0; i < 10; i++) {
+            targetingSystem.moveTarget(Direction.RIGHT);
+        }
+        
+        // After clamping, should still be within range
+        assertTrue(targetingSystem.isWithinMaxRange(), "Clamped target should be within range");
+    }
+    
+    @Test
+    public void testIsWithinMaxRangeWithUnlimitedRange() {
+        targetingSystem.setMaxRange(-1);
+        targetingSystem.activate(512, 512, TargetingMode.ADJACENT, callback);
+        
+        // Move very far
+        for (int i = 0; i < 50; i++) {
+            targetingSystem.moveTarget(Direction.RIGHT);
+        }
+        
+        // Should always be within range when unlimited
+        assertTrue(targetingSystem.isWithinMaxRange(), "Should always be within range when maxRange is -1");
+    }
+    
+    @Test
+    public void testIsWithinMaxRangeWithZeroRange() {
+        targetingSystem.setMaxRange(0);
+        targetingSystem.activate(512, 512, TargetingMode.ADJACENT, callback);
+        
+        // Zero or negative range should be treated as unlimited
+        assertTrue(targetingSystem.isWithinMaxRange(), "Zero range should be treated as unlimited");
+    }
+    
+    @Test
+    public void testRangeEnforcementInAllDirections() {
+        targetingSystem.setMaxRange(192);
+        targetingSystem.activate(512, 512, TargetingMode.ADJACENT, callback);
+        
+        // Test clamping in each direction
+        
+        // UP
+        for (int i = 0; i < 10; i++) {
+            targetingSystem.moveTarget(Direction.UP);
+        }
+        float[] coords = targetingSystem.getTargetCoordinates();
+        float dy = coords[1] - 512;
+        assertTrue(Math.abs(dy) <= 192, "UP movement should be clamped to max range");
+        
+        // Reset
+        targetingSystem.deactivate();
+        targetingSystem.activate(512, 512, TargetingMode.ADJACENT, callback);
+        
+        // DOWN
+        for (int i = 0; i < 10; i++) {
+            targetingSystem.moveTarget(Direction.DOWN);
+        }
+        coords = targetingSystem.getTargetCoordinates();
+        dy = coords[1] - 512;
+        assertTrue(Math.abs(dy) <= 192, "DOWN movement should be clamped to max range");
+        
+        // Reset
+        targetingSystem.deactivate();
+        targetingSystem.activate(512, 512, TargetingMode.ADJACENT, callback);
+        
+        // LEFT
+        for (int i = 0; i < 10; i++) {
+            targetingSystem.moveTarget(Direction.LEFT);
+        }
+        coords = targetingSystem.getTargetCoordinates();
+        float dx = coords[0] - 512;
+        assertTrue(Math.abs(dx) <= 192, "LEFT movement should be clamped to max range");
+        
+        // Reset
+        targetingSystem.deactivate();
+        targetingSystem.activate(512, 512, TargetingMode.ADJACENT, callback);
+        
+        // RIGHT
+        for (int i = 0; i < 10; i++) {
+            targetingSystem.moveTarget(Direction.RIGHT);
+        }
+        coords = targetingSystem.getTargetCoordinates();
+        dx = coords[0] - 512;
+        assertTrue(Math.abs(dx) <= 192, "RIGHT movement should be clamped to max range");
+    }
 }

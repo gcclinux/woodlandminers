@@ -50,6 +50,9 @@ public class GameClient {
     private static final int MAX_RECONNECT_ATTEMPTS = 3;
     private boolean intentionalDisconnect;
     
+    // Planting range configuration
+    private int plantingMaxRange = -1; // -1 = unlimited (not connected to server)
+    
     /**
      * Creates a new GameClient instance.
      */
@@ -590,6 +593,45 @@ public class GameClient {
      */
     public boolean isReconnecting() {
         return !connected.get() && !intentionalDisconnect && reconnectAttempts > 0 && reconnectAttempts < MAX_RECONNECT_ATTEMPTS;
+    }
+    
+    /**
+     * Gets the maximum planting range configured by the server.
+     * @return The maximum planting range in pixels, or -1 if unlimited/not connected
+     */
+    public int getPlantingMaxRange() {
+        return plantingMaxRange;
+    }
+    
+    /**
+     * Handles a connection accepted message from the server.
+     * Extracts and stores the planting range configuration.
+     * @param message The connection accepted message
+     * @param gameInstance Optional game instance to notify of range configuration (can be null)
+     */
+    public void handleConnectionAccepted(ConnectionAcceptedMessage message, Object gameInstance) {
+        if (message == null) {
+            System.err.println("Received null ConnectionAcceptedMessage");
+            return;
+        }
+        
+        // Extract planting range from message
+        this.plantingMaxRange = message.getPlantingMaxRange();
+        
+        // Log the received configuration
+        if (plantingMaxRange > 0) {
+            int tiles = plantingMaxRange / 64; // Convert pixels to tiles (64 pixels per tile)
+            System.out.println("Received planting range configuration from server:");
+            System.out.println("  - Max range: " + plantingMaxRange + " pixels (" + tiles + " tiles)");
+        } else {
+            System.out.println("Received planting range configuration from server: unlimited");
+        }
+        
+        // Notify game instance if provided
+        if (gameInstance != null && gameInstance instanceof wagemaker.uk.gdx.MyGdxGame) {
+            wagemaker.uk.gdx.MyGdxGame game = (wagemaker.uk.gdx.MyGdxGame) gameInstance;
+            game.setPlantingMaxRange(plantingMaxRange);
+        }
     }
     
     /**

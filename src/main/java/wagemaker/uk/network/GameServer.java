@@ -7,6 +7,7 @@ import java.util.concurrent.*;
 import wagemaker.uk.respawn.RespawnManager;
 import wagemaker.uk.respawn.RespawnEntry;
 import wagemaker.uk.respawn.ResourceType;
+import wagemaker.uk.server.ServerConfig;
 
 /**
  * GameServer manages the authoritative game state and handles client connections.
@@ -27,6 +28,7 @@ public class GameServer {
     private Thread acceptThread;
     private boolean running;
     private int port;
+    private ServerConfig config;
     
     /**
      * Creates a new GameServer with default port.
@@ -64,6 +66,10 @@ public class GameServer {
         this.connectedClients = new ConcurrentHashMap<>();
         this.clientThreadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
         this.running = false;
+        
+        // Load server configuration
+        this.config = ServerConfig.load();
+        System.out.println("Server configuration loaded successfully");
         
         // Initialize world state with specified or random seed
         long seed = (worldSeed == 0) ? System.currentTimeMillis() : worldSeed;
@@ -187,6 +193,14 @@ public class GameServer {
      */
     public RespawnManager getRespawnManager() {
         return respawnManager;
+    }
+    
+    /**
+     * Gets the server configuration.
+     * @return The server configuration instance
+     */
+    public ServerConfig getConfig() {
+        return config;
     }
     
     /**

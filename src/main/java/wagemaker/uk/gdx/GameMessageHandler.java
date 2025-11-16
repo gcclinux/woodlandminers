@@ -51,6 +51,9 @@ public class GameMessageHandler extends DefaultMessageHandler {
         // Set the client ID
         if (game.getGameClient() != null) {
             game.getGameClient().setClientId(message.getAssignedClientId());
+            
+            // Handle planting range configuration and notify game instance
+            game.getGameClient().handleConnectionAccepted(message, game);
         }
         
         // Save the server address for future connections

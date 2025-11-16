@@ -19,6 +19,11 @@ public class ServerConfig {
     private static final int DEFAULT_RATE_LIMIT = 100;
     private static final boolean DEFAULT_DEBUG = false;
     
+    // Planting range configuration
+    private static final int DEFAULT_PLANTING_RANGE = 512;
+    private static final int MIN_PLANTING_RANGE = 64;
+    private static final int MAX_PLANTING_RANGE = 1024;
+    
     // Configuration properties
     private int port;
     private int maxClients;
@@ -27,6 +32,7 @@ public class ServerConfig {
     private int clientTimeout;
     private int rateLimit;
     private boolean debug;
+    private int plantingMaxRange;
     
     /**
      * Creates a ServerConfig with default values.
@@ -39,6 +45,7 @@ public class ServerConfig {
         this.clientTimeout = DEFAULT_CLIENT_TIMEOUT;
         this.rateLimit = DEFAULT_RATE_LIMIT;
         this.debug = DEFAULT_DEBUG;
+        this.plantingMaxRange = DEFAULT_PLANTING_RANGE;
     }
     
     /**
@@ -79,8 +86,10 @@ public class ServerConfig {
             config.clientTimeout = parseIntProperty(props, "server.client-timeout", DEFAULT_CLIENT_TIMEOUT, 5, 300);
             config.rateLimit = parseIntProperty(props, "server.rate-limit", DEFAULT_RATE_LIMIT, 10, 10000);
             config.debug = parseBooleanProperty(props, "server.debug", DEFAULT_DEBUG);
+            config.plantingMaxRange = parseIntProperty(props, "planting.max.range", DEFAULT_PLANTING_RANGE, MIN_PLANTING_RANGE, MAX_PLANTING_RANGE);
             
             System.out.println("Configuration loaded from: " + configFile);
+            config.logPlantingRangeConfig();
             
         } catch (IOException e) {
             System.err.println("Error loading configuration file: " + e.getMessage());
@@ -130,6 +139,12 @@ public class ServerConfig {
             writer.write("# Enable debug logging (true/false)\n");
             writer.write("# Default: false\n");
             writer.write("server.debug=" + DEFAULT_DEBUG + "\n");
+            writer.write("\n");
+            writer.write("# Planting Range Configuration (in pixels)\n");
+            writer.write("# Maximum distance a player can plant from their position\n");
+            writer.write("# Default: 512 (8 tiles at 64px per tile)\n");
+            writer.write("# Range: 64-1024 (1-16 tiles)\n");
+            writer.write("planting.max.range=" + DEFAULT_PLANTING_RANGE + "\n");
             
             System.out.println("Created default configuration file: " + configFile);
             
@@ -236,6 +251,19 @@ public class ServerConfig {
         return debug;
     }
     
+    public int getPlantingMaxRange() {
+        return plantingMaxRange;
+    }
+    
+    /**
+     * Logs the active planting range configuration in both pixels and tiles.
+     */
+    private void logPlantingRangeConfig() {
+        int tiles = plantingMaxRange / 64;
+        System.out.println("Planting Range Configuration:");
+        System.out.println("  Max Range: " + plantingMaxRange + " pixels (" + tiles + " tiles)");
+    }
+    
     /**
      * Prints the current configuration to the console.
      */
@@ -248,5 +276,6 @@ public class ServerConfig {
         System.out.println("  Client Timeout: " + clientTimeout + "s");
         System.out.println("  Rate Limit: " + rateLimit + " msg/s");
         System.out.println("  Debug Mode: " + debug);
+        System.out.println("  Planting Max Range: " + plantingMaxRange + " pixels (" + (plantingMaxRange / 64) + " tiles)");
     }
 }

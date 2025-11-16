@@ -81,6 +81,7 @@ public class TargetingSystem {
     /**
      * Process directional input to move the target cursor.
      * Moves the target by one tile (64px) in the specified direction.
+     * Enforces maximum range if configured.
      * 
      * @param direction Direction to move (UP, DOWN, LEFT, RIGHT)
      */
@@ -110,6 +111,26 @@ public class TargetingSystem {
         // Snap to tile grid
         newX = snapToTileGrid(newX);
         newY = snapToTileGrid(newY);
+        
+        // Enforce maximum range if configured
+        if (maxRange > 0) {
+            float dx = newX - playerX;
+            float dy = newY - playerY;
+            double distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > maxRange) {
+                // Clamp to max range boundary
+                double angle = Math.atan2(dy, dx);
+                float clampedX = playerX + (float)(Math.cos(angle) * maxRange);
+                float clampedY = playerY + (float)(Math.sin(angle) * maxRange);
+                
+                // Snap clamped position to tile grid
+                newX = snapToTileGrid(clampedX);
+                newY = snapToTileGrid(clampedY);
+                
+                System.out.println("TargetingSystem: Target position clamped to max range boundary (" + maxRange + " pixels)");
+            }
+        }
         
         // Update target position
         targetX = newX;
@@ -221,6 +242,24 @@ public class TargetingSystem {
      */
     private float snapToTileGrid(float coordinate) {
         return (float) (Math.floor(coordinate / (double) TILE_SIZE) * TILE_SIZE);
+    }
+    
+    /**
+     * Check if the current target position is within the maximum range.
+     * 
+     * @return true if within range or range is unlimited, false otherwise
+     */
+    public boolean isWithinMaxRange() {
+        // Unlimited range
+        if (maxRange <= 0) {
+            return true;
+        }
+        
+        float dx = targetX - playerX;
+        float dy = targetY - playerY;
+        double distance = Math.sqrt(dx * dx + dy * dy);
+        
+        return distance <= maxRange;
     }
     
     /**

@@ -54,6 +54,7 @@ import wagemaker.uk.world.WorldSaveManager;
 import wagemaker.uk.inventory.InventoryManager;
 import wagemaker.uk.respawn.RespawnManager;
 import wagemaker.uk.respawn.ResourceType;
+import wagemaker.uk.targeting.TargetingSystem;
 
 /**
  * Main game class for Woodlanders multiplayer game.
@@ -2640,6 +2641,39 @@ public class MyGdxGame extends ApplicationAdapter {
         // Update direction if needed
         // Note: Direction enum from network package needs to be converted to player direction
         // This would require mapping between the two direction systems
+    }
+    
+    /**
+     * Configures the planting maximum range for the targeting system.
+     * Called when the client receives the range configuration from the server.
+     * 
+     * @param maxRange The maximum planting range in pixels, or -1 for unlimited
+     */
+    public void setPlantingMaxRange(int maxRange) {
+        // Validate player exists
+        if (player == null) {
+            System.err.println("Cannot set planting max range: player is null");
+            return;
+        }
+        
+        // Get the player's targeting system
+        TargetingSystem targetingSystem = player.getTargetingSystem();
+        if (targetingSystem == null) {
+            System.err.println("Cannot set planting max range: targeting system is null");
+            return;
+        }
+        
+        // Configure the targeting system with the received range
+        targetingSystem.setMaxRange(maxRange);
+        
+        // Log the configuration
+        if (maxRange > 0) {
+            int tiles = maxRange / 64; // Convert pixels to tiles (64 pixels per tile)
+            System.out.println("Targeting system configured with planting range:");
+            System.out.println("  - Max range: " + maxRange + " pixels (" + tiles + " tiles)");
+        } else {
+            System.out.println("Targeting system configured with unlimited planting range");
+        }
     }
     
     /**

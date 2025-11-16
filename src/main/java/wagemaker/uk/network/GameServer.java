@@ -49,15 +49,26 @@ public class GameServer {
      * @param maxClients The maximum number of concurrent clients
      */
     public GameServer(int port, int maxClients) {
+        this(port, maxClients, 0);
+    }
+    
+    /**
+     * Creates a new GameServer with specified port, max clients, and world seed.
+     * @param port The port to bind to
+     * @param maxClients The maximum number of concurrent clients
+     * @param worldSeed The world seed (0 for random)
+     */
+    public GameServer(int port, int maxClients, long worldSeed) {
         this.port = port;
         this.maxClients = maxClients;
         this.connectedClients = new ConcurrentHashMap<>();
         this.clientThreadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
         this.running = false;
         
-        // Initialize world state with random seed
-        long seed = System.currentTimeMillis();
+        // Initialize world state with specified or random seed
+        long seed = (worldSeed == 0) ? System.currentTimeMillis() : worldSeed;
         this.worldState = new WorldState(seed);
+        System.out.println("World initialized with seed: " + seed);
     }
     
     /**

@@ -175,7 +175,9 @@ java -Xms4G -Xmx4G \
      -XX:+UseG1GC \
      -XX:MaxGCPauseMillis=50 \
      -XX:+ParallelRefProcEnabled \
-     -jar woodlanders-server.jar \
+     -jar woodlanders-server.jar \     -XX:+UseG1GC \
+     -XX:MaxGCPauseMillis=50 \
+     -XX:+ParallelRefProcEnabled \
      --port 25565 \
      --max-clients 50
 ```

@@ -562,6 +562,13 @@ public class MyGdxGame extends ApplicationAdapter {
         batch.begin();
         // draw infinite grass background around camera
         drawInfiniteGrass();
+        // draw target indicator (after terrain, before planted bamboos)
+        // Only render for local player when targeting is active
+        if (player.getTargetingSystem().isActive()) {
+            float[] targetCoords = player.getTargetingSystem().getTargetCoordinates();
+            boolean isValid = player.getTargetingSystem().isTargetValid();
+            player.getTargetIndicatorRenderer().render(batch, targetCoords[0], targetCoords[1], isValid);
+        }
         // draw planted bamboos (after terrain, before trees)
         drawPlantedBamboos();
         // draw respawn indicators (after terrain, before trees)

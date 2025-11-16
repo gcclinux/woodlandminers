@@ -19,24 +19,24 @@ import java.util.Map;
 public class PlantingSystem {
     
     /**
-     * Attempt to plant baby bamboo at the player's current position.
+     * Attempt to plant baby bamboo at the specified target coordinates.
      * Performs all validation checks and creates PlantedBamboo on success.
      * 
      * Validation steps:
      * 1. Check if player has baby bamboo in inventory (slot 2)
-     * 2. Check if player is standing on sand tile
+     * 2. Check if target tile is sand
      * 3. Check if tile is not occupied by existing PlantedBamboo
      * 4. Check if tile is not occupied by existing BambooTree
      * 
-     * @param playerX The player's x-coordinate
-     * @param playerY The player's y-coordinate
+     * @param targetX The target x-coordinate for planting
+     * @param targetY The target y-coordinate for planting
      * @param inventoryManager The inventory manager for checking and deducting items
      * @param biomeManager The biome manager for tile type checking
      * @param plantedBamboos Map of existing planted bamboos
      * @param bambooTrees Map of existing bamboo trees
      * @return PlantedBamboo instance on success, null on failure
      */
-    public PlantedBamboo attemptPlant(float playerX, float playerY, InventoryManager inventoryManager,
+    public PlantedBamboo attemptPlant(float targetX, float targetY, InventoryManager inventoryManager,
                                       BiomeManager biomeManager,
                                       Map<String, PlantedBamboo> plantedBamboos,
                                       Map<String, BambooTree> bambooTrees) {
@@ -51,9 +51,9 @@ public class PlantingSystem {
             return null; // No baby bamboo in inventory
         }
         
-        // Get player position and snap to tile grid
-        float tileX = snapToTileGrid(playerX);
-        float tileY = snapToTileGrid(playerY);
+        // Snap target coordinates to tile grid
+        float tileX = snapToTileGrid(targetX);
+        float tileY = snapToTileGrid(targetY);
         
         // Validation 2: Check if player is standing on sand tile
         if (!isValidPlantingLocation(tileX, tileY, biomeManager, plantedBamboos, bambooTrees)) {

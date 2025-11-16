@@ -25,6 +25,11 @@ import wagemaker.uk.inventory.InventoryManager;
 import wagemaker.uk.planting.PlantingSystem;
 import wagemaker.uk.planting.PlantedBamboo;
 import wagemaker.uk.biome.BiomeManager;
+import wagemaker.uk.targeting.TargetingSystem;
+import wagemaker.uk.targeting.TargetIndicatorRenderer;
+import wagemaker.uk.targeting.TargetingMode;
+import wagemaker.uk.targeting.TargetingCallback;
+import wagemaker.uk.targeting.PlantingTargetValidator;
 import java.util.Map;
 
 public class Player {
@@ -76,6 +81,10 @@ public class Player {
     private BiomeManager biomeManager;
     private Map<String, PlantedBamboo> plantedBamboos;
     
+    // Targeting system fields
+    private TargetingSystem targetingSystem;
+    private TargetIndicatorRenderer targetIndicatorRenderer;
+    
     // Direction tracking
     private enum Direction { UP, DOWN, LEFT, RIGHT }
     private Direction currentDirection = Direction.DOWN;
@@ -86,6 +95,11 @@ public class Player {
         this.y = startY;
         this.camera = camera;
         loadAnimations();
+        
+        // Initialize targeting system
+        this.targetingSystem = new TargetingSystem();
+        this.targetIndicatorRenderer = new TargetIndicatorRenderer();
+        this.targetIndicatorRenderer.initialize();
     }
     
     public void setTrees(Map<String, SmallTree> trees) {
@@ -102,6 +116,7 @@ public class Player {
     
     public void setBambooTrees(Map<String, BambooTree> bambooTrees) {
         this.bambooTrees = bambooTrees;
+        updateTargetingValidator();
     }
     
     public void setBananaTrees(Map<String, BananaTree> bananaTrees) {
@@ -154,6 +169,7 @@ public class Player {
     
     public void setInventoryManager(InventoryManager inventoryManager) {
         this.inventoryManager = inventoryManager;
+        updateTargetingValidator();
     }
     
     public void setPlantingSystem(PlantingSystem plantingSystem) {
@@ -162,10 +178,26 @@ public class Player {
     
     public void setBiomeManager(BiomeManager biomeManager) {
         this.biomeManager = biomeManager;
+        updateTargetingValidator();
     }
     
     public void setPlantedBamboos(Map<String, PlantedBamboo> plantedBamboos) {
         this.plantedBamboos = plantedBamboos;
+        updateTargetingValidator();
+    }
+    
+    /**
+     * Update the targeting system validator with current dependencies.
+     * Called whenever planting-related dependencies are updated.
+     */
+    private void updateTargetingValidator() {
+        if (inventoryManager != null && biomeManager != null && 
+            plantedBamboos != null && bambooTrees != null) {
+            PlantingTargetValidator validator = new PlantingTargetValidator(
+                inventoryManager, biomeManager, plantedBamboos, bambooTrees
+            );
+            targetingSystem.setValidator(validator);
+        }
     }
     
     // Multiplayer getters and setters
@@ -334,12 +366,21 @@ public class Player {
         // Handle inventory selection (only when menu is not open)
         if (gameMenu != null && !gameMenu.isAnyMenuOpen()) {
             handleInventorySelection();
+            handleTargetingInput();
             handlePlantingAction();
         }
 
-        // handle attack
+        // Handle spacebar - context-sensitive action
+        // If targeting is active: plant item at target
+        // If targeting is not active: attack nearby targets
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-            attackNearbyTargets();
+            if (targetingSystem.isActive()) {
+                // Targeting mode: use spacebar to plant
+                handleSpacebarPlanting();
+            } else {
+                // Normal mode: use spacebar to attack
+                attackNearbyTargets();
+            }
         }
 
         // update animation time
@@ -1026,8 +1067,10 @@ public class Player {
 
     /**
      * Handle keyboard input for inventory item selection.
-     * Maps number keys 1-5 to inventory slots 0-4.
+     * Maps number keys 1-6 to inventory slots 0-5.
      * Pressing the same key again will deselect the slot (toggle behavior).
+     * When an item is selected, the targeting system is activated.
+     * When an item is deselected, the targeting system is deactivated.
      */
     private void handleInventorySelection() {
         if (inventoryManager == null) {
@@ -1035,6 +1078,7 @@ public class Player {
         }
         
         int currentSelection = inventoryManager.getSelectedSlot();
+        int previousSelection = currentSelection;
         
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
             // Toggle: if slot 0 is already selected, deselect it
@@ -1055,46 +1099,181 @@ public class Player {
             // Toggle: if slot 5 is already selected, deselect it
             inventoryManager.setSelectedSlot(currentSelection == 5 ? -1 : 5);
         }
+        
+        // Check if selection changed
+        int newSelection = inventoryManager.getSelectedSlot();
+        if (newSelection != previousSelection) {
+            // Selection changed - update targeting system
+            if (newSelection == -1) {
+                // Item deselected - deactivate targeting
+                if (targetingSystem.isActive()) {
+                    targetingSystem.deactivate();
+                }
+            } else {
+                // Item selected - activate targeting at player position
+                if (!targetingSystem.isActive()) {
+                    targetingSystem.activate(x, y, TargetingMode.ADJACENT, new TargetingCallback() {
+                        @Override
+                        public void onTargetConfirmed(float targetX, float targetY) {
+                            // Handle planting based on selected item
+                            handleItemPlacement(targetX, targetY);
+                        }
+                        
+                        @Override
+                        public void onTargetCancelled() {
+                            System.out.println("Item placement cancelled");
+                        }
+                    });
+                }
+            }
+        }
+    }
+    
+    /**
+     * Handle item placement at the confirmed target coordinates.
+     * Called when the player confirms a target position (presses P).
+     * Handles different item types based on the currently selected inventory slot.
+     */
+    private void handleItemPlacement(float targetX, float targetY) {
+        if (inventoryManager == null) {
+            return;
+        }
+        
+        int selectedSlot = inventoryManager.getSelectedSlot();
+        
+        // Handle baby bamboo planting (slot 2)
+        if (selectedSlot == 2) {
+            if (inventoryManager.getCurrentInventory().getBabyBambooCount() > 0) {
+                executePlanting(targetX, targetY);
+            } else {
+                System.out.println("No baby bamboo in inventory");
+            }
+        }
+        // Add handling for other items here in the future
+        // For now, only baby bamboo (slot 2) supports placement
+        else {
+            System.out.println("Selected item cannot be placed");
+        }
+    }
+    
+    /**
+     * Handle targeting input when targeting mode is active.
+     * Processes A/W/D/S keys for directional movement and ESC for cancellation.
+     * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 4.1, 4.2, 4.3, 4.4
+     */
+    private void handleTargetingInput() {
+        if (!targetingSystem.isActive()) {
+            return;
+        }
+        
+        // Handle directional input (A/W/D/S)
+        if (Gdx.input.isKeyJustPressed(Input.Keys.A)) {
+            targetingSystem.moveTarget(wagemaker.uk.targeting.Direction.LEFT);
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.W)) {
+            targetingSystem.moveTarget(wagemaker.uk.targeting.Direction.UP);
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.D)) {
+            targetingSystem.moveTarget(wagemaker.uk.targeting.Direction.RIGHT);
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.S)) {
+            targetingSystem.moveTarget(wagemaker.uk.targeting.Direction.DOWN);
+        }
+        
+        // Handle cancellation (ESC key)
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            targetingSystem.cancel();
+        }
     }
     
     /**
      * Handle planting action when "p" key is pressed.
-     * Validates that baby bamboo is selected (slot 2) before attempting to plant.
+     * Places item at current target position without deactivating targeting.
+     * Targeting stays active as long as an item is selected.
      * Requirements: 1.1, 1.3, 4.1, 4.2
      */
     private void handlePlantingAction() {
         if (Gdx.input.isKeyJustPressed(Input.Keys.P)) {
-            if (plantingSystem != null && inventoryManager != null && biomeManager != null && plantedBamboos != null) {
-                // Check if baby bamboo is selected (slot 2)
-                if (inventoryManager.getSelectedSlot() == 2) {
-                    // Attempt to plant baby bamboo at player's current position
-                    PlantedBamboo plantedBamboo = plantingSystem.attemptPlant(
-                        x, y, 
-                        inventoryManager, 
-                        biomeManager, 
-                        plantedBamboos, 
-                        bambooTrees
-                    );
+            // If targeting is active and target is valid, place the item
+            if (targetingSystem.isActive() && targetingSystem.isTargetValid()) {
+                // Get current target coordinates
+                float[] coords = targetingSystem.getTargetCoordinates();
+                
+                // Place the item at target location
+                handleItemPlacement(coords[0], coords[1]);
+                
+                // Targeting remains active - don't deactivate
+                // It will only deactivate when the player deselects the item
+            }
+        }
+    }
+    
+    /**
+     * Handle planting action when spacebar is pressed while targeting is active.
+     * This provides an alternative to the 'P' key for planting.
+     * Spacebar is context-sensitive: plants when targeting, attacks when not targeting.
+     */
+    private void handleSpacebarPlanting() {
+        // If targeting is active and target is valid, place the item
+        if (targetingSystem.isActive() && targetingSystem.isTargetValid()) {
+            // Get current target coordinates
+            float[] coords = targetingSystem.getTargetCoordinates();
+            
+            // Place the item at target location
+            handleItemPlacement(coords[0], coords[1]);
+            
+            // Targeting remains active - don't deactivate
+            // It will only deactivate when the player deselects the item
+        }
+    }
+    
+    /**
+     * Execute planting at the specified target coordinates.
+     * Called by the targeting system callback when target is confirmed.
+     * Includes error handling and state rollback on failure.
+     */
+    private void executePlanting(float targetX, float targetY) {
+        // Store initial inventory state for potential rollback
+        int initialBabyBambooCount = inventoryManager.getCurrentInventory().getBabyBambooCount();
+        
+        // Attempt to plant baby bamboo at target coordinates
+        PlantedBamboo plantedBamboo = plantingSystem.attemptPlant(
+            targetX, targetY, 
+            inventoryManager, 
+            biomeManager, 
+            plantedBamboos, 
+            bambooTrees
+        );
+        
+        // Add planted bamboo to game world map if planting succeeds
+        if (plantedBamboo != null) {
+            // Generate unique key for the planted bamboo
+            float tileX = (float) (Math.floor(targetX / 64.0) * 64.0);
+            float tileY = (float) (Math.floor(targetY / 64.0) * 64.0);
+            String key = "planted-bamboo-" + (int)tileX + "-" + (int)tileY;
+            plantedBamboos.put(key, plantedBamboo);
+            System.out.println("Planted bamboo added to game world at: " + key);
+            
+            // Send planting message to server in multiplayer
+            if (gameClient != null && gameClient.isConnected()) {
+                try {
+                    gameClient.sendBambooPlant(key, tileX, tileY);
                     
-                    // Add planted bamboo to game world map if planting succeeds
-                    if (plantedBamboo != null) {
-                        // Generate unique key for the planted bamboo
-                        float tileX = (float) (Math.floor(x / 64.0) * 64.0);
-                        float tileY = (float) (Math.floor(y / 64.0) * 64.0);
-                        String key = "planted-bamboo-" + (int)tileX + "-" + (int)tileY;
-                        plantedBamboos.put(key, plantedBamboo);
-                        System.out.println("Planted bamboo added to game world at: " + key);
-                        
-                        // Send planting message to server in multiplayer
-                        if (gameClient != null && gameClient.isConnected()) {
-                            gameClient.sendBambooPlant(key, tileX, tileY);
-                            
-                            // Send inventory update after planting (baby bamboo was deducted)
-                            inventoryManager.sendInventoryUpdateToServer();
-                        }
-                    }
+                    // Send inventory update after planting (baby bamboo was deducted)
+                    inventoryManager.sendInventoryUpdateToServer();
+                } catch (Exception e) {
+                    // Network error - rollback state
+                    System.err.println("Failed to send planting message to server: " + e.getMessage());
+                    
+                    // Remove planted bamboo from local state
+                    plantedBamboos.remove(key);
+                    plantedBamboo.dispose();
+                    
+                    // Restore inventory (add baby bamboo back)
+                    inventoryManager.getCurrentInventory().addBabyBamboo(1);
+                    
+                    System.out.println("Planting rolled back due to network error");
                 }
             }
+        } else {
+            System.out.println("Planting failed: invalid location or no baby bamboo in inventory");
         }
     }
 
@@ -1468,8 +1647,29 @@ public class Player {
             }
         }
     }
+    
+    /**
+     * Get the targeting system instance.
+     * Used by MyGdxGame for rendering the target indicator.
+     * 
+     * @return The targeting system instance
+     */
+    public TargetingSystem getTargetingSystem() {
+        return targetingSystem;
+    }
+    
+    /**
+     * Get the target indicator renderer instance.
+     * Used by MyGdxGame for rendering the target indicator.
+     * 
+     * @return The target indicator renderer instance
+     */
+    public TargetIndicatorRenderer getTargetIndicatorRenderer() {
+        return targetIndicatorRenderer;
+    }
 
     public void dispose() {
         if (spriteSheet != null) spriteSheet.dispose();
+        if (targetIndicatorRenderer != null) targetIndicatorRenderer.dispose();
     }
 }

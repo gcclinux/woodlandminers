@@ -94,13 +94,33 @@ A 2D top-down multiplayer adventure game built with libGDX featuring infinite wo
 - Character automatically animates based on movement direction
 
 ### Actions
-- **Spacebar** - Attack nearby trees
-- **P** - Plant baby bamboo (when standing on sand with baby bamboo in inventory slot 2)
+- **Spacebar** - Context-sensitive action key:
+  - **When no item selected**: Attack nearby trees
+  - **When item selected**: Plant item at target location
 - **Automatic Pickup** - Items are automatically collected when walking near them (within 32 pixels)
 
+### Targeting System (When Item Selected)
+When you select a placeable item (e.g., baby bamboo with key '3'), a white targeting indicator appears:
+- **A** - Move target left
+- **W** - Move target up
+- **D** - Move target right
+- **S** - Move target down
+- **Spacebar** or **P** - Plant item at current target location
+- **ESC** - Cancel targeting
+- **Press item key again** - Deselect item and hide targeting indicator
+
+The targeting system stays active as long as an item is selected, allowing you to plant multiple items quickly without reactivating targeting.
+
 ### Inventory
-- **1-5 Keys** - Select/deselect inventory slots (toggle selection)
+- **1-6 Keys** - Select/deselect inventory slots (toggle selection)
+  - **1** - Apples (consumable)
+  - **2** - Bananas (consumable)
+  - **3** - Baby Bamboo (placeable on sand)
+  - **4** - Bamboo Stack (resource)
+  - **5** - Wood Stack (resource)
+  - **6** - Pebbles (resource)
 - **Tab** - Toggle inventory display
+- Selected items show a yellow highlight box
 
 ### Interface
 - **Escape** - Open/close game menu
@@ -280,7 +300,8 @@ For a comprehensive list of all game features, mechanics, and technical details,
 - ⚔️ **Combat System** - Attack and destroy trees with visual health bars
 - 🔄 **Health Regeneration** - Damaged trees slowly recover health over time
 - 🌵 **Environmental Hazards** - Cacti that damage players on contact
-- 🎋 **Bamboo Planting System** - Plant baby bamboo on sand tiles that grows into harvestable bamboo trees (120s growth time)
+- 🎋 **Bamboo Planting System** - Plant baby bamboo on sand tiles using the targeting system; grows into harvestable bamboo trees (120s growth time)
+- 🎯 **Tile Targeting System** - Visual targeting indicator for precise item placement with WASD controls
 
 #### Inventory & Items
 - 🎒 **Inventory System** - Separate inventories for singleplayer and multiplayer modes
@@ -326,6 +347,7 @@ For a comprehensive list of all game features, mechanics, and technical details,
 - **Health System**: Player health with damage, restoration, and auto-consumption
 - **Collision System**: Precise hitboxes for all entities with optimized detection
 - **Planting System**: Plant baby bamboo on sand tiles with growth and transformation mechanics
+- **Targeting System**: Visual tile-based targeting with WASD movement and persistent indicator while item selected
 
 ### 🚧 Future Enhancements
 - **Crafting System**: Combine resources to create new items

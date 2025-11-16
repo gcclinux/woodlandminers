@@ -1052,20 +1052,28 @@ public class ClientConnection implements Runnable {
         }
         
         // Validate planting distance (player must be near the planting location)
+        // Allow 512 pixels (8 tiles) to account for:
+        // 1. Network latency between client position updates (can be significant)
+        // 2. Player movement while planting (player can move several tiles away)
+        // 3. Tile-based targeting system allowing multi-tile range
+        // 4. Rapid planting sequences where position updates lag behind planting actions
         float dx = x - playerState.getX();
         float dy = y - playerState.getY();
         float distance = (float) Math.sqrt(dx * dx + dy * dy);
         
-        if (distance > 128) { // Allow planting within 128 pixels
+        if (distance > 512) { // Allow planting within 512 pixels (8 tiles)
             System.out.println("Bamboo plant out of range from " + clientId + ": distance=" + distance);
             logSecurityViolation("Bamboo plant range check failed: distance=" + distance);
             return;
         }
         
-        System.out.println("Player " + clientId + " planted bamboo at (" + x + ", " + y + ")");
+        System.out.println("[ClientConnection] Player " + clientId + " planted bamboo at (" + x + ", " + y + ")");
+        System.out.println("  - Planted Bamboo ID: " + plantedBambooId);
+        System.out.println("  - Broadcasting to all clients...");
         
         // Broadcast to all clients (including sender for confirmation)
         server.broadcastToAll(message);
+        System.out.println("  - Broadcast complete");
     }
     
     /**

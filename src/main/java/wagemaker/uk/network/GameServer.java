@@ -395,11 +395,13 @@ public class GameServer {
         }
         
         List<String> failedClients = new ArrayList<>();
+        int successCount = 0;
         
         for (ClientConnection client : connectedClients.values()) {
             try {
                 if (client.isAlive()) {
                     client.sendMessage(message);
+                    successCount++;
                 } else {
                     failedClients.add(client.getClientId());
                 }
@@ -408,6 +410,11 @@ public class GameServer {
                                  client.getClientId() + ": " + e.getMessage());
                 failedClients.add(client.getClientId());
             }
+        }
+        
+        // Log broadcast statistics for bamboo plant messages
+        if (message.getType() == MessageType.BAMBOO_PLANT) {
+            System.out.println("[GameServer] Broadcast BambooPlantMessage to " + successCount + " clients (failed: " + failedClients.size() + ")");
         }
         
         // Clean up failed clients

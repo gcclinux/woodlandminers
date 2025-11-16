@@ -393,8 +393,8 @@ public class LocalizationManagerTest {
         String[] supported = localizationManager.getSupportedLanguages();
         
         assertNotNull(supported);
-        assertEquals(4, supported.length);
-        assertArrayEquals(new String[]{"en", "pl", "pt", "nl"}, supported);
+        assertEquals(5, supported.length);
+        assertArrayEquals(new String[]{"en", "pl", "pt", "nl", "de"}, supported);
     }
     
     @Test

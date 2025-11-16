@@ -1123,13 +1123,18 @@ public class MyGdxGame extends ApplicationAdapter {
     private void drawPlantedBamboos() {
         float camX = camera.position.x;
         float camY = camera.position.y;
-        float viewWidth = viewport.getWorldWidth();
-        float viewHeight = viewport.getWorldHeight();
+        float viewWidth = viewport.getWorldWidth() / 2;
+        float viewHeight = viewport.getWorldHeight() / 2;
         
         for (PlantedBamboo planted : plantedBamboos.values()) {
             if (Math.abs(planted.getX() - camX) < viewWidth && 
                 Math.abs(planted.getY() - camY) < viewHeight) {
-                batch.draw(planted.getTexture(), planted.getX(), planted.getY(), 64, 64);
+                Texture texture = planted.getTexture();
+                if (texture != null) {
+                    batch.draw(texture, planted.getX(), planted.getY(), 64, 64);
+                } else {
+                    System.err.println("[RENDER] PlantedBamboo at (" + planted.getX() + ", " + planted.getY() + ") has null texture!");
+                }
             }
         }
     }
@@ -3661,18 +3666,36 @@ public class MyGdxGame extends ApplicationAdapter {
      * This ensures OpenGL operations happen in the correct context.
      */
     private void processPendingBambooPlants() {
+        int processedCount = 0;
         wagemaker.uk.network.BambooPlantMessage message;
         while ((message = pendingBambooPlants.poll()) != null) {
+            processedCount++;
             String plantedBambooId = message.getPlantedBambooId();
             float x = message.getX();
             float y = message.getY();
             
+            System.out.println("[MyGdxGame] Processing pending bamboo plant #" + processedCount + ":");
+            System.out.println("  - Planted Bamboo ID: " + plantedBambooId);
+            System.out.println("  - Position: (" + x + ", " + y + ")");
+            System.out.println("  - Already exists: " + plantedBamboos.containsKey(plantedBambooId));
+            System.out.println("  - Current plantedBamboos count: " + plantedBamboos.size());
+            
             // Create planted bamboo if it doesn't exist
             if (!plantedBamboos.containsKey(plantedBambooId)) {
                 PlantedBamboo plantedBamboo = new PlantedBamboo(x, y);
+                Texture texture = plantedBamboo.getTexture();
+                System.out.println("  - PlantedBamboo created, texture is: " + (texture != null ? "valid" : "NULL"));
+                
                 plantedBamboos.put(plantedBambooId, plantedBamboo);
-                System.out.println("Remote player planted bamboo at: " + plantedBambooId);
+                System.out.println("  - SUCCESS: Remote player planted bamboo at: " + plantedBambooId);
+                System.out.println("  - New plantedBamboos count: " + plantedBamboos.size());
+            } else {
+                System.out.println("  - SKIPPED: Bamboo already exists at this location");
             }
+        }
+        
+        if (processedCount > 0) {
+            System.out.println("[MyGdxGame] Processed " + processedCount + " bamboo plants this frame. Total in map: " + plantedBamboos.size());
         }
     }
     

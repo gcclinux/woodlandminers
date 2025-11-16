@@ -353,7 +353,7 @@ public class LocalizationIntegrationTest {
         String[] supported = localizationManager.getSupportedLanguages();
         
         assertNotNull(supported);
-        assertEquals(4, supported.length);
+        assertEquals(5, supported.length);
         
         // Verify display names
         assertEquals("English", localizationManager.getLanguageDisplayName("en"));

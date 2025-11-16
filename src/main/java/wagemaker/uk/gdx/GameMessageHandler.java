@@ -321,12 +321,23 @@ public class GameMessageHandler extends DefaultMessageHandler {
     
     @Override
     protected void handleBambooPlant(wagemaker.uk.network.BambooPlantMessage message) {
+        String myClientId = game.getGameClient() != null ? game.getGameClient().getClientId() : "null";
+        String senderPlayerId = message.getPlayerId();
+        
+        System.out.println("[GameMessageHandler] Received BambooPlantMessage:");
+        System.out.println("  - My Client ID: " + myClientId);
+        System.out.println("  - Sender Player ID: " + senderPlayerId);
+        System.out.println("  - Planted Bamboo ID: " + message.getPlantedBambooId());
+        System.out.println("  - Position: (" + message.getX() + ", " + message.getY() + ")");
+        
         // Don't process our own planting messages (already handled locally)
         if (game.getGameClient() != null && 
             message.getPlayerId().equals(game.getGameClient().getClientId())) {
+            System.out.println("  - SKIPPING: This is my own planting message");
             return;
         }
         
+        System.out.println("  - PROCESSING: This is a remote player's planting");
         // Queue bamboo planting to be processed on the main thread
         game.queueBambooPlant(message);
     }

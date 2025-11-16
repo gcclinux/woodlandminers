@@ -5,34 +5,59 @@ import com.badlogic.gdx.graphics.Texture;
 
 public class PlantedBamboo {
     private float x, y;
-    private Texture texture;
     private float growthTimer;
     private static final float GROWTH_DURATION = 120.0f; // 120 seconds
+    
+    // Shared texture for all PlantedBamboo instances to avoid repeated texture creation
+    // This fixes multiplayer synchronization issues where rapid texture creation causes rendering failures
+    private static Texture sharedTexture = null;
+    private static int instanceCount = 0;
 
     public PlantedBamboo(float x, float y) {
         this.x = snapToTileGrid(x);
         this.y = snapToTileGrid(y);
         this.growthTimer = 0.0f;
-        createTexture();
+        
+        // Create shared texture on first instance
+        if (sharedTexture == null) {
+            createSharedTexture();
+        }
+        instanceCount++;
     }
 
     private float snapToTileGrid(float coordinate) {
         return (float) (Math.floor(coordinate / 64.0) * 64.0);
     }
 
-    private void createTexture() {
-        Texture spriteSheet = new Texture("sprites/assets.png");
-        Pixmap pixmap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
-        spriteSheet.getTextureData().prepare();
-        Pixmap sheetPixmap = spriteSheet.getTextureData().consumePixmap();
+    /**
+     * Creates the shared texture used by all PlantedBamboo instances.
+     * This is called once when the first PlantedBamboo is created.
+     * Using a shared texture prevents issues with rapid texture creation in multiplayer.
+     */
+    private static synchronized void createSharedTexture() {
+        if (sharedTexture != null) {
+            return; // Already created
+        }
         
-        // BabyBamboo coordinates: 192 from left, 128 from top, 64x64 size
-        pixmap.drawPixmap(sheetPixmap, 0, 0, 192, 128, 64, 64);
-        
-        texture = new Texture(pixmap);
-        pixmap.dispose();
-        sheetPixmap.dispose();
-        spriteSheet.dispose();
+        try {
+            Texture spriteSheet = new Texture("sprites/assets.png");
+            Pixmap pixmap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
+            spriteSheet.getTextureData().prepare();
+            Pixmap sheetPixmap = spriteSheet.getTextureData().consumePixmap();
+            
+            // BabyBamboo coordinates: 192 from left, 128 from top, 64x64 size
+            pixmap.drawPixmap(sheetPixmap, 0, 0, 192, 128, 64, 64);
+            
+            sharedTexture = new Texture(pixmap);
+            pixmap.dispose();
+            sheetPixmap.dispose();
+            spriteSheet.dispose();
+            
+            System.out.println("[PlantedBamboo] Shared texture created successfully");
+        } catch (Exception e) {
+            System.err.println("[PlantedBamboo] Failed to create shared texture: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     public boolean update(float deltaTime) {
@@ -53,12 +78,34 @@ public class PlantedBamboo {
     }
 
     public Texture getTexture() {
-        return texture;
+        return sharedTexture;
     }
 
     public void dispose() {
-        if (texture != null) {
-            texture.dispose();
+        // Decrement instance count
+        instanceCount--;
+        
+        // Only dispose shared texture when all instances are gone
+        // In practice, we keep it loaded for the game session
+        // This prevents texture disposal/recreation cycles
+        if (instanceCount <= 0 && sharedTexture != null) {
+            System.out.println("[PlantedBamboo] All instances disposed, keeping shared texture for reuse");
+            // Don't actually dispose - keep it for future plantings
+            // sharedTexture.dispose();
+            // sharedTexture = null;
+        }
+    }
+    
+    /**
+     * Manually dispose the shared texture when shutting down the game.
+     * Call this from the game's dispose() method.
+     */
+    public static void disposeSharedTexture() {
+        if (sharedTexture != null) {
+            sharedTexture.dispose();
+            sharedTexture = null;
+            instanceCount = 0;
+            System.out.println("[PlantedBamboo] Shared texture disposed");
         }
     }
 }

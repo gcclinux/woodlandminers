@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/bash
 
 # Woodlanders Server Launcher Script
 # This script reads JVM configuration and starts the server
@@ -11,7 +11,7 @@ JVM_GC_PAUSE=${JVM_GC_PAUSE:-50}
 JVM_PARALLEL_REF=${JVM_PARALLEL_REF:-true}
 
 # Server settings
-SERVER_JAR="build/libs/woodlanders-server.jar"
+SERVER_JAR="woodlanders-server.jar"
 SERVER_ARGS="$@"
 
 # Build JVM arguments

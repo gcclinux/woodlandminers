@@ -2,6 +2,10 @@ SOme screenshots are older the idea is to start adding them based on their versi
 
 <div align="center">
 
+### New targeting System
+![Latest 0.0.12](screenshots/targeting-system.png)
+*New targeting system now just to plant bamboo, future attack + more.*
+
 ### Farming Bamboo
 ![Latest 0.0.9](screenshots/Rain-Inv-Planting-MP-009.png)
 *Farming Baoom with rain, inventory, trees, items, sand, compas, ping*

@@ -16,9 +16,9 @@ The goal was simple yet audacious: **build a complete, enjoyable multiplayer gam
 
 <div align="center">
 
-### Farming Bamboo
-![Latest 0.0.9](screenshots/Rain-Inv-Planting-MP-009.png)
-*Farming Baoom with rain, inventory, trees, items, sand, compas, ping*
+### New targeting System
+![Latest 0.0.12](screenshots/targeting-system.png)
+*New targeting system now just to plant bamboo, future attack + more.*
 
 </div>
 

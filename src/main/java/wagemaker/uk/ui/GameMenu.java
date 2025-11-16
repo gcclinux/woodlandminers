@@ -1107,16 +1107,17 @@ public class GameMenu implements LanguageChangeListener {
      * Handles selection in the multiplayer menu.
      */
     private void handleMultiplayerMenuSelection() {
-        String selected = multiplayerMenu.getSelectedOption();
+        int selectedIndex = multiplayerMenu.getSelectedIndex();
+        LocalizationManager loc = LocalizationManager.getInstance();
         
-        if (selected.equals("Host Server")) {
+        if (selectedIndex == 0) { // Host Server
             multiplayerMenu.close();
             if (gameInstance != null) {
                 gameInstance.attemptHostServer();
             } else {
                 System.err.println("Cannot host server: game instance not set");
             }
-        } else if (selected.equals("Connect to Server")) {
+        } else if (selectedIndex == 1) { // Connect to Server
             multiplayerMenu.close();
             
             // Load PlayerConfig and pre-fill the saved server address
@@ -1125,7 +1126,7 @@ public class GameMenu implements LanguageChangeListener {
             
             // Show dialog with pre-filled address (or empty if no last server)
             connectDialog.show(lastServer);
-        } else if (selected.equals("Back")) {
+        } else if (selectedIndex == 2) { // Back
             multiplayerMenu.close();
             isOpen = true; // Return to main menu
         }

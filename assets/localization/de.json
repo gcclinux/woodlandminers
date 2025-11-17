@@ -1,6 +1,7 @@
 {
   "menu": {
     "player_name": "Spielername",
+    "player_location": "Spielerposition",
     "save_world": "Welt Speichern",
     "load_world": "Welt Laden",
     "multiplayer": "Mehrspieler",
@@ -30,6 +31,18 @@
     "title": "Spielernamen Eingeben",
     "min_characters": "Min. 3 Zeichen!!!",
     "instructions": "Enter, oder Esc zum Abbrechen"
+  },
+  "player_location_dialog": {
+    "title": "Spielerkoordinaten",
+    "current_location": "Aktuelle Position",
+    "new_target": "Neue Zielposition",
+    "set_target": "Ziel Setzen",
+    "reset_origin": "Zum Ursprung Zurücksetzen",
+    "tab_instruction": "Tab zum Wechseln der Felder",
+    "confirm_instruction": "Enter zum Setzen, ESC zum Abbrechen",
+    "invalid_number": "Ungültige Nummer",
+    "target_set": "Kompassziel gesetzt auf ({0}, {1})",
+    "target_reset": "Kompass zum Ursprung zurückgesetzt (0, 0)"
   },
   "connect_dialog": {
     "title": "Mit Server Verbinden",

@@ -12,12 +12,16 @@ import java.nio.file.Paths;
  */
 public class PlayerConfig {
     private String lastServer;
+    private Float compassTargetX;
+    private Float compassTargetY;
     
     /**
      * Private constructor. Use load() to create instances.
      */
     private PlayerConfig() {
         this.lastServer = null;
+        this.compassTargetX = null;
+        this.compassTargetY = null;
     }
     
     /**
@@ -88,9 +92,32 @@ public class PlayerConfig {
             // Parse the lastServer field
             config.lastServer = parseJsonString(jsonContent, "\"lastServer\":");
             
+            // Parse the compassTarget fields
+            String compassTargetXStr = parseJsonNumber(jsonContent, "\"compassTarget\":", "\"x\":");
+            String compassTargetYStr = parseJsonNumber(jsonContent, "\"compassTarget\":", "\"y\":");
+            
+            if (compassTargetXStr != null) {
+                try {
+                    config.compassTargetX = Float.parseFloat(compassTargetXStr);
+                } catch (NumberFormatException e) {
+                    System.err.println("Invalid compassTarget.x value: " + compassTargetXStr);
+                }
+            }
+            
+            if (compassTargetYStr != null) {
+                try {
+                    config.compassTargetY = Float.parseFloat(compassTargetYStr);
+                } catch (NumberFormatException e) {
+                    System.err.println("Invalid compassTarget.y value: " + compassTargetYStr);
+                }
+            }
+            
             System.out.println("Player configuration loaded successfully from " + configFile.getAbsolutePath());
             if (config.lastServer != null) {
                 System.out.println("Last server: " + config.lastServer);
+            }
+            if (config.compassTargetX != null && config.compassTargetY != null) {
+                System.out.println("Compass target: (" + config.compassTargetX + ", " + config.compassTargetY + ")");
             }
             
         } catch (IOException e) {
@@ -176,6 +203,77 @@ public class PlayerConfig {
     }
     
     /**
+     * Parses a number value from a nested JSON object.
+     * 
+     * @param json The JSON content
+     * @param parentKey The parent object key to search for
+     * @param childKey The child key within the parent object
+     * @return The parsed number value as a string, or null if not found
+     */
+    private static String parseJsonNumber(String json, String parentKey, String childKey) {
+        int parentIndex = json.indexOf(parentKey);
+        if (parentIndex == -1) {
+            return null; // Parent key not found
+        }
+        
+        // Find the opening brace of the parent object
+        int objectStart = parentIndex + parentKey.length();
+        while (objectStart < json.length() && json.charAt(objectStart) != '{') {
+            objectStart++;
+        }
+        
+        if (objectStart >= json.length()) {
+            return null; // No opening brace found
+        }
+        
+        // Find the closing brace of the parent object
+        int objectEnd = objectStart + 1;
+        int braceCount = 1;
+        while (objectEnd < json.length() && braceCount > 0) {
+            if (json.charAt(objectEnd) == '{') {
+                braceCount++;
+            } else if (json.charAt(objectEnd) == '}') {
+                braceCount--;
+            }
+            objectEnd++;
+        }
+        
+        // Extract the parent object content
+        String objectContent = json.substring(objectStart, objectEnd);
+        
+        // Find the child key within the object
+        int childIndex = objectContent.indexOf(childKey);
+        if (childIndex == -1) {
+            return null; // Child key not found
+        }
+        
+        // Find the start of the value (after the colon and any whitespace)
+        int valueStart = childIndex + childKey.length();
+        while (valueStart < objectContent.length() && 
+               (objectContent.charAt(valueStart) == ' ' || 
+                objectContent.charAt(valueStart) == '\t' || 
+                objectContent.charAt(valueStart) == ':')) {
+            valueStart++;
+        }
+        
+        // Find the end of the value (comma, closing brace, or newline)
+        int valueEnd = valueStart;
+        while (valueEnd < objectContent.length() && 
+               objectContent.charAt(valueEnd) != ',' && 
+               objectContent.charAt(valueEnd) != '}' && 
+               objectContent.charAt(valueEnd) != '\n' &&
+               objectContent.charAt(valueEnd) != '\r') {
+            valueEnd++;
+        }
+        
+        if (valueEnd > valueStart) {
+            return objectContent.substring(valueStart, valueEnd).trim();
+        }
+        
+        return null;
+    }
+    
+    /**
      * Saves the current configuration to disk.
      * If save fails, logs an error but doesn't throw an exception.
      */
@@ -197,8 +295,11 @@ public class PlayerConfig {
                 
                 // Update or add the lastServer field
                 jsonContent = updateJsonField(existingContent, "lastServer", lastServer);
+                
+                // Update or add the compassTarget object
+                jsonContent = updateCompassTargetField(jsonContent);
             } else {
-                // Create new JSON with just the lastServer field
+                // Create new JSON with all fields
                 jsonContent = buildJsonContent();
             }
             
@@ -227,8 +328,26 @@ public class PlayerConfig {
         StringBuilder json = new StringBuilder();
         json.append("{\n");
         
+        boolean hasFields = false;
+        
         if (lastServer != null && !lastServer.isEmpty()) {
-            json.append("  \"lastServer\": \"").append(lastServer).append("\"\n");
+            json.append("  \"lastServer\": \"").append(lastServer).append("\"");
+            hasFields = true;
+        }
+        
+        if (compassTargetX != null && compassTargetY != null) {
+            if (hasFields) {
+                json.append(",\n");
+            }
+            json.append("  \"compassTarget\": {\n");
+            json.append("    \"x\": ").append(compassTargetX).append(",\n");
+            json.append("    \"y\": ").append(compassTargetY).append("\n");
+            json.append("  }");
+            hasFields = true;
+        }
+        
+        if (hasFields) {
+            json.append("\n");
         }
         
         json.append("}");
@@ -347,5 +466,146 @@ public class PlayerConfig {
             // Catch any unexpected exceptions to ensure this method never crashes the application
             System.err.println("Unexpected error saving server address: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Retrieves the compass target X coordinate.
+     * 
+     * @return The X coordinate, or null if not set
+     */
+    public Float getCompassTargetX() {
+        return compassTargetX;
+    }
+    
+    /**
+     * Retrieves the compass target Y coordinate.
+     * 
+     * @return The Y coordinate, or null if not set
+     */
+    public Float getCompassTargetY() {
+        return compassTargetY;
+    }
+    
+    /**
+     * Saves the compass target coordinates and persists them to disk.
+     * 
+     * @param x The target X coordinate
+     * @param y The target Y coordinate
+     */
+    public void saveCompassTarget(Float x, Float y) {
+        try {
+            this.compassTargetX = x;
+            this.compassTargetY = y;
+            save();
+            if (x != null && y != null) {
+                System.out.println("Saved compass target: (" + x + ", " + y + ")");
+            }
+        } catch (Exception e) {
+            // Catch any unexpected exceptions to ensure this method never crashes the application
+            System.err.println("Unexpected error saving compass target: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Clears the compass target coordinates and persists the change to disk.
+     */
+    public void clearCompassTarget() {
+        try {
+            this.compassTargetX = null;
+            this.compassTargetY = null;
+            save();
+            System.out.println("Cleared compass target from configuration");
+        } catch (Exception e) {
+            // Catch any unexpected exceptions to ensure this method never crashes the application
+            System.err.println("Unexpected error clearing compass target: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Updates the compassTarget nested object in existing JSON content.
+     * 
+     * @param existingJson The existing JSON content
+     * @return The updated JSON content
+     */
+    private String updateCompassTargetField(String existingJson) {
+        String key = "\"compassTarget\":";
+        int keyIndex = existingJson.indexOf(key);
+        
+        if (keyIndex != -1) {
+            // compassTarget object exists, need to replace it
+            int objectStart = keyIndex + key.length();
+            
+            // Skip whitespace to find opening brace
+            while (objectStart < existingJson.length() && 
+                   (existingJson.charAt(objectStart) == ' ' || existingJson.charAt(objectStart) == '\t')) {
+                objectStart++;
+            }
+            
+            if (objectStart < existingJson.length() && existingJson.charAt(objectStart) == '{') {
+                // Find the closing brace
+                int objectEnd = objectStart + 1;
+                int braceCount = 1;
+                while (objectEnd < existingJson.length() && braceCount > 0) {
+                    if (existingJson.charAt(objectEnd) == '{') {
+                        braceCount++;
+                    } else if (existingJson.charAt(objectEnd) == '}') {
+                        braceCount--;
+                    }
+                    objectEnd++;
+                }
+                
+                if (compassTargetX == null || compassTargetY == null) {
+                    // Remove the compassTarget field entirely
+                    // Find the start of the line
+                    int lineStart = keyIndex;
+                    while (lineStart > 0 && existingJson.charAt(lineStart - 1) != '\n') {
+                        lineStart--;
+                    }
+                    
+                    // Find the end (including comma if present)
+                    int lineEnd = objectEnd;
+                    while (lineEnd < existingJson.length() && 
+                           (existingJson.charAt(lineEnd) == ',' || existingJson.charAt(lineEnd) == ' ' || 
+                            existingJson.charAt(lineEnd) == '\t')) {
+                        lineEnd++;
+                    }
+                    if (lineEnd < existingJson.length() && existingJson.charAt(lineEnd) == '\n') {
+                        lineEnd++;
+                    }
+                    
+                    return existingJson.substring(0, lineStart) + existingJson.substring(lineEnd);
+                } else {
+                    // Replace the object
+                    String newObject = "{\n    \"x\": " + compassTargetX + ",\n    \"y\": " + compassTargetY + "\n  }";
+                    return existingJson.substring(0, objectStart) + newObject + existingJson.substring(objectEnd);
+                }
+            }
+        } else {
+            // compassTarget doesn't exist, add it if values are not null
+            if (compassTargetX == null || compassTargetY == null) {
+                return existingJson; // Don't add if values are null
+            }
+            
+            // Find the last closing brace
+            int lastBrace = existingJson.lastIndexOf('}');
+            if (lastBrace == -1) {
+                // Invalid JSON, rebuild from scratch
+                return buildJsonContent();
+            }
+            
+            // Check if there are other fields
+            String beforeBrace = existingJson.substring(0, lastBrace).trim();
+            boolean hasOtherFields = beforeBrace.length() > 1 && !beforeBrace.endsWith("{");
+            
+            String newField = (hasOtherFields ? ",\n" : "") + 
+                            "  \"compassTarget\": {\n" +
+                            "    \"x\": " + compassTargetX + ",\n" +
+                            "    \"y\": " + compassTargetY + "\n" +
+                            "  }\n";
+            
+            return existingJson.substring(0, lastBrace) + newField + "}";
+        }
+        
+        return existingJson;
     }
 }

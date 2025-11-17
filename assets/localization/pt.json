@@ -1,6 +1,7 @@
 {
   "menu": {
     "player_name": "Nome do Jogador",
+    "player_location": "Localização do Jogador",
     "save_world": "Salvar Mundo",
     "load_world": "Carregar Mundo",
     "multiplayer": "Multijogador",
@@ -29,6 +30,18 @@
     "title": "Digite o Nome do Jogador",
     "min_characters": "Mínimo 3 Caracteres!!!",
     "instructions": "Enter, ou Esc para Cancelar"
+  },
+  "player_location_dialog": {
+    "title": "Coordenadas do Jogador",
+    "current_location": "Localização Atual",
+    "new_target": "Nova Localização Alvo",
+    "set_target": "Definir Alvo",
+    "reset_origin": "Resetar para Origem",
+    "tab_instruction": "Tab para alternar campos",
+    "confirm_instruction": "Enter para definir, ESC para cancelar",
+    "invalid_number": "Número inválido",
+    "target_set": "Alvo da bússola definido para ({0}, {1})",
+    "target_reset": "Bússola resetada para origem (0, 0)"
   },
   "connect_dialog": {
     "title": "Conectar ao Servidor",

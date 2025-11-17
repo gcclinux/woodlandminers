@@ -1,6 +1,7 @@
 {
   "menu": {
     "player_name": "Imię Gracza",
+    "player_location": "Lokalizacja Gracza",
     "save_world": "Zapisz Świat",
     "load_world": "Wczytaj Świat",
     "multiplayer": "Multiplayer",
@@ -29,6 +30,18 @@
     "title": "Wprowadź Imię Gracza",
     "min_characters": "Min 3 Znaki!!!",
     "instructions": "Enter, lub Esc aby Anulować"
+  },
+  "player_location_dialog": {
+    "title": "Współrzędne Gracza",
+    "current_location": "Aktualna Lokalizacja",
+    "new_target": "Nowa Lokalizacja Docelowa",
+    "set_target": "Ustaw Cel",
+    "reset_origin": "Resetuj do Początku",
+    "tab_instruction": "Tab aby przełączyć pola",
+    "confirm_instruction": "Enter aby ustawić, ESC aby anulować",
+    "invalid_number": "Nieprawidłowa liczba",
+    "target_set": "Cel kompasu ustawiony na ({0}, {1})",
+    "target_reset": "Kompas zresetowany do początku (0, 0)"
   },
   "connect_dialog": {
     "title": "Połącz z Serwerem",

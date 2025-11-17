@@ -16,9 +16,9 @@ The goal was simple yet audacious: **build a complete, enjoyable multiplayer gam
 
 <div align="center">
 
-### New targeting System
-![Latest 0.0.12](screenshots/targeting-system.png)
-*New targeting system now just to plant bamboo, future attack + more.*
+### Player Location Compass
+![Latest 0.0.12](screenshots/mp-location-compas.png)
+*The compass can now guide you until the other players if entred their location*
 
 </div>
 
@@ -141,6 +141,7 @@ Access the main menu at any time by pressing the Escape key. The menu adapts bas
 ```
 ┌────────────────────────────┐
 │   Player Name              │
+|   Player Location          |
 │   Save World               │
 │   Load World               │
 │   Multiplayer              │
@@ -154,6 +155,7 @@ Access the main menu at any time by pressing the Escape key. The menu adapts bas
 ```
 ┌────────────────────────────┐
 │   Player Name              │
+|   Player Location          |
 │   Save World               │
 │   Load World               │
 │   Save Player              │
@@ -163,6 +165,24 @@ Access the main menu at any time by pressing the Escape key. The menu adapts bas
 └────────────────────────────┘
 ```
 
+### Main Menu Player Location
+```
+┌────────────────────────────────┐
+│     Player Coordinates         │
+│                                │
+│  Current Location              │
+│  x: 12345    y: -12345         │
+│                                │
+│  New Target Location           │
+│  x: [_______]  y: [_______]    │
+│                                │
+│  [Set Target] [Reset Origin]   │
+│                                │
+│  Tab to switch, Enter to set   │
+│  ESC to cancel                 │
+└────────────────────────────────┘
+
+```
 ### Menu Options Explained
 
 **Player Name**

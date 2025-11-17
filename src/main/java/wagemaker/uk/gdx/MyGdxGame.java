@@ -339,6 +339,19 @@ public class MyGdxGame extends ApplicationAdapter {
         
         // Initialize compass
         compass = new Compass();
+        
+        // Load compass target from PlayerConfig and apply if it exists
+        wagemaker.uk.client.PlayerConfig playerConfig = wagemaker.uk.client.PlayerConfig.load();
+        Float targetX = playerConfig.getCompassTargetX();
+        Float targetY = playerConfig.getCompassTargetY();
+        
+        if (targetX != null && targetY != null) {
+            compass.setCustomTarget(targetX, targetY);
+            System.out.println("Restored compass target from config: (" + targetX + ", " + targetY + ")");
+        }
+        
+        // Pass Compass reference to GameMenu
+        gameMenu.setCompass(compass);
 
         // Initialize biome manager for ground texture variation
         biomeManager = new BiomeManager();

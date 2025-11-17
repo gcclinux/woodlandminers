@@ -1,6 +1,7 @@
 {
   "menu": {
     "player_name": "Spelersnaam",
+    "player_location": "Speler Locatie",
     "save_world": "Wereld Opslaan",
     "load_world": "Wereld Laden",
     "multiplayer": "Multiplayer",
@@ -29,6 +30,18 @@
     "title": "Voer Spelersnaam In",
     "min_characters": "Min 3 Tekens!!!",
     "instructions": "Enter, of Esc om te Annuleren"
+  },
+  "player_location_dialog": {
+    "title": "Speler Coördinaten",
+    "current_location": "Huidige Locatie",
+    "new_target": "Nieuwe Doellocatie",
+    "set_target": "Doel Instellen",
+    "reset_origin": "Reset naar Oorsprong",
+    "tab_instruction": "Tab om te wisselen tussen velden",
+    "confirm_instruction": "Enter om in te stellen, ESC om te annuleren",
+    "invalid_number": "Ongeldig nummer",
+    "target_set": "Kompas doel ingesteld op ({0}, {1})",
+    "target_reset": "Kompas gereset naar oorsprong (0, 0)"
   },
   "connect_dialog": {
     "title": "Verbinden met Server",

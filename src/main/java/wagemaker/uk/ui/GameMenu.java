@@ -36,7 +36,7 @@ public class GameMenu implements LanguageChangeListener {
     private wagemaker.uk.gdx.MyGdxGame gameInstance;
     private wagemaker.uk.inventory.InventoryManager inventoryManager;
     private static final float MENU_WIDTH = 400; // Increased by 60% (250 * 1.6 = 400)
-    private static final float MENU_HEIGHT = 280; // Increased to fit all 7 menu items comfortably
+    private static final float MENU_HEIGHT = 310; // Increased to fit all 8 menu items comfortably
     private static final float NAME_DIALOG_WIDTH = 384; // Increased by 20% (320 * 1.2 = 384)
     private static final float NAME_DIALOG_HEIGHT = 220;
     
@@ -60,6 +60,12 @@ public class GameMenu implements LanguageChangeListener {
     
     // Language dialog
     private LanguageDialog languageDialog;
+    
+    // Player location dialog
+    private PlayerLocationDialog playerLocationDialog;
+    
+    // Compass reference for custom target
+    private Compass compass;
 
 
     public GameMenu() {
@@ -86,6 +92,9 @@ public class GameMenu implements LanguageChangeListener {
         
         // Initialize language dialog
         languageDialog = new LanguageDialog();
+        
+        // Initialize player location dialog
+        playerLocationDialog = new PlayerLocationDialog();
         
         // Register as language change listener
         LocalizationManager.getInstance().addLanguageChangeListener(this);
@@ -130,6 +139,10 @@ public class GameMenu implements LanguageChangeListener {
         this.inventoryManager = inventoryManager;
     }
     
+    public void setCompass(Compass compass) {
+        this.compass = compass;
+    }
+    
     /**
      * Updates menu items with localized text.
      * Called on initialization and when language changes.
@@ -139,6 +152,7 @@ public class GameMenu implements LanguageChangeListener {
         
         singleplayerMenuItems = new String[] {
             loc.getText("menu.player_name"),
+            loc.getText("menu.player_location"),
             loc.getText("menu.save_world"),
             loc.getText("menu.load_world"),
             loc.getText("menu.multiplayer"),
@@ -149,6 +163,7 @@ public class GameMenu implements LanguageChangeListener {
         
         multiplayerMenuItems = new String[] {
             loc.getText("menu.player_name"),
+            loc.getText("menu.player_location"),
             loc.getText("menu.save_world"),
             loc.getText("menu.load_world"),
             loc.getText("menu.save_player"),
@@ -597,6 +612,12 @@ public class GameMenu implements LanguageChangeListener {
             return;
         }
         
+        if (playerLocationDialog.isVisible()) {
+            playerLocationDialog.handleInput();
+            handlePlayerLocationDialogResult();
+            return;
+        }
+        
         if (nameDialogOpen) {
             handleNameDialogInput();
             return;
@@ -675,6 +696,11 @@ public class GameMenu implements LanguageChangeListener {
         
         if (languageDialog.isVisible()) {
             languageDialog.render(batch, shapeRenderer, camX, camY);
+            return;
+        }
+        
+        if (playerLocationDialog.isVisible()) {
+            playerLocationDialog.render(batch, shapeRenderer, camX, camY);
             return;
         }
         
@@ -769,6 +795,8 @@ public class GameMenu implements LanguageChangeListener {
         
         if (selectedItem.equals(loc.getText("menu.player_name"))) {
             openNameDialog();
+        } else if (selectedItem.equals(loc.getText("menu.player_location"))) {
+            openPlayerLocationDialog();
         } else if (selectedItem.equals(loc.getText("menu.save_world"))) {
             openWorldSaveDialog();
         } else if (selectedItem.equals(loc.getText("menu.load_world"))) {
@@ -793,6 +821,25 @@ public class GameMenu implements LanguageChangeListener {
     private void openLanguageDialog() {
         isOpen = false; // Close main menu
         languageDialog.show();
+    }
+    
+    /**
+     * Opens the player location dialog.
+     */
+    private void openPlayerLocationDialog() {
+        isOpen = false; // Close main menu
+        PlayerConfig config = PlayerConfig.load();
+        playerLocationDialog.show(player, compass, config);
+    }
+    
+    /**
+     * Handles the result of the player location dialog.
+     */
+    private void handlePlayerLocationDialogResult() {
+        if (!playerLocationDialog.isVisible()) {
+            // Dialog was closed
+            isOpen = true; // Return to main menu
+        }
     }
     
     /**
@@ -1354,19 +1401,19 @@ public class GameMenu implements LanguageChangeListener {
 
 
     private Texture createWoodenPlank() {
-        Pixmap pixmap = new Pixmap(250, 220, Pixmap.Format.RGBA8888); // Increased height for multiplayer option
+        Pixmap pixmap = new Pixmap((int)MENU_WIDTH, (int)MENU_HEIGHT, Pixmap.Format.RGBA8888);
         
         pixmap.setColor(0.4f, 0.25f, 0.1f, 1.0f);
         pixmap.fill();
         
         pixmap.setColor(0.3f, 0.18f, 0.08f, 1.0f);
-        for (int y = 10; y < 220; y += 15) { // Updated for new height
-            pixmap.drawLine(0, y, 250, y + 5);
+        for (int y = 10; y < MENU_HEIGHT; y += 15) {
+            pixmap.drawLine(0, y, (int)MENU_WIDTH, y + 5);
         }
         
         pixmap.setColor(0.2f, 0.12f, 0.05f, 1.0f);
-        pixmap.drawRectangle(0, 0, 250, 220); // Updated for new height
-        pixmap.drawRectangle(2, 2, 246, 216); // Updated for new height
+        pixmap.drawRectangle(0, 0, (int)MENU_WIDTH, (int)MENU_HEIGHT);
+        pixmap.drawRectangle(2, 2, (int)MENU_WIDTH - 4, (int)MENU_HEIGHT - 4);
         
         Texture texture = new Texture(pixmap);
         pixmap.dispose();
@@ -1437,7 +1484,8 @@ public class GameMenu implements LanguageChangeListener {
                worldSaveDialog.isVisible() ||
                worldLoadDialog.isVisible() ||
                worldManageDialog.isVisible() ||
-               languageDialog.isVisible();
+               languageDialog.isVisible() ||
+               playerLocationDialog.isVisible();
     }
     
     /**
@@ -1552,6 +1600,9 @@ public class GameMenu implements LanguageChangeListener {
         }
         if (languageDialog != null) {
             languageDialog.dispose();
+        }
+        if (playerLocationDialog != null) {
+            playerLocationDialog.dispose();
         }
         
         // Unregister from language change listener

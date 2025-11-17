@@ -1,6 +1,7 @@
 {
   "menu": {
     "player_name": "Player Name",
+    "player_location": "Player Location",
     "save_world": "Save World",
     "load_world": "Load World",
     "multiplayer": "Multiplayer",
@@ -29,6 +30,18 @@
     "title": "Enter Player Name",
     "min_characters": "Min 3 Characters!!!",
     "instructions": "Enter, or Esc to Cancel"
+  },
+  "player_location_dialog": {
+    "title": "Player Coordinates",
+    "current_location": "Current Location",
+    "new_target": "New Target Location",
+    "set_target": "Set Target",
+    "reset_origin": "Reset to Origin",
+    "tab_instruction": "Tab to switch fields",
+    "confirm_instruction": "Enter to set, ESC to cancel",
+    "invalid_number": "Invalid number",
+    "target_set": "Compass target set to ({0}, {1})",
+    "target_reset": "Compass reset to origin (0, 0)"
   },
   "connect_dialog": {
     "title": "Connect to Server",

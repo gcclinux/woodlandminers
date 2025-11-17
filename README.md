@@ -22,7 +22,7 @@ The goal was simple yet audacious: **build a complete, enjoyable multiplayer gam
 
 </div>
 
-### 📸 [More Woodland Screenshots](./SCREENSHOTS.md)
+### 📸 [More Woodland Screenshots](docs/SCREENSHOTS.md)
 
 ### The Kiro Contains: Two Powerful Approaches
 
@@ -85,7 +85,7 @@ A 2D top-down multiplayer adventure game built with libGDX featuring infinite wo
 - **Heartbeat**: 5-second keepalive with 15-second timeout
 - **Rate Limiting**: Configurable message rate limits per client
 
-## [Installation Guide](INSTALLATION.md)
+## [Installation Guide](docs/INSTALLATION.md)
 
 ## Controls
 

@@ -130,7 +130,7 @@ The targeting system stays active as long as an item is selected, allowing you t
 - **Enter** - Select menu option
 - **Escape** - Close menu or cancel dialog
 - **Backspace** - Delete character in text input
-- **Delete** - Remove selected save file (in load menu)
+- **X** - Delete selected save world file (in load menu)
 
 ## Menu Navigation
 
@@ -325,7 +325,7 @@ For a comprehensive list of all game features, mechanics, and technical details,
 - 🎨 **Custom Fonts** - Retro pixel font (slkscr.ttf) for authentic game feel
 - 🌍 **Multi-Language Support** - English, Polish (Polski), Portuguese (Português), and Dutch (Nederlands) with auto-detection
 
-##  [Java Classes](CLASSES.md)
+##  [Java Classes](docs/CLASSES.md)
 
 ## Current Status
 

@@ -28,6 +28,8 @@ public class WorldLoadDialog implements LanguageChangeListener {
     private boolean cancelled = false;
     private boolean showingLoadConfirmation = false;
     private boolean showingLoadProgress = false;
+    private boolean showingDeleteConfirmation = false;
+    private boolean deleteConfirmed = false;
     private Texture woodenPlank;
     private BitmapFont dialogFont;
     private BitmapFont smallFont;
@@ -182,6 +184,11 @@ public class WorldLoadDialog implements LanguageChangeListener {
             return;
         }
         
+        if (showingDeleteConfirmation) {
+            handleDeleteConfirmationInput();
+            return;
+        }
+        
         // Handle navigation when saves are available
         if (!availableSaves.isEmpty()) {
             // Handle up/down arrow keys for navigation
@@ -218,6 +225,13 @@ public class WorldLoadDialog implements LanguageChangeListener {
                     showingLoadConfirmation = true;
                 }
             }
+            
+            // Handle X key to delete save
+            if (Gdx.input.isKeyJustPressed(Input.Keys.X)) {
+                if (selectedSaveIndex >= 0 && selectedSaveIndex < availableSaves.size()) {
+                    showingDeleteConfirmation = true;
+                }
+            }
         }
         
         // Handle R to refresh save list
@@ -248,6 +262,16 @@ public class WorldLoadDialog implements LanguageChangeListener {
         }
     }
     
+    private void handleDeleteConfirmationInput() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.Y) || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            showingDeleteConfirmation = false;
+            proceedWithDelete();
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.N) || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            showingDeleteConfirmation = false;
+        }
+    }
+    
     /**
      * Updates the scroll offset to keep the selected save visible.
      */
@@ -265,7 +289,21 @@ public class WorldLoadDialog implements LanguageChangeListener {
     private void proceedWithLoad() {
         showingLoadProgress = true;
         confirmed = true;
-        // The actual load operation will be handled by the caller
+    }
+    
+    private void proceedWithDelete() {
+        if (selectedSaveIndex >= 0 && selectedSaveIndex < availableSaves.size()) {
+            WorldSaveInfo saveInfo = availableSaves.get(selectedSaveIndex);
+            try {
+                WorldSaveManager.deleteSave(saveInfo.getSaveName(), isMultiplayer);
+                loadAvailableSaves();
+                deleteConfirmed = true;
+                showingDeleteConfirmation = false;
+            } catch (Exception e) {
+                errorMessage = LocalizationManager.getInstance().getText("messages.delete_error", e.getMessage());
+                showingDeleteConfirmation = false;
+            }
+        }
     }
     
     /**
@@ -294,6 +332,8 @@ public class WorldLoadDialog implements LanguageChangeListener {
             renderLoadProgress(batch, dialogX, dialogY);
         } else if (showingLoadConfirmation) {
             renderLoadConfirmation(batch, dialogX, dialogY);
+        } else if (showingDeleteConfirmation) {
+            renderDeleteConfirmation(batch, dialogX, dialogY);
         } else {
             renderSaveList(batch, dialogX, dialogY);
         }
@@ -343,8 +383,10 @@ public class WorldLoadDialog implements LanguageChangeListener {
         if (!availableSaves.isEmpty()) {
             smallFont.draw(batch, loc.getText("world_load_dialog.select_instruction"), dialogX + 20, dialogY + 45);
             smallFont.draw(batch, loc.getText("world_load_dialog.scroll_instruction"), dialogX + 20, dialogY + 30);
+            smallFont.draw(batch, "Press X to remove selected save", dialogX + 20, dialogY + 15);
+        } else {
+            smallFont.draw(batch, loc.getText("world_load_dialog.refresh_instruction"), dialogX + 20, dialogY + 15);
         }
-        smallFont.draw(batch, loc.getText("world_load_dialog.refresh_instruction"), dialogX + 20, dialogY + 15);
     }
     
     /**
@@ -460,6 +502,25 @@ public class WorldLoadDialog implements LanguageChangeListener {
         // Draw instructions
         smallFont.setColor(Color.LIGHT_GRAY);
         smallFont.draw(batch, loc.getText("world_load_dialog.confirm_load_instruction"), dialogX + 20, dialogY + 25);
+    }
+    
+    private void renderDeleteConfirmation(SpriteBatch batch, float dialogX, float dialogY) {
+        if (selectedSaveIndex < 0 || selectedSaveIndex >= availableSaves.size()) {
+            return;
+        }
+        LocalizationManager loc = LocalizationManager.getInstance();
+        WorldSaveInfo saveInfo = availableSaves.get(selectedSaveIndex);
+        dialogFont.setColor(Color.RED);
+        dialogFont.draw(batch, "Delete Save?", dialogX + 20, dialogY + DIALOG_HEIGHT - 30);
+        dialogFont.setColor(Color.WHITE);
+        dialogFont.draw(batch, saveInfo.getSaveName(), dialogX + 20, dialogY + DIALOG_HEIGHT - 70);
+        dialogFont.setColor(Color.ORANGE);
+        dialogFont.draw(batch, "This action cannot be undone!", dialogX + 20, dialogY + DIALOG_HEIGHT - 110);
+        dialogFont.setColor(Color.YELLOW);
+        dialogFont.draw(batch, "Y - Delete", dialogX + 50, dialogY + 80);
+        dialogFont.draw(batch, "N - Cancel", dialogX + 50, dialogY + 55);
+        smallFont.setColor(Color.LIGHT_GRAY);
+        smallFont.draw(batch, "Press Y to confirm deletion or N to cancel", dialogX + 20, dialogY + 25);
     }
     
     /**
@@ -583,8 +644,10 @@ public class WorldLoadDialog implements LanguageChangeListener {
     public void reset() {
         confirmed = false;
         cancelled = false;
+        deleteConfirmed = false;
         showingLoadConfirmation = false;
         showingLoadProgress = false;
+        showingDeleteConfirmation = false;
         errorMessage = "";
     }
     
@@ -610,6 +673,10 @@ public class WorldLoadDialog implements LanguageChangeListener {
         }
         // Note: The dialog text will be automatically refreshed on next render
         // since all text is retrieved from LocalizationManager during rendering
+    }
+    
+    public boolean isDeleteConfirmed() {
+        return deleteConfirmed;
     }
     
     /**

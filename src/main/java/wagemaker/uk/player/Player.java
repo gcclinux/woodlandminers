@@ -1125,20 +1125,35 @@ public class Player {
                     targetingSystem.deactivate();
                 }
             } else {
-                // Item selected - activate targeting at player position
-                if (!targetingSystem.isActive()) {
-                    targetingSystem.activate(x, y, TargetingMode.ADJACENT, new TargetingCallback() {
-                        @Override
-                        public void onTargetConfirmed(float targetX, float targetY) {
-                            // Handle planting based on selected item
-                            handleItemPlacement(targetX, targetY);
-                        }
-                        
-                        @Override
-                        public void onTargetCancelled() {
-                            System.out.println("Item placement cancelled");
-                        }
-                    });
+                // Item selected - check if it's a plantable item
+                wagemaker.uk.inventory.ItemType selectedItemType = inventoryManager.getSelectedItemType();
+                
+                // Only activate targeting for plantable items (not consumables)
+                boolean isPlantable = selectedItemType != null && 
+                                     !selectedItemType.restoresHealth() && 
+                                     !selectedItemType.reducesHunger();
+                
+                if (isPlantable) {
+                    // Plantable item - activate targeting at player position
+                    if (!targetingSystem.isActive()) {
+                        targetingSystem.activate(x, y, TargetingMode.ADJACENT, new TargetingCallback() {
+                            @Override
+                            public void onTargetConfirmed(float targetX, float targetY) {
+                                // Handle planting based on selected item
+                                handleItemPlacement(targetX, targetY);
+                            }
+                            
+                            @Override
+                            public void onTargetCancelled() {
+                                System.out.println("Item placement cancelled");
+                            }
+                        });
+                    }
+                } else {
+                    // Consumable item - deactivate targeting if active
+                    if (targetingSystem.isActive()) {
+                        targetingSystem.deactivate();
+                    }
                 }
             }
         }
@@ -1466,7 +1481,6 @@ public class Player {
         wagemaker.uk.inventory.ItemType selectedItemType = inventoryManager.getSelectedItemType();
         
         if (selectedItemType == null) {
-            System.out.println("No item selected for consumption");
             return;
         }
         

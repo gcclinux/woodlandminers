@@ -40,6 +40,7 @@ public class HealthBarUI {
      * 3. Blue hunger overlay (from right side) - shows hunger accumulated (decreasing satisfaction from right)
      * 
      * Both red and blue overlays decrease from the right side to show loss/depletion.
+     * Only renders when health < 100 OR hunger > 0.
      * 
      * @param health Current health value (0-100)
      * @param hunger Current hunger value (0-100)
@@ -47,6 +48,11 @@ public class HealthBarUI {
      * @param viewport The viewport for calculating screen dimensions
      */
     public void render(float health, float hunger, Camera camera, Viewport viewport) {
+        // Only show bar when health < 100 OR hunger > 0
+        if (health >= 100 && hunger <= 0) {
+            return;
+        }
+        
         // Calculate top-left screen position in world coordinates
         float barX = camera.position.x - viewport.getWorldWidth() / 2 + SCREEN_OFFSET_X;
         float barY = camera.position.y + viewport.getWorldHeight() / 2 - SCREEN_OFFSET_Y;

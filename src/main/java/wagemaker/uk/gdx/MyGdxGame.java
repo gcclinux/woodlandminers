@@ -1218,7 +1218,7 @@ public class MyGdxGame extends ApplicationAdapter {
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         
-        // Draw remote player health bars in multiplayer mode
+        // Draw remote player health bars in multiplayer mode (filled shapes)
         if (gameMode != GameMode.SINGLEPLAYER) {
             float camX = camera.position.x;
             float camY = camera.position.y;
@@ -1365,6 +1365,23 @@ public class MyGdxGame extends ApplicationAdapter {
         }
         
         shapeRenderer.end();
+        
+        // Draw borders for remote player health bars
+        if (gameMode != GameMode.SINGLEPLAYER) {
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+            float camX = camera.position.x;
+            float camY = camera.position.y;
+            float viewWidth = viewport.getWorldWidth();
+            float viewHeight = viewport.getWorldHeight();
+            
+            for (RemotePlayer remotePlayer : remotePlayers.values()) {
+                if (Math.abs(remotePlayer.getX() - camX) < viewWidth && 
+                    Math.abs(remotePlayer.getY() - camY) < viewHeight) {
+                    remotePlayer.renderHealthBarBorder(shapeRenderer);
+                }
+            }
+            shapeRenderer.end();
+        }
     }
 
     public void spawnNewCactus() {

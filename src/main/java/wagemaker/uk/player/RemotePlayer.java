@@ -289,8 +289,8 @@ public class RemotePlayer {
             float healthPercent = Math.max(0, Math.min(100, health)) / 100.0f;
             float hungerPercent = Math.max(0, Math.min(100, hunger)) / 100.0f;
             
-            // Begin filled shape rendering
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            // NOTE: ShapeRenderer is already begun in Filled mode by drawHealthBars()
+            // Do NOT call begin() here - just render the shapes
             
             // Layer 1: Draw green base (full bar)
             shapeRenderer.setColor(0, 1, 0, 1);  // Green
@@ -313,14 +313,25 @@ public class RemotePlayer {
                 shapeRenderer.rect(healthBarX + healthBarWidth - hungerWidth, healthBarY, 
                                   hungerWidth, healthBarHeight);
             }
+        }
+    }
+    
+    /**
+     * Render the border for the health bar.
+     * This is called separately in Line mode after all filled shapes are rendered.
+     */
+    public void renderHealthBarBorder(ShapeRenderer shapeRenderer) {
+        // Show bar when health < 100 OR hunger > 0
+        if (health < 100 || hunger > 0) {
+            float healthBarWidth = 100;
+            float healthBarHeight = 6;
+            float healthBarX = x;
+            float healthBarY = y + 110; // Above player sprite (100px sprite + 10px gap)
             
-            shapeRenderer.end();
-            
-            // Layer 4: Draw black border
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+            // NOTE: ShapeRenderer is already begun in Line mode by drawHealthBars()
+            // Do NOT call begin() here - just render the border
             shapeRenderer.setColor(0, 0, 0, 1);  // Black
             shapeRenderer.rect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
-            shapeRenderer.end();
         }
     }
     
@@ -330,7 +341,7 @@ public class RemotePlayer {
     public void renderNameTag(SpriteBatch batch, BitmapFont font) {
         if (playerName != null && !playerName.isEmpty()) {
             // Calculate text position (centered above player)
-            float nameTagY = y + 115; // Above health bar (100px sprite + 2px gap + 6px health bar + 7px gap)
+            float nameTagY = y + 103; // Above player's head
             
             // Get text width for centering
             com.badlogic.gdx.graphics.g2d.GlyphLayout layout = 

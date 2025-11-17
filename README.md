@@ -312,7 +312,10 @@ For a comprehensive list of all game features, mechanics, and technical details,
 
 #### Character & Movement
 - 🏃 **Animated Player Character** - Smooth walking animations with directional sprites
-- 💚 **Health System** - Player health management with damage and restoration mechanics
+- 💚 **Health & Hunger System** - Dual survival mechanics with health damage and hunger accumulation
+- � ***Apple Consumption** - Restores 10% health when consumed (press number key to select, space to consume)
+- 🍌 **Banana Consumption** - Reduces 5% hunger when consumed (press number key to select, space to consume)
+- 📊 **Unified Health Bar** - Visual display showing both health (red) and hunger (blue) status
 - 🎯 **Precise Collision Detection** - Optimized hitboxes for all game objects
 
 #### Trees & Resources
@@ -326,9 +329,10 @@ For a comprehensive list of all game features, mechanics, and technical details,
 #### Inventory & Items
 - 🎒 **Inventory System** - Separate inventories for singleplayer and multiplayer modes
 - 🍎 **Collectible Items** - Apples, bananas, baby bamboo, bamboo stacks, and wood stacks
-- 🍌 **Auto-Consumption** - Items automatically consumed when health is low
+- 🥤 **Manual Consumption** - Select consumable items and press space to consume (apples restore health, bananas reduce hunger)
 - 📦 **Item Drops** - Trees drop resources when destroyed
 - 🔄 **Network Sync** - Inventory synchronized across multiplayer sessions
+- ⏱️ **Hunger Accumulation** - Hunger increases by 1% every 60 seconds; death occurs at 100% hunger
 
 #### Multiplayer
 - 🌐 **Dedicated Server** - Standalone server with configurable settings
@@ -388,21 +392,6 @@ Player data and world saves are stored in OS-specific directories:
 - **Windows**: `%APPDATA%/Woodlanders/`
 - **macOS**: `~/Library/Application Support/Woodlanders/`
 - **Linux**: `~/.config/woodlanders/`
-
-Directory structure:
-```
-Woodlanders/
-├── woodlanders.json          # Player config (position, health, inventory, name)
-└── world-saves/
-    ├── singleplayer/         # Singleplayer world saves
-    │   ├── World_1.wld
-    │   ├── World_1.wld.backup
-    │   └── ...
-    └── multiplayer/          # Multiplayer world saves
-        ├── Server_1.wld
-        ├── Server_1.wld.backup
-        └── ...
-```
 
 ### Resource Respawn Configuration
 

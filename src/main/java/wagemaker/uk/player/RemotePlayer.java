@@ -20,6 +20,7 @@ public class RemotePlayer {
     private float y;
     private Direction currentDirection;
     private float health;
+    private float hunger; // Hunger level (0-100%)
     private boolean isMoving;
     private float animTime;
     
@@ -50,6 +51,7 @@ public class RemotePlayer {
         this.targetY = y;
         this.currentDirection = direction != null ? direction : Direction.DOWN;
         this.health = health;
+        this.hunger = 0; // Initialize hunger to 0
         this.isMoving = isMoving;
         this.animTime = 0;
         
@@ -162,6 +164,14 @@ public class RemotePlayer {
     }
     
     /**
+     * Update player hunger.
+     * @param hunger The new hunger level (0-100%)
+     */
+    public void updateHunger(float hunger) {
+        this.hunger = Math.max(0, Math.min(100, hunger));
+    }
+    
+    /**
      * Update animation and interpolate position.
      */
     public void update(float deltaTime) {
@@ -241,6 +251,10 @@ public class RemotePlayer {
         return health;
     }
     
+    public float getHunger() {
+        return hunger;
+    }
+    
     public boolean isMoving() {
         return isMoving;
     }
@@ -254,23 +268,59 @@ public class RemotePlayer {
     }
     
     /**
-     * Render health bar above the player when health is below 100.
+     * Render unified health bar above the player showing both health damage and hunger.
+     * Uses the same three-layer rendering approach as the local player's health bar:
+     * - Green base layer representing full health and no hunger
+     * - Red overlay from the right side showing damage taken (decreasing health)
+     * - Blue overlay from the right side showing hunger accumulated (decreasing satisfaction)
+     * 
+     * Both red and blue overlays decrease from the right to show depletion/loss.
+     * The bar is shown when health < 100 OR hunger > 0.
      */
     public void renderHealthBar(ShapeRenderer shapeRenderer) {
-        if (health < 100) {
+        // Show bar when health < 100 OR hunger > 0
+        if (health < 100 || hunger > 0) {
             float healthBarWidth = 100;
             float healthBarHeight = 6;
             float healthBarX = x;
-            float healthBarY = y + 90; // Above player sprite (100px sprite + 2px gap)
+            float healthBarY = y + 110; // Above player sprite (100px sprite + 10px gap)
             
-            // Draw background (red)
-            shapeRenderer.setColor(Color.RED);
+            // Calculate percentages
+            float healthPercent = Math.max(0, Math.min(100, health)) / 100.0f;
+            float hungerPercent = Math.max(0, Math.min(100, hunger)) / 100.0f;
+            
+            // Begin filled shape rendering
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            
+            // Layer 1: Draw green base (full bar)
+            shapeRenderer.setColor(0, 1, 0, 1);  // Green
             shapeRenderer.rect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
             
-            // Draw health (green)
-            float healthPercentage = health / 100.0f;
-            shapeRenderer.setColor(Color.GREEN);
-            shapeRenderer.rect(healthBarX, healthBarY, healthBarWidth * healthPercentage, healthBarHeight);
+            // Layer 2: Draw red damage overlay (from right side - decreasing health)
+            float damagePercent = 1.0f - healthPercent;
+            if (damagePercent > 0) {
+                shapeRenderer.setColor(1, 0, 0, 1);  // Red
+                float damageWidth = healthBarWidth * damagePercent;
+                shapeRenderer.rect(healthBarX + healthBarWidth - damageWidth, healthBarY, 
+                                  damageWidth, healthBarHeight);
+            }
+            
+            // Layer 3: Draw blue hunger overlay (from right side - decreasing satisfaction)
+            // Hunger represents "not full", so it also decreases from the right
+            if (hungerPercent > 0) {
+                shapeRenderer.setColor(0, 0, 1, 1);  // Blue
+                float hungerWidth = healthBarWidth * hungerPercent;
+                shapeRenderer.rect(healthBarX + healthBarWidth - hungerWidth, healthBarY, 
+                                  hungerWidth, healthBarHeight);
+            }
+            
+            shapeRenderer.end();
+            
+            // Layer 4: Draw black border
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+            shapeRenderer.setColor(0, 0, 0, 1);  // Black
+            shapeRenderer.rect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
+            shapeRenderer.end();
         }
     }
     

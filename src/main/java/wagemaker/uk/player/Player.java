@@ -40,6 +40,12 @@ public class Player {
     private float lastCactusDamageTime = 0; // To prevent spam damage
     private float previousHealth = 100; // Track previous health for change detection
     
+    // Hunger system fields
+    private float hunger = 0; // Hunger level (0-100%)
+    private float hungerTimer = 0; // Timer accumulator for hunger increase
+    private float previousHunger = 0; // Track previous hunger for change detection
+    private static final float HUNGER_INTERVAL = 60.0f; // 60 seconds per 1% hunger increase
+    
     // Multiplayer fields
     private String playerId; // Unique identifier for multiplayer
     private GameClient gameClient; // Reference for sending network updates
@@ -371,12 +377,16 @@ public class Player {
         }
 
         // Handle spacebar - context-sensitive action
-        // If targeting is active: plant item at target
-        // If targeting is not active: attack nearby targets
+        // Priority 1: If targeting is active: plant item at target
+        // Priority 2: If item is selected (consumable): consume the item
+        // Priority 3: Otherwise: attack nearby targets
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
             if (targetingSystem.isActive()) {
                 // Targeting mode: use spacebar to plant
                 handleSpacebarPlanting();
+            } else if (inventoryManager != null && inventoryManager.getSelectedSlot() != -1) {
+                // Item selected: try to consume it
+                consumeSelectedItem();
             } else {
                 // Normal mode: use spacebar to attack
                 attackNearbyTargets();
@@ -393,6 +403,9 @@ public class Player {
         
         // Check for cactus damage
         checkCactusDamage(deltaTime);
+        
+        // Update hunger system
+        updateHunger(deltaTime);
         
         // Check for apple pickups
         checkApplePickups();
@@ -412,10 +425,7 @@ public class Player {
         // Check for pebble pickups
         checkPebblePickups();
         
-        // Check for health decrease and trigger auto-consumption
-        if (inventoryManager != null && health < previousHealth) {
-            inventoryManager.tryAutoConsume();
-        }
+        // Track previous health for change detection
         previousHealth = health;
         
         // Send health updates to server in multiplayer mode
@@ -703,7 +713,7 @@ public class Player {
                 // Send attack action to server in multiplayer mode
                 if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
                     gameClient.sendAttackAction(targetKey);
-                    // In multiplayer, server handles tree destruction and item spawning
+                    // In multiplayer, server handles tree destruction, healing, and item spawning
                     attackedSomething = true;
                 } else {
                     // Single-player mode: handle locally
@@ -716,7 +726,12 @@ public class Player {
                     attackedSomething = true;
                     
                     if (destroyed) {
-                        // Spawn apple at tree position
+                        // FIRST: Immediate health restoration (10%)
+                        float currentHealth = health;
+                        health = Math.min(100, currentHealth + 10);
+                        System.out.println("Apple tree destroyed! Health restored: 10% (from " + currentHealth + " to " + health + ")");
+                        
+                        // THEN: Spawn apple at tree position
                         apples.put(targetKey, new Apple(targetAppleTree.getX(), targetAppleTree.getY()));
                         System.out.println("Apple dropped at: " + targetAppleTree.getX() + ", " + targetAppleTree.getY());
                         
@@ -1317,8 +1332,9 @@ public class Player {
     private void respawnPlayer() {
         System.out.println("Player died! Respawning...");
         
-        // Reset health
+        // Reset health and hunger
         health = 100;
+        hunger = 0;
         
         // Generate random respawn position far from cactus
         float newX, newY;
@@ -1359,6 +1375,158 @@ public class Player {
     
     public float getHealthPercentage() {
         return health / 100.0f;
+    }
+    
+    /**
+     * Get the current hunger level (0-100%).
+     * @return Current hunger level
+     */
+    public float getHunger() {
+        return hunger;
+    }
+    
+    /**
+     * Set the hunger level (clamped between 0 and 100).
+     * @param hunger New hunger level
+     */
+    public void setHunger(float hunger) {
+        this.hunger = Math.max(0, Math.min(100, hunger)); // Clamp between 0 and 100
+    }
+    
+    /**
+     * Update hunger system - increases hunger by 1% every 60 seconds.
+     * When hunger reaches 100%, player dies and respawns.
+     * Sends hunger updates to server in multiplayer mode.
+     * Requirements: 4.1, 4.2, 4.3, 5.1, 5.2, 5.3, 5.4
+     * 
+     * @param deltaTime Time elapsed since last frame in seconds
+     */
+    private void updateHunger(float deltaTime) {
+        // Accumulate time
+        hungerTimer += deltaTime;
+        
+        // Check if 60 seconds have passed
+        if (hungerTimer >= HUNGER_INTERVAL) {
+            // Increase hunger by 1%
+            hunger = Math.min(100, hunger + 1);
+            
+            // Subtract interval from timer (preserve remainder for precision)
+            hungerTimer -= HUNGER_INTERVAL;
+            
+            System.out.println("Hunger increased to: " + hunger + "%");
+            
+            // Send hunger update to server in multiplayer mode
+            checkAndSendHungerUpdate();
+            
+            // Check for hunger death
+            if (hunger >= 100) {
+                handleHungerDeath();
+            }
+        }
+    }
+    
+    /**
+     * Handle player death from hunger.
+     * Respawns player at origin (0, 0) with full health and no hunger.
+     * Requirements: 5.1, 5.2, 5.3, 5.4
+     */
+    private void handleHungerDeath() {
+        System.out.println("Player died from hunger! Respawning...");
+        
+        // Reset health and hunger
+        health = 100;
+        hunger = 0;
+        hungerTimer = 0; // Reset timer as well
+        
+        // Respawn at origin (0, 0)
+        x = 0;
+        y = 0;
+        
+        // Send respawn message in multiplayer with hunger reset
+        if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+            gameClient.sendPlayerRespawn(x, y, health, hunger);
+            System.out.println("Sent respawn message to server with hunger reset");
+        }
+        
+        System.out.println("Player respawned at origin (0, 0)!");
+    }
+    
+    /**
+     * Consume the currently selected item from inventory.
+     * Handles apple consumption (restore 10% health) and banana consumption (reduce 5% hunger).
+     * Called when space bar is pressed with a consumable item selected.
+     * Requirements: 1.2, 2.1
+     */
+    private void consumeSelectedItem() {
+        if (inventoryManager == null) {
+            return;
+        }
+        
+        // Get the selected item type
+        wagemaker.uk.inventory.ItemType selectedItemType = inventoryManager.getSelectedItemType();
+        
+        if (selectedItemType == null) {
+            System.out.println("No item selected for consumption");
+            return;
+        }
+        
+        // Check if the item is consumable
+        if (!selectedItemType.restoresHealth() && !selectedItemType.reducesHunger()) {
+            System.out.println("Selected item (" + selectedItemType.name() + ") cannot be consumed");
+            return;
+        }
+        
+        // Try to consume the item via inventory manager
+        boolean consumed = inventoryManager.tryConsumeSelectedItem(this);
+        
+        if (consumed) {
+            // Log successful consumption
+            if (selectedItemType.restoresHealth()) {
+                System.out.println("Consumed " + selectedItemType.name() + " - restored " + 
+                                 selectedItemType.getHealthRestore() + "% health");
+            } else if (selectedItemType.reducesHunger()) {
+                System.out.println("Consumed " + selectedItemType.name() + " - reduced 5% hunger");
+            }
+            
+            // Send consumption to server in multiplayer mode
+            if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+                // Convert inventory ItemType to network ItemType
+                wagemaker.uk.network.ItemType networkItemType = convertToNetworkItemType(selectedItemType);
+                if (networkItemType != null) {
+                    gameClient.sendItemConsumption(networkItemType);
+                }
+            }
+        } else {
+            System.out.println("Failed to consume " + selectedItemType.name() + " - none in inventory");
+        }
+    }
+    
+    /**
+     * Convert inventory ItemType to network ItemType.
+     * @param inventoryItemType The inventory item type
+     * @return The corresponding network item type, or null if not found
+     */
+    private wagemaker.uk.network.ItemType convertToNetworkItemType(wagemaker.uk.inventory.ItemType inventoryItemType) {
+        if (inventoryItemType == null) {
+            return null;
+        }
+        
+        switch (inventoryItemType) {
+            case APPLE:
+                return wagemaker.uk.network.ItemType.APPLE;
+            case BANANA:
+                return wagemaker.uk.network.ItemType.BANANA;
+            case BABY_BAMBOO:
+                return wagemaker.uk.network.ItemType.BABY_BAMBOO;
+            case BAMBOO_STACK:
+                return wagemaker.uk.network.ItemType.BAMBOO_STACK;
+            case WOOD_STACK:
+                return wagemaker.uk.network.ItemType.WOOD_STACK;
+            case PEBBLE:
+                return wagemaker.uk.network.ItemType.PEBBLE;
+            default:
+                return null;
+        }
     }
     
     private void checkApplePickups() {
@@ -1644,6 +1812,19 @@ public class Player {
             if (health != previousHealth) {
                 gameClient.sendPlayerHealth(health);
                 previousHealth = health;
+            }
+        }
+    }
+    
+    /**
+     * Check if hunger has changed and send update to server in multiplayer mode.
+     */
+    private void checkAndSendHungerUpdate() {
+        if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+            // Only send update if hunger has changed
+            if (hunger != previousHunger) {
+                gameClient.sendPlayerHunger(hunger);
+                previousHunger = hunger;
             }
         }
     }

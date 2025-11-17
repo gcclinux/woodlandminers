@@ -4,13 +4,16 @@ import wagemaker.uk.client.PlayerConfig;
 import wagemaker.uk.network.ConnectionAcceptedMessage;
 import wagemaker.uk.network.DefaultMessageHandler;
 import wagemaker.uk.network.InventorySyncMessage;
+import wagemaker.uk.network.ItemConsumptionMessage;
 import wagemaker.uk.network.ItemPickupMessage;
 import wagemaker.uk.network.ItemSpawnMessage;
 import wagemaker.uk.network.ItemState;
 import wagemaker.uk.network.PlayerHealthUpdateMessage;
+import wagemaker.uk.network.PlayerHungerUpdateMessage;
 import wagemaker.uk.network.PlayerJoinMessage;
 import wagemaker.uk.network.PlayerLeaveMessage;
 import wagemaker.uk.network.PlayerMovementMessage;
+import wagemaker.uk.network.PlayerRespawnMessage;
 import wagemaker.uk.network.PongMessage;
 import wagemaker.uk.network.PositionCorrectionMessage;
 import wagemaker.uk.network.StoneCreatedMessage;
@@ -271,6 +274,33 @@ public class GameMessageHandler extends DefaultMessageHandler {
     }
     
     @Override
+    protected void handlePlayerHungerUpdate(PlayerHungerUpdateMessage message) {
+        String playerId = message.getPlayerId();
+        float hunger = message.getHunger();
+        
+        // Update local player hunger if it's for us
+        if (game.getGameClient() != null && 
+            playerId.equals(game.getGameClient().getClientId())) {
+            game.getPlayer().setHunger(hunger);
+            System.out.println("Hunger updated: " + hunger);
+        }
+        
+        // Update remote player hunger
+        RemotePlayer remotePlayer = game.getRemotePlayers().get(playerId);
+        if (remotePlayer != null) {
+            remotePlayer.updateHunger(hunger);
+        }
+    }
+    
+    @Override
+    protected void handleItemConsumption(ItemConsumptionMessage message) {
+        // Item consumption is handled server-side
+        // The client receives inventory, health, and hunger updates as separate messages
+        // This handler is here for completeness but doesn't need to do anything
+        System.out.println("Player " + message.getPlayerId() + " consumed " + message.getItemType());
+    }
+    
+    @Override
     protected void handlePositionCorrection(PositionCorrectionMessage message) {
         // Only process corrections for our own player
         if (game.getGameClient() == null || 
@@ -404,6 +434,36 @@ public class GameMessageHandler extends DefaultMessageHandler {
             game.getRespawnManager().handleRespawnStateSync(message.getPendingRespawns());
         } else {
             System.err.println("Cannot handle respawn state: RespawnManager not initialized");
+        }
+    }
+    
+    @Override
+    protected void handlePlayerRespawn(wagemaker.uk.network.PlayerRespawnMessage message) {
+        String playerId = message.getPlayerId();
+        float x = message.getX();
+        float y = message.getY();
+        float health = message.getHealth();
+        float hunger = message.getHunger();
+        
+        System.out.println("Player " + playerId + " respawned at (" + x + ", " + y + 
+                         ") with health=" + health + ", hunger=" + hunger);
+        
+        // Update local player if it's for us
+        if (game.getGameClient() != null && 
+            playerId.equals(game.getGameClient().getClientId())) {
+            game.getPlayer().setPosition(x, y);
+            game.getPlayer().setHealth(health);
+            game.getPlayer().setHunger(hunger);
+            System.out.println("Local player respawned");
+        }
+        
+        // Update remote player
+        RemotePlayer remotePlayer = game.getRemotePlayers().get(playerId);
+        if (remotePlayer != null) {
+            remotePlayer.updatePosition(x, y, remotePlayer.getCurrentDirection(), false);
+            remotePlayer.updateHealth(health);
+            remotePlayer.updateHunger(hunger);
+            System.out.println("Remote player " + playerId + " respawned");
         }
     }
 }

@@ -78,9 +78,7 @@ public class InventoryManager {
     }
     
     /**
-     * Collect an item with health-based routing logic.
-     * If the item is consumable and player health is below 100%, consume it immediately.
-     * Otherwise, add it to the current inventory.
+     * Collect an item and add it to the current inventory.
      * @param type The type of item being collected
      */
     public void collectItem(ItemType type) {
@@ -88,14 +86,8 @@ public class InventoryManager {
             return;
         }
         
-        // Check if item is consumable and player needs health
-        if (type.isConsumable() && player.getHealth() < 100) {
-            // Consume immediately to restore health
-            consumeItem(type);
-        } else {
-            // Add to inventory storage
-            addItemToInventory(type, 1);
-        }
+        // Always add to inventory storage
+        addItemToInventory(type, 1);
     }
     
     /**
@@ -129,90 +121,6 @@ public class InventoryManager {
         
         // Send inventory update to server in multiplayer mode
         sendInventoryUpdate();
-    }
-    
-    /**
-     * Consume an item immediately to restore health.
-     * @param type The type of item to consume
-     */
-    private void consumeItem(ItemType type) {
-        if (!type.isConsumable()) {
-            return;
-        }
-        
-        // Restore health
-        float currentHealth = player.getHealth();
-        float newHealth = Math.min(100, currentHealth + type.getHealthRestore());
-        player.setHealth(newHealth);
-        
-        System.out.println(type.name() + " consumed! Health restored: " + 
-                          (newHealth - currentHealth) + " (Health: " + 
-                          currentHealth + " → " + newHealth + ")");
-    }
-    
-    /**
-     * Try to automatically consume items from inventory when player health is below 100%.
-     * Prioritizes apples first, then bananas.
-     * Called when player takes damage.
-     */
-    public void tryAutoConsume() {
-        // Only auto-consume if health is below maximum
-        if (player.getHealth() >= 100) {
-            return;
-        }
-        
-        Inventory inventory = getCurrentInventory();
-        
-        // Try to consume an apple first
-        if (inventory.getAppleCount() > 0) {
-            consumeApple();
-        } 
-        // If no apples, try banana
-        else if (inventory.getBananaCount() > 0) {
-            consumeBanana();
-        }
-    }
-    
-    /**
-     * Consume an apple from inventory to restore health.
-     * Decrements apple count and restores 20 HP.
-     */
-    private void consumeApple() {
-        Inventory inventory = getCurrentInventory();
-        
-        if (inventory.removeApple(1)) {
-            float currentHealth = player.getHealth();
-            float newHealth = Math.min(100, currentHealth + 20);
-            player.setHealth(newHealth);
-            
-            System.out.println("Apple auto-consumed from inventory! Health restored: " + 
-                              (newHealth - currentHealth) + " (Health: " + 
-                              currentHealth + " → " + newHealth + ")");
-            
-            // Send inventory update to server in multiplayer mode
-            sendInventoryUpdate();
-        }
-    }
-    
-    /**
-     * Consume a banana from inventory to restore health.
-     * Decrements banana count and restores 20 HP.
-     */
-    private void consumeBanana() {
-        Inventory inventory = getCurrentInventory();
-        
-        if (inventory.removeBanana(1)) {
-            float currentHealth = player.getHealth();
-            float newHealth = Math.min(100, currentHealth + 20);
-            player.setHealth(newHealth);
-            
-            System.out.println("Banana auto-consumed from inventory! Health restored: " + 
-                              (newHealth - currentHealth) + " (Health: " + 
-                              currentHealth + " → " + newHealth + ")");
-            
-            // Send inventory update to server in multiplayer mode
-            sendInventoryUpdate();
-        }
     }
     
     /**
@@ -319,6 +227,57 @@ public class InventoryManager {
             case 5: return ItemType.PEBBLE;
             default: return null;
         }
+    }
+    
+    /**
+     * Try to consume the currently selected item.
+     * Handles apple consumption (restore 10% health) and banana consumption (reduce 5% hunger).
+     * Removes the item from inventory if consumption is successful.
+     * Requirements: 1.2, 2.1
+     * 
+     * @param player The player consuming the item
+     * @return true if item was consumed successfully, false otherwise
+     */
+    public boolean tryConsumeSelectedItem(Player player) {
+        if (player == null) {
+            return false;
+        }
+        
+        int selectedSlot = getSelectedSlot();
+        ItemType itemType = getSelectedItemType();
+        
+        if (itemType == null) {
+            return false;
+        }
+        
+        Inventory inventory = getCurrentInventory();
+        
+        // Handle apple consumption
+        if (itemType == ItemType.APPLE) {
+            if (inventory.removeApple(1)) {
+                // Restore 10% health (capped at 100%)
+                float newHealth = Math.min(100, player.getHealth() + 10);
+                player.setHealth(newHealth);
+                
+                // Send inventory update in multiplayer
+                sendInventoryUpdate();
+                return true;
+            }
+        }
+        // Handle banana consumption
+        else if (itemType == ItemType.BANANA) {
+            if (inventory.removeBanana(1)) {
+                // Reduce 5% hunger (minimum 0%)
+                float newHunger = Math.max(0, player.getHunger() - 5);
+                player.setHunger(newHunger);
+                
+                // Send inventory update in multiplayer
+                sendInventoryUpdate();
+                return true;
+            }
+        }
+        
+        return false;
     }
 }
 

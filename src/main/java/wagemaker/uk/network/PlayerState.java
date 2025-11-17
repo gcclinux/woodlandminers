@@ -14,6 +14,7 @@ public class PlayerState implements Serializable {
     private float y;
     private Direction direction;
     private float health;
+    private float hunger;
     private boolean isMoving;
     private long lastUpdateTime;
     
@@ -86,6 +87,14 @@ public class PlayerState implements Serializable {
     
     public void setHealth(float health) {
         this.health = health;
+    }
+    
+    public float getHunger() {
+        return hunger;
+    }
+    
+    public void setHunger(float hunger) {
+        this.hunger = hunger;
     }
     
     public boolean isMoving() {

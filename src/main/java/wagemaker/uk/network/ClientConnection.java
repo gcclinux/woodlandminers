@@ -235,6 +235,14 @@ public class ClientConnection implements Runnable {
                 handlePlayerHealthUpdate((PlayerHealthUpdateMessage) message);
                 break;
                 
+            case PLAYER_HUNGER_UPDATE:
+                handlePlayerHungerUpdate((PlayerHungerUpdateMessage) message);
+                break;
+                
+            case ITEM_CONSUMPTION:
+                handleItemConsumption((ItemConsumptionMessage) message);
+                break;
+                
             case INVENTORY_UPDATE:
                 handleInventoryUpdate((InventoryUpdateMessage) message);
                 break;
@@ -245,6 +253,10 @@ public class ClientConnection implements Runnable {
                 
             case BAMBOO_TRANSFORM:
                 handleBambooTransform((BambooTransformMessage) message);
+                break;
+                
+            case PLAYER_RESPAWN:
+                handlePlayerRespawn((PlayerRespawnMessage) message);
                 break;
                 
             case RESOURCE_RESPAWN:
@@ -469,7 +481,21 @@ public class ClientConnection implements Runnable {
             TreeDestroyedMessage destroyMsg = new TreeDestroyedMessage("server", targetId, quantizedX, quantizedY);
             server.broadcastToAll(destroyMsg);
             
-            // Spawn item(s) based on tree type
+            // FIRST: Apply immediate health restoration for apple tree destruction (10%)
+            if (tree.getType() == TreeType.APPLE) {
+                float currentHealth = playerState.getHealth();
+                float newPlayerHealth = Math.min(100, currentHealth + 10);
+                playerState.setHealth(newPlayerHealth);
+                server.getWorldState().addOrUpdatePlayer(playerState);
+                
+                System.out.println("Apple tree destroyed by " + clientId + "! Health restored: 10% (from " + currentHealth + " to " + newPlayerHealth + ")");
+                
+                // Broadcast health update to all clients
+                PlayerHealthUpdateMessage healthMsg = new PlayerHealthUpdateMessage("server", clientId, newPlayerHealth);
+                server.broadcastToAll(healthMsg);
+            }
+            
+            // THEN: Spawn item(s) based on tree type
             if (tree.getType() == TreeType.APPLE || tree.getType() == TreeType.BANANA) {
                 ItemType itemType = tree.getType() == TreeType.APPLE ? ItemType.APPLE : ItemType.BANANA;
                 String itemId = UUID.randomUUID().toString();
@@ -725,6 +751,125 @@ public class ClientConnection implements Runnable {
     }
     
     /**
+     * Handles a player hunger update message.
+     * @param message The hunger update message
+     */
+    private void handlePlayerHungerUpdate(PlayerHungerUpdateMessage message) {
+        // Validate message data
+        if (message == null) {
+            logSecurityViolation("Null hunger update message");
+            return;
+        }
+        
+        // Validate hunger value (0-100 range)
+        float hunger = message.getHunger();
+        if (hunger < 0 || hunger > 100 || Float.isNaN(hunger) || Float.isInfinite(hunger)) {
+            System.err.println("Invalid hunger value from " + clientId + ": " + hunger);
+            logSecurityViolation("Invalid hunger value: " + hunger);
+            return;
+        }
+        
+        // Update player state
+        playerState.setHunger(hunger);
+        server.getWorldState().addOrUpdatePlayer(playerState);
+        
+        // Broadcast hunger update to other clients
+        server.broadcastToAllExcept(message, clientId);
+    }
+    
+    /**
+     * Handles an item consumption message.
+     * Validates player has the item, applies consumption effect, and broadcasts updates.
+     * Requirements: 1.2, 2.1
+     * @param message The item consumption message
+     */
+    private void handleItemConsumption(ItemConsumptionMessage message) {
+        // Validate message data
+        if (message == null) {
+            logSecurityViolation("Null item consumption message");
+            return;
+        }
+        
+        ItemType itemType = message.getItemType();
+        
+        // Validate item type
+        if (itemType == null) {
+            System.err.println("Invalid item type from " + clientId);
+            logSecurityViolation("Invalid item type in consumption message");
+            return;
+        }
+        
+        // Validate that the item is consumable
+        if (itemType != ItemType.APPLE && itemType != ItemType.BANANA) {
+            System.err.println("Non-consumable item type from " + clientId + ": " + itemType);
+            logSecurityViolation("Attempted to consume non-consumable item: " + itemType);
+            return;
+        }
+        
+        // Validate player has the item in inventory
+        int itemCount = 0;
+        switch (itemType) {
+            case APPLE:
+                itemCount = playerState.getAppleCount();
+                break;
+            case BANANA:
+                itemCount = playerState.getBananaCount();
+                break;
+        }
+        
+        if (itemCount <= 0) {
+            System.err.println("Player " + clientId + " tried to consume " + itemType + " but has none in inventory");
+            logSecurityViolation("Attempted to consume item not in inventory: " + itemType);
+            return;
+        }
+        
+        // Remove item from inventory
+        switch (itemType) {
+            case APPLE:
+                playerState.setAppleCount(itemCount - 1);
+                // Restore 10% health (capped at 100%)
+                float newHealth = Math.min(100, playerState.getHealth() + 10);
+                playerState.setHealth(newHealth);
+                System.out.println("Player " + clientId + " consumed APPLE - Health: " + 
+                                 (newHealth - 10) + " -> " + newHealth);
+                
+                // Broadcast health update
+                PlayerHealthUpdateMessage healthMsg = new PlayerHealthUpdateMessage("server", clientId, newHealth);
+                server.broadcastToAll(healthMsg);
+                break;
+                
+            case BANANA:
+                playerState.setBananaCount(itemCount - 1);
+                // Reduce 5% hunger (minimum 0%)
+                float newHunger = Math.max(0, playerState.getHunger() - 5);
+                playerState.setHunger(newHunger);
+                System.out.println("Player " + clientId + " consumed BANANA - Hunger: " + 
+                                 (newHunger + 5) + " -> " + newHunger);
+                
+                // Broadcast hunger update
+                PlayerHungerUpdateMessage hungerMsg = new PlayerHungerUpdateMessage("server", clientId, newHunger);
+                server.broadcastToAll(hungerMsg);
+                break;
+        }
+        
+        // Update player state in world
+        server.getWorldState().addOrUpdatePlayer(playerState);
+        
+        // Broadcast inventory update
+        InventoryUpdateMessage inventoryMsg = new InventoryUpdateMessage(
+            "server",
+            clientId,
+            playerState.getAppleCount(),
+            playerState.getBananaCount(),
+            playerState.getBabyBambooCount(),
+            playerState.getBambooStackCount(),
+            playerState.getWoodStackCount(),
+            playerState.getPebbleCount()
+        );
+        server.broadcastToAll(inventoryMsg);
+    }
+    
+    /**
      * Generates a cooldown key for tracking player attacks.
      * @param attackerId The ID of the attacking player
      * @param targetId The ID of the target player
@@ -864,6 +1009,76 @@ public class ClientConnection implements Runnable {
             100
         );
         server.broadcastToAll(healthMsg);
+    }
+    
+    /**
+     * Handles a player respawn message from the client.
+     * Updates player position, health, and hunger on the server and broadcasts to all clients.
+     * @param message The player respawn message
+     */
+    private void handlePlayerRespawn(PlayerRespawnMessage message) {
+        // Validate message data
+        if (message == null) {
+            logSecurityViolation("Null player respawn message");
+            return;
+        }
+        
+        String playerId = message.getPlayerId();
+        float x = message.getX();
+        float y = message.getY();
+        float health = message.getHealth();
+        float hunger = message.getHunger();
+        
+        // Validate player ID matches the client
+        if (!playerId.equals(clientId)) {
+            System.err.println("Player ID mismatch in respawn message from " + clientId);
+            logSecurityViolation("Player ID mismatch in respawn: " + playerId);
+            return;
+        }
+        
+        // Validate position
+        if (!isValidPosition(x, y)) {
+            System.err.println("Invalid respawn position from " + clientId);
+            logSecurityViolation("Invalid respawn position: x=" + x + ", y=" + y);
+            return;
+        }
+        
+        // Validate health (should be 100 on respawn)
+        if (health < 0 || health > 100 || Float.isNaN(health) || Float.isInfinite(health)) {
+            System.err.println("Invalid respawn health from " + clientId + ": " + health);
+            logSecurityViolation("Invalid respawn health: " + health);
+            return;
+        }
+        
+        // Validate hunger (should be 0 on respawn)
+        if (hunger < 0 || hunger > 100 || Float.isNaN(hunger) || Float.isInfinite(hunger)) {
+            System.err.println("Invalid respawn hunger from " + clientId + ": " + hunger);
+            logSecurityViolation("Invalid respawn hunger: " + hunger);
+            return;
+        }
+        
+        // Update player state
+        playerState.setX(x);
+        playerState.setY(y);
+        playerState.setHealth(health);
+        playerState.setHunger(hunger);
+        
+        // Update in world state
+        server.getWorldState().addOrUpdatePlayer(playerState);
+        
+        System.out.println("Player " + clientId + " respawned at (" + x + ", " + y + 
+                         ") with health=" + health + ", hunger=" + hunger);
+        
+        // Broadcast respawn to all clients including hunger state
+        PlayerRespawnMessage broadcastMsg = new PlayerRespawnMessage(
+            "server",
+            playerId,
+            x,
+            y,
+            health,
+            hunger
+        );
+        server.broadcastToAll(broadcastMsg);
     }
     
     /**

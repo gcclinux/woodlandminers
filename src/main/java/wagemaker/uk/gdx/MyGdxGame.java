@@ -48,6 +48,7 @@ import wagemaker.uk.trees.SmallTree;
 import wagemaker.uk.biome.BiomeManager;
 import wagemaker.uk.ui.Compass;
 import wagemaker.uk.ui.GameMenu;
+import wagemaker.uk.ui.HealthBarUI;
 import wagemaker.uk.weather.RainSystem;
 import wagemaker.uk.world.WorldSaveData;
 import wagemaker.uk.world.WorldSaveManager;
@@ -206,6 +207,7 @@ public class MyGdxGame extends ApplicationAdapter {
     
     // UI components
     private Compass compass;
+    private HealthBarUI healthBarUI;
     
     // Notification system
     private String currentNotification;
@@ -352,6 +354,9 @@ public class MyGdxGame extends ApplicationAdapter {
         
         // Pass Compass reference to GameMenu
         gameMenu.setCompass(compass);
+        
+        // Initialize health bar UI
+        healthBarUI = new HealthBarUI(shapeRenderer);
 
         // Initialize biome manager for ground texture variation
         biomeManager = new BiomeManager();
@@ -624,6 +629,13 @@ public class MyGdxGame extends ApplicationAdapter {
         
         // draw health bars
         drawHealthBars();
+        
+        // render unified health bar UI for local player
+        if (healthBarUI != null) {
+            // Set up screen-space projection for UI rendering
+            shapeRenderer.setProjectionMatrix(camera.combined);
+            healthBarUI.render(player.getHealth(), player.getHunger(), camera, viewport);
+        }
         
         // draw connection quality indicator in multiplayer mode
         if (gameMode != GameMode.SINGLEPLAYER && connectionQualityIndicator != null) {
@@ -1350,30 +1362,6 @@ public class MyGdxGame extends ApplicationAdapter {
                 shapeRenderer.setColor(1, 0, 0, 1);
                 shapeRenderer.rect(barX, barY, barWidth * damagePercent, barHeight);
             }
-        }
-        
-        // Draw player health bar (fixed position on screen)
-        if (player.shouldShowHealthBar()) {
-            // Health bar in top-left corner of screen
-            float screenX = camera.position.x - viewport.getWorldWidth() / 2 + 20;
-            float screenY = camera.position.y + viewport.getWorldHeight() / 2 - 40;
-            float barWidth = 200;
-            float barHeight = 20;
-            
-            // Black background
-            shapeRenderer.setColor(0, 0, 0, 0.8f);
-            shapeRenderer.rect(screenX - 2, screenY - 2, barWidth + 4, barHeight + 4);
-            
-            // Red background (full bar)
-            shapeRenderer.setColor(0.8f, 0.2f, 0.2f, 1);
-            shapeRenderer.rect(screenX, screenY, barWidth, barHeight);
-            
-            // Green foreground (current health)
-            float healthPercent = player.getHealthPercentage();
-            shapeRenderer.setColor(0.2f, 0.8f, 0.2f, 1);
-            shapeRenderer.rect(screenX, screenY, barWidth * healthPercent, barHeight);
-            
-            // Health text would go here if we had font rendering
         }
         
         shapeRenderer.end();
@@ -3951,6 +3939,11 @@ public class MyGdxGame extends ApplicationAdapter {
         // Dispose compass
         if (compass != null) {
             compass.dispose();
+        }
+        
+        // Dispose health bar UI
+        if (healthBarUI != null) {
+            healthBarUI.dispose();
         }
         
         // Dispose inventory renderer

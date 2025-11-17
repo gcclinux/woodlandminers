@@ -51,6 +51,14 @@ public class DefaultMessageHandler implements MessageHandler {
                     handlePlayerHealthUpdate((PlayerHealthUpdateMessage) message);
                     break;
                     
+                case PLAYER_HUNGER_UPDATE:
+                    handlePlayerHungerUpdate((PlayerHungerUpdateMessage) message);
+                    break;
+                    
+                case ITEM_CONSUMPTION:
+                    handleItemConsumption((ItemConsumptionMessage) message);
+                    break;
+                    
                 case TREE_HEALTH_UPDATE:
                     handleTreeHealthUpdate((TreeHealthUpdateMessage) message);
                     break;
@@ -125,6 +133,10 @@ public class DefaultMessageHandler implements MessageHandler {
                     
                 case RESPAWN_STATE:
                     handleRespawnState((RespawnStateMessage) message);
+                    break;
+                    
+                case PLAYER_RESPAWN:
+                    handlePlayerRespawn((PlayerRespawnMessage) message);
                     break;
                     
                 default:
@@ -214,6 +226,22 @@ public class DefaultMessageHandler implements MessageHandler {
      */
     protected void handlePlayerHealthUpdate(PlayerHealthUpdateMessage message) {
         System.out.println("Player " + message.getPlayerId() + " health: " + message.getHealth());
+    }
+    
+    /**
+     * Handles PLAYER_HUNGER_UPDATE message.
+     * Override this method to update player hunger displays.
+     */
+    protected void handlePlayerHungerUpdate(PlayerHungerUpdateMessage message) {
+        System.out.println("Player " + message.getPlayerId() + " hunger: " + message.getHunger());
+    }
+    
+    /**
+     * Handles ITEM_CONSUMPTION message.
+     * Override this method to process item consumption effects.
+     */
+    protected void handleItemConsumption(ItemConsumptionMessage message) {
+        System.out.println("Player " + message.getPlayerId() + " consumed " + message.getItemType());
     }
     
     /**
@@ -388,5 +416,16 @@ public class DefaultMessageHandler implements MessageHandler {
         System.out.println("Respawn state sync: " + 
                          (message.getPendingRespawns() != null ? message.getPendingRespawns().size() : 0) + 
                          " pending respawns");
+    }
+    
+    /**
+     * Handles PLAYER_RESPAWN message.
+     * Override this method to update player position, health, and hunger on respawn.
+     */
+    protected void handlePlayerRespawn(PlayerRespawnMessage message) {
+        System.out.println("Player " + message.getPlayerId() + " respawned at (" + 
+                         message.getX() + ", " + message.getY() + 
+                         ") with health=" + message.getHealth() + 
+                         ", hunger=" + message.getHunger());
     }
 }

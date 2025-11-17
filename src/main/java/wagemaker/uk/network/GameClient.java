@@ -383,6 +383,52 @@ public class GameClient {
     }
     
     /**
+     * Sends a player hunger update to the server.
+     * @param hunger The player's current hunger value
+     */
+    public void sendPlayerHunger(float hunger) {
+        if (clientId == null) {
+            System.err.println("Cannot send hunger update: client ID not set");
+            return;
+        }
+        
+        PlayerHungerUpdateMessage message = new PlayerHungerUpdateMessage(clientId, clientId, hunger);
+        sendMessage(message);
+    }
+    
+    /**
+     * Sends an item consumption action to the server.
+     * @param itemType The type of item being consumed
+     */
+    public void sendItemConsumption(ItemType itemType) {
+        if (clientId == null) {
+            System.err.println("Cannot send item consumption: client ID not set");
+            return;
+        }
+        
+        ItemConsumptionMessage message = new ItemConsumptionMessage(clientId, clientId, itemType);
+        sendMessage(message);
+    }
+    
+    /**
+     * Sends a player respawn message to the server.
+     * Called when player dies (from hunger or damage) and respawns.
+     * @param x The respawn x position
+     * @param y The respawn y position
+     * @param health The respawn health value
+     * @param hunger The respawn hunger value
+     */
+    public void sendPlayerRespawn(float x, float y, float health, float hunger) {
+        if (clientId == null) {
+            System.err.println("Cannot send player respawn: client ID not set");
+            return;
+        }
+        
+        PlayerRespawnMessage message = new PlayerRespawnMessage(clientId, clientId, x, y, health, hunger);
+        sendMessage(message);
+    }
+    
+    /**
      * Sends a bamboo planting action to the server.
      * @param plantedBambooId The unique ID for the planted bamboo
      * @param x The tile-aligned x position

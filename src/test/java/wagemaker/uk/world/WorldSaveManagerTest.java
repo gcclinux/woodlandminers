@@ -661,32 +661,35 @@ public class WorldSaveManagerTest {
         List<RespawnEntry> testEntries = new ArrayList<>();
         testEntries.add(expiredEntry);
         
-        // Create save data with expired respawn entry
-        WorldSaveData saveData = new WorldSaveData(
-            TEST_WORLD_SEED,
-            testWorldState.getTrees(),
-            testWorldState.getStones(),
-            testWorldState.getItems(),
-            testWorldState.getClearedPositions(),
-            testWorldState.getRainZones(),
-            100, 200, 85,
-            "expired-respawn-test",
-            "singleplayer"
-        );
-        saveData.setPendingRespawns(testEntries);
-        
-        // Save manually
+        // Save with respawn manager first to create the file
         assertTrue(WorldSaveManager.saveWorld("expired-respawn-test", testWorldState, 
                                             100, 200, 85, null, false, mockRespawnManager),
                   "Save should succeed");
         
-        // Manually set the expired entry
+        // Load and update with expired entry
         WorldSaveData loadedForUpdate = WorldSaveManager.loadWorld("expired-respawn-test", false);
+        assertNotNull(loadedForUpdate, "Initial load should succeed");
         loadedForUpdate.setPendingRespawns(testEntries);
         
+        // Get the config directory path
+        String os = System.getProperty("os.name").toLowerCase();
+        String userHome = System.getProperty("user.home");
+        File configDir;
+        
+        if (os.contains("win")) {
+            String appData = System.getenv("APPDATA");
+            configDir = appData != null ? new File(appData, "Woodlanders") : new File(userHome, "AppData/Roaming/Woodlanders");
+        } else if (os.contains("mac")) {
+            configDir = new File(userHome, "Library/Application Support/Woodlanders");
+        } else {
+            configDir = new File(userHome, ".config/woodlanders");
+        }
+        
+        File saveDir = new File(new File(configDir, "world-saves"), "singleplayer");
+        File saveFile = new File(saveDir, "expired-respawn-test.wld");
+        
         // Re-save with expired entry
-        try (java.io.FileOutputStream fos = new java.io.FileOutputStream(
-                new File(System.getProperty("user.home") + "/.config/woodlanders/world-saves/singleplayer/expired-respawn-test.wld"));
+        try (java.io.FileOutputStream fos = new java.io.FileOutputStream(saveFile);
              java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream(fos)) {
             oos.writeObject(loadedForUpdate);
         } catch (Exception e) {

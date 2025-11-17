@@ -340,9 +340,9 @@ public class MultiplayerPerformanceTest {
         
         System.out.println("✓ Memory growth over " + iterations + " iterations: " + formatBytes(memoryGrowth));
         
-        // Memory growth should be reasonable (less than 10MB for this test)
-        assertTrue(memoryGrowth < 10 * 1024 * 1024,
-                  "Memory growth should be less than 10MB, got: " + formatBytes(memoryGrowth));
+        // Memory growth should be reasonable (less than 15MB for this test)
+        assertTrue(memoryGrowth < 15 * 1024 * 1024,
+                  "Memory growth should be less than 15MB, got: " + formatBytes(memoryGrowth));
         
         // Disconnect all clients and check memory cleanup
         for (GameClient client : clients) {

@@ -270,7 +270,7 @@ public class GameMenu implements LanguageChangeListener {
             boolean isMultiplayer = (gameInstance != null && 
                                     gameInstance.getGameMode() != wagemaker.uk.gdx.MyGdxGame.GameMode.SINGLEPLAYER);
             
-            float x, y, health;
+            float x, y, health, hunger;
             
             if (isMultiplayer) {
                 // Load multiplayer position from object format
@@ -278,6 +278,11 @@ public class GameMenu implements LanguageChangeListener {
                     x = parseJsonObjectFloat(jsonContent, "\"multiplayerPosition\"", "x");
                     y = parseJsonObjectFloat(jsonContent, "\"multiplayerPosition\"", "y");
                     health = parseJsonFloat(jsonContent, "\"multiplayerHealth\":");
+                    try {
+                        hunger = parseJsonFloat(jsonContent, "\"multiplayerHunger\":");
+                    } catch (Exception e) {
+                        hunger = 0.0f; // Default hunger if not found
+                    }
                     System.out.println("Loading multiplayer position from object format");
                 } catch (Exception e) {
 
@@ -286,6 +291,11 @@ public class GameMenu implements LanguageChangeListener {
                         x = parseJsonFloat(jsonContent, "\"multiplayerX\":");
                         y = parseJsonFloat(jsonContent, "\"multiplayerY\":");
                         health = parseJsonFloat(jsonContent, "\"multiplayerHealth\":");
+                        try {
+                            hunger = parseJsonFloat(jsonContent, "\"multiplayerHunger\":");
+                        } catch (Exception e3) {
+                            hunger = 0.0f;
+                        }
                         System.out.println("Loading multiplayer position from legacy flat format");
                     } catch (Exception e2) {
                         // Fallback to spawn if multiplayer position doesn't exist
@@ -293,6 +303,7 @@ public class GameMenu implements LanguageChangeListener {
                         x = 0;
                         y = 0;
                         health = 100.0f;
+                        hunger = 0.0f;
                     }
                 }
             } else {
@@ -301,6 +312,11 @@ public class GameMenu implements LanguageChangeListener {
                     x = parseJsonObjectFloat(jsonContent, "\"singleplayerPosition\"", "x");
                     y = parseJsonObjectFloat(jsonContent, "\"singleplayerPosition\"", "y");
                     health = parseJsonFloat(jsonContent, "\"singleplayerHealth\":");
+                    try {
+                        hunger = parseJsonFloat(jsonContent, "\"singleplayerHunger\":");
+                    } catch (Exception e) {
+                        hunger = 0.0f; // Default hunger if not found
+                    }
                     System.out.println("Loading singleplayer position from object format");
                 } catch (Exception e) {
                     // Fallback to flat format for backwards compatibility
@@ -308,6 +324,11 @@ public class GameMenu implements LanguageChangeListener {
                         x = parseJsonFloat(jsonContent, "\"singleplayerX\":");
                         y = parseJsonFloat(jsonContent, "\"singleplayerY\":");
                         health = parseJsonFloat(jsonContent, "\"singleplayerHealth\":");
+                        try {
+                            hunger = parseJsonFloat(jsonContent, "\"singleplayerHunger\":");
+                        } catch (Exception e3) {
+                            hunger = 0.0f;
+                        }
                         System.out.println("Loading singleplayer position from legacy flat format");
                     } catch (Exception e2) {
                         // Fallback to old format for backwards compatibility
@@ -315,12 +336,14 @@ public class GameMenu implements LanguageChangeListener {
                             x = parseJsonFloat(jsonContent, "\"x\":");
                             y = parseJsonFloat(jsonContent, "\"y\":");
                             health = parseJsonFloat(jsonContent, "\"playerHealth\":");
+                            hunger = 0.0f; // Old format doesn't have hunger
                             System.out.println("Loading position from legacy format");
                         } catch (Exception e3) {
                             System.out.println("No singleplayer position found, using default (0, 0)");
                             x = 0;
                             y = 0;
                             health = 100.0f;
+                            hunger = 0.0f;
                         }
                     }
                 }
@@ -329,9 +352,10 @@ public class GameMenu implements LanguageChangeListener {
             // Load player name (shared between modes)
             String loadedName = parseJsonString(jsonContent, "\"playerName\":");
             
-            // Set player position and health
+            // Set player position, health, and hunger
             player.setPosition(x, y);
             player.setHealth(health);
+            player.setHunger(hunger);
             
             // Set player name if found
             if (loadedName != null && !loadedName.isEmpty()) {
@@ -418,6 +442,7 @@ public class GameMenu implements LanguageChangeListener {
             System.out.println("Game loaded from: " + saveFile.getAbsolutePath());
             System.out.println("Player position loaded: (" + x + ", " + y + ")");
             System.out.println("Player health loaded: " + health);
+            System.out.println("Player hunger loaded: " + hunger);
             System.out.println("Player name loaded: " + playerName);
             
             return true;
@@ -1254,8 +1279,8 @@ public class GameMenu implements LanguageChangeListener {
             
             // Read existing values if file exists
             String lastServer = null;
-            Float singleplayerX = null, singleplayerY = null, singleplayerHealth = null;
-            Float multiplayerX = null, multiplayerY = null, multiplayerHealth = null;
+            Float singleplayerX = null, singleplayerY = null, singleplayerHealth = null, singleplayerHunger = null;
+            Float multiplayerX = null, multiplayerY = null, multiplayerHealth = null, multiplayerHunger = null;
             
             if (saveFile.exists()) {
                 try {
@@ -1267,12 +1292,22 @@ public class GameMenu implements LanguageChangeListener {
                         singleplayerX = parseJsonObjectFloat(existingContent, "\"singleplayerPosition\"", "x");
                         singleplayerY = parseJsonObjectFloat(existingContent, "\"singleplayerPosition\"", "y");
                         singleplayerHealth = parseJsonFloat(existingContent, "\"singleplayerHealth\":");
+                        try {
+                            singleplayerHunger = parseJsonFloat(existingContent, "\"singleplayerHunger\":");
+                        } catch (Exception e) {
+                            singleplayerHunger = 0.0f; // Default if not found
+                        }
                     } catch (Exception e) {
                         // Fallback to flat format for backwards compatibility
                         try {
                             singleplayerX = parseJsonFloat(existingContent, "\"singleplayerX\":");
                             singleplayerY = parseJsonFloat(existingContent, "\"singleplayerY\":");
                             singleplayerHealth = parseJsonFloat(existingContent, "\"singleplayerHealth\":");
+                            try {
+                                singleplayerHunger = parseJsonFloat(existingContent, "\"singleplayerHunger\":");
+                            } catch (Exception e3) {
+                                singleplayerHunger = 0.0f;
+                            }
                         } catch (Exception e2) {
                             // Singleplayer position doesn't exist yet
                         }
@@ -1282,12 +1317,22 @@ public class GameMenu implements LanguageChangeListener {
                         multiplayerX = parseJsonObjectFloat(existingContent, "\"multiplayerPosition\"", "x");
                         multiplayerY = parseJsonObjectFloat(existingContent, "\"multiplayerPosition\"", "y");
                         multiplayerHealth = parseJsonFloat(existingContent, "\"multiplayerHealth\":");
+                        try {
+                            multiplayerHunger = parseJsonFloat(existingContent, "\"multiplayerHunger\":");
+                        } catch (Exception e) {
+                            multiplayerHunger = 0.0f; // Default if not found
+                        }
                     } catch (Exception e) {
                         // Fallback to flat format for backwards compatibility
                         try {
                             multiplayerX = parseJsonFloat(existingContent, "\"multiplayerX\":");
                             multiplayerY = parseJsonFloat(existingContent, "\"multiplayerY\":");
                             multiplayerHealth = parseJsonFloat(existingContent, "\"multiplayerHealth\":");
+                            try {
+                                multiplayerHunger = parseJsonFloat(existingContent, "\"multiplayerHunger\":");
+                            } catch (Exception e3) {
+                                multiplayerHunger = 0.0f;
+                            }
                         } catch (Exception e2) {
                             // Multiplayer position doesn't exist yet
                         }
@@ -1306,12 +1351,14 @@ public class GameMenu implements LanguageChangeListener {
                 multiplayerX = player.getX();
                 multiplayerY = player.getY();
                 multiplayerHealth = player.getHealth();
+                multiplayerHunger = player.getHunger();
                 System.out.println("Saving multiplayer position");
             } else {
                 // Update singleplayer position
                 singleplayerX = player.getX();
                 singleplayerY = player.getY();
                 singleplayerHealth = player.getHealth();
+                singleplayerHunger = player.getHunger();
                 System.out.println("Saving singleplayer position");
             }
             
@@ -1327,6 +1374,9 @@ public class GameMenu implements LanguageChangeListener {
                 jsonBuilder.append(String.format("    \"y\": %.2f\n", singleplayerY));
                 jsonBuilder.append("  },\n");
                 jsonBuilder.append(String.format("  \"singleplayerHealth\": %.1f,\n", singleplayerHealth));
+                if (singleplayerHunger != null) {
+                    jsonBuilder.append(String.format("  \"singleplayerHunger\": %.1f,\n", singleplayerHunger));
+                }
             }
             
             // Singleplayer inventory
@@ -1350,6 +1400,9 @@ public class GameMenu implements LanguageChangeListener {
                 jsonBuilder.append(String.format("    \"y\": %.2f\n", multiplayerY));
                 jsonBuilder.append("  },\n");
                 jsonBuilder.append(String.format("  \"multiplayerHealth\": %.1f,\n", multiplayerHealth));
+                if (multiplayerHunger != null) {
+                    jsonBuilder.append(String.format("  \"multiplayerHunger\": %.1f,\n", multiplayerHunger));
+                }
             }
             
             // Multiplayer inventory
@@ -1382,6 +1435,7 @@ public class GameMenu implements LanguageChangeListener {
             System.out.println("Game saved to: " + saveFile.getAbsolutePath());
             System.out.println("Player position saved: (" + player.getX() + ", " + player.getY() + ")");
             System.out.println("Player health saved: " + player.getHealth());
+            System.out.println("Player hunger saved: " + player.getHunger());
             System.out.println("Player name saved: " + playerName);
             System.out.println("Mode: " + (isMultiplayer ? "Multiplayer" : "Singleplayer"));
             if (lastServer != null) {

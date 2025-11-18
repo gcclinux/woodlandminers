@@ -42,12 +42,11 @@ public class BananaTree {
     }
 
     public boolean collidesWith(float playerX, float playerY, float playerWidth, float playerHeight) {
-        // Adjusted collision box for narrower banana tree:
-        // Further away on the left, closer on the right
-        float treeCollisionX = x + 40; // Moved left from x + 56 to x + 40 (16px further left)
-        float treeCollisionWidth = 12; // Reduced from 20px to 12px (8px narrower on the right)
-        float treeCollisionY = y + 28;
-        float treeCollisionHeight = 52;
+        // Collision box for banana tree trunk (tree sprite is 64x128, center at 32,64)
+        float treeCollisionX = x + 16;      // 16px from left edge (16px left of horizontal center)
+        float treeCollisionWidth = 16;      // 16px width (ends at horizontal center)
+        float treeCollisionY = y - 16;      // -16px from bottom (16px above vertical center)
+        float treeCollisionHeight = 84;     // 64px height (ends 48px above vertical center)
         
         return playerX < treeCollisionX + treeCollisionWidth && playerX + playerWidth > treeCollisionX && 
                playerY < treeCollisionY + treeCollisionHeight && playerY + playerHeight > treeCollisionY;
@@ -77,16 +76,16 @@ public class BananaTree {
     }
     
     public boolean isInAttackRange(float playerX, float playerY) {
-        // BananaTree attack range: 128px up/down, 64px left/right from center
-        float treeCenterX = x + 64;
-        float treeCenterY = y + 64;
-        float playerCenterX = playerX + 32;
-        float playerCenterY = playerY + 32;
+        // BananaTree attack range: 128px up/down, asymmetric left/right
+        float treeCenterX = x + 32;  // Tree horizontal center
+        float treeCenterY = y + 64;  // Tree vertical center
+        float playerCenterX = playerX + 28;
+        float playerCenterY = playerY + 28;
         
-        float dx = Math.abs(treeCenterX - playerCenterX);
+        float dx = playerCenterX - treeCenterX;  // Positive = player right of tree
         float dy = Math.abs(treeCenterY - playerCenterY);
         
-        return dx <= 64 && dy <= 128;
+        return dx >= -96 && dx <= 32 && dy <= 128;  // 96px left, 32px right, 128px up/down
     }
     
     public float getHealth() {

@@ -346,6 +346,12 @@ public class GameMenu implements LanguageChangeListener {
                     int spBanana = parseJsonObjectInt(jsonContent, "\"singleplayerInventory\"", "banana");
                     int spBabyBamboo = parseJsonObjectInt(jsonContent, "\"singleplayerInventory\"", "babyBamboo");
                     int spBambooStack = parseJsonObjectInt(jsonContent, "\"singleplayerInventory\"", "bambooStack");
+                    int spBabyTree = 0;
+                    try {
+                        spBabyTree = parseJsonObjectInt(jsonContent, "\"singleplayerInventory\"", "babyTree");
+                    } catch (Exception e) {
+                        // BabyTree field doesn't exist in old saves
+                    }
                     int spWoodStack = parseJsonObjectInt(jsonContent, "\"singleplayerInventory\"", "woodStack");
                     int spPebble = 0;
                     try {
@@ -359,13 +365,14 @@ public class GameMenu implements LanguageChangeListener {
                     spInv.setBananaCount(spBanana);
                     spInv.setBabyBambooCount(spBabyBamboo);
                     spInv.setBambooStackCount(spBambooStack);
+                    spInv.setBabyTreeCount(spBabyTree);
                     spInv.setWoodStackCount(spWoodStack);
                     spInv.setPebbleCount(spPebble);
                     
                     System.out.println("Singleplayer inventory loaded: Apple=" + spApple + 
                                       ", Banana=" + spBanana + ", BabyBamboo=" + spBabyBamboo + 
-                                      ", BambooStack=" + spBambooStack + ", WoodStack=" + spWoodStack +
-                                      ", Pebble=" + spPebble);
+                                      ", BambooStack=" + spBambooStack + ", BabyTree=" + spBabyTree +
+                                      ", WoodStack=" + spWoodStack + ", Pebble=" + spPebble);
                 } catch (Exception e) {
                     System.out.println("No singleplayer inventory data found, starting with empty inventory");
                 }
@@ -376,6 +383,12 @@ public class GameMenu implements LanguageChangeListener {
                     int mpBanana = parseJsonObjectInt(jsonContent, "\"multiplayerInventory\"", "banana");
                     int mpBabyBamboo = parseJsonObjectInt(jsonContent, "\"multiplayerInventory\"", "babyBamboo");
                     int mpBambooStack = parseJsonObjectInt(jsonContent, "\"multiplayerInventory\"", "bambooStack");
+                    int mpBabyTree = 0;
+                    try {
+                        mpBabyTree = parseJsonObjectInt(jsonContent, "\"multiplayerInventory\"", "babyTree");
+                    } catch (Exception e) {
+                        // BabyTree field doesn't exist in old saves
+                    }
                     int mpWoodStack = parseJsonObjectInt(jsonContent, "\"multiplayerInventory\"", "woodStack");
                     int mpPebble = 0;
                     try {
@@ -389,13 +402,14 @@ public class GameMenu implements LanguageChangeListener {
                     mpInv.setBananaCount(mpBanana);
                     mpInv.setBabyBambooCount(mpBabyBamboo);
                     mpInv.setBambooStackCount(mpBambooStack);
+                    mpInv.setBabyTreeCount(mpBabyTree);
                     mpInv.setWoodStackCount(mpWoodStack);
                     mpInv.setPebbleCount(mpPebble);
                     
                     System.out.println("Multiplayer inventory loaded: Apple=" + mpApple + 
                                       ", Banana=" + mpBanana + ", BabyBamboo=" + mpBabyBamboo + 
-                                      ", BambooStack=" + mpBambooStack + ", WoodStack=" + mpWoodStack +
-                                      ", Pebble=" + mpPebble);
+                                      ", BambooStack=" + mpBambooStack + ", BabyTree=" + mpBabyTree +
+                                      ", WoodStack=" + mpWoodStack + ", Pebble=" + mpPebble);
                 } catch (Exception e) {
                     System.out.println("No multiplayer inventory data found, starting with empty inventory");
                 }
@@ -1323,6 +1337,7 @@ public class GameMenu implements LanguageChangeListener {
                 jsonBuilder.append(String.format("    \"banana\": %d,\n", spInv.getBananaCount()));
                 jsonBuilder.append(String.format("    \"babyBamboo\": %d,\n", spInv.getBabyBambooCount()));
                 jsonBuilder.append(String.format("    \"bambooStack\": %d,\n", spInv.getBambooStackCount()));
+                jsonBuilder.append(String.format("    \"babyTree\": %d,\n", spInv.getBabyTreeCount()));
                 jsonBuilder.append(String.format("    \"woodStack\": %d,\n", spInv.getWoodStackCount()));
                 jsonBuilder.append(String.format("    \"pebble\": %d\n", spInv.getPebbleCount()));
                 jsonBuilder.append("  },\n");
@@ -1345,6 +1360,7 @@ public class GameMenu implements LanguageChangeListener {
                 jsonBuilder.append(String.format("    \"banana\": %d,\n", mpInv.getBananaCount()));
                 jsonBuilder.append(String.format("    \"babyBamboo\": %d,\n", mpInv.getBabyBambooCount()));
                 jsonBuilder.append(String.format("    \"bambooStack\": %d,\n", mpInv.getBambooStackCount()));
+                jsonBuilder.append(String.format("    \"babyTree\": %d,\n", mpInv.getBabyTreeCount()));
                 jsonBuilder.append(String.format("    \"woodStack\": %d,\n", mpInv.getWoodStackCount()));
                 jsonBuilder.append(String.format("    \"pebble\": %d\n", mpInv.getPebbleCount()));
                 jsonBuilder.append("  },\n");

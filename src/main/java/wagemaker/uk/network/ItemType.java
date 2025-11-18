@@ -8,8 +8,9 @@ import java.io.Serializable;
 public enum ItemType implements Serializable {
     APPLE,
     BANANA,
-    BAMBOO_STACK,
     BABY_BAMBOO,
+    BAMBOO_STACK,
     WOOD_STACK,
+    BABY_TREE,
     PEBBLE
 }

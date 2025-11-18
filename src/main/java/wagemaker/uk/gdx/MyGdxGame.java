@@ -20,6 +20,7 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 
 import wagemaker.uk.items.Apple;
 import wagemaker.uk.items.BabyBamboo;
+import wagemaker.uk.items.BabyTree;
 import wagemaker.uk.items.BambooStack;
 import wagemaker.uk.items.Banana;
 import wagemaker.uk.items.Pebble;
@@ -183,6 +184,7 @@ public class MyGdxGame extends ApplicationAdapter {
     Map<String, Banana> bananas;
     Map<String, BambooStack> bambooStacks;
     Map<String, BabyBamboo> babyBamboos;
+    Map<String, BabyTree> babyTrees;
     Map<String, WoodStack> woodStacks;
     Map<String, Pebble> pebbles;
     Map<String, PlantedBamboo> plantedBamboos;
@@ -270,6 +272,7 @@ public class MyGdxGame extends ApplicationAdapter {
         bananas = new HashMap<>();
         bambooStacks = new HashMap<>();
         babyBamboos = new HashMap<>();
+        babyTrees = new HashMap<>();
         woodStacks = new HashMap<>();
         pebbles = new HashMap<>();
         plantedBamboos = new HashMap<>();
@@ -312,6 +315,7 @@ public class MyGdxGame extends ApplicationAdapter {
         player.setBananas(bananas);
         player.setBambooStacks(bambooStacks);
         player.setBabyBamboos(babyBamboos);
+        player.setBabyTrees(babyTrees);
         player.setWoodStacks(woodStacks);
         player.setPebbles(pebbles);
         player.setStones(stones);
@@ -605,6 +609,7 @@ public class MyGdxGame extends ApplicationAdapter {
         drawBananas();
         drawBambooStacks();
         drawBabyBamboos();
+        drawBabyTrees();
         drawWoodStacks();
         drawPebbles();
         drawCactus();
@@ -1128,6 +1133,20 @@ public class MyGdxGame extends ApplicationAdapter {
             if (Math.abs(babyBamboo.getX() - camX) < viewWidth && 
                 Math.abs(babyBamboo.getY() - camY) < viewHeight) {
                 batch.draw(babyBamboo.getTexture(), babyBamboo.getX(), babyBamboo.getY(), 32, 32);
+            }
+        }
+    }
+    
+    private void drawBabyTrees() {
+        float camX = camera.position.x;
+        float camY = camera.position.y;
+        float viewWidth = viewport.getWorldWidth() / 2;
+        float viewHeight = viewport.getWorldHeight() / 2;
+        
+        for (BabyTree babyTree : babyTrees.values()) {
+            if (Math.abs(babyTree.getX() - camX) < viewWidth && 
+                Math.abs(babyTree.getY() - camY) < viewHeight) {
+                batch.draw(babyTree.getTexture(), babyTree.getX(), babyTree.getY(), 32, 32);
             }
         }
     }
@@ -2216,6 +2235,9 @@ public class MyGdxGame extends ApplicationAdapter {
         if (babyBamboos.containsKey(itemId)) {
             return wagemaker.uk.inventory.ItemType.BABY_BAMBOO;
         }
+        if (babyTrees.containsKey(itemId)) {
+            return wagemaker.uk.inventory.ItemType.BABY_TREE;
+        }
         if (woodStacks.containsKey(itemId)) {
             return wagemaker.uk.inventory.ItemType.WOOD_STACK;
         }
@@ -2252,6 +2274,13 @@ public class MyGdxGame extends ApplicationAdapter {
         if (babyBamboo != null) {
             // Defer texture disposal to render thread
             deferOperation(() -> babyBamboo.dispose());
+            return;
+        }
+        
+        BabyTree babyTree = babyTrees.remove(itemId);
+        if (babyTree != null) {
+            // Defer texture disposal to render thread
+            deferOperation(() -> babyTree.dispose());
             return;
         }
         
@@ -2934,6 +2963,7 @@ public class MyGdxGame extends ApplicationAdapter {
                     targetInventory.setBananaCount(saveData.getBananaCount());
                     targetInventory.setBabyBambooCount(saveData.getBabyBambooCount());
                     targetInventory.setBambooStackCount(saveData.getBambooStackCount());
+                    targetInventory.setBabyTreeCount(saveData.getBabyTreeCount());
                     targetInventory.setWoodStackCount(saveData.getWoodStackCount());
                     targetInventory.setPebbleCount(saveData.getPebbleCount());
                     System.out.println("Restored inventory from world save (pebbles: " + saveData.getPebbleCount() + ")");
@@ -3616,6 +3646,11 @@ public class MyGdxGame extends ApplicationAdapter {
                 case BABY_BAMBOO:
                     if (!babyBamboos.containsKey(itemId)) {
                         babyBamboos.put(itemId, new BabyBamboo(x, y));
+                    }
+                    break;
+                case BABY_TREE:
+                    if (!babyTrees.containsKey(itemId)) {
+                        babyTrees.put(itemId, new BabyTree(x, y));
                     }
                     break;
                 case WOOD_STACK:

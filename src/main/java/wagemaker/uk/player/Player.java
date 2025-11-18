@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import wagemaker.uk.items.Apple;
 import wagemaker.uk.items.BabyBamboo;
+import wagemaker.uk.items.BabyTree;
 import wagemaker.uk.items.Banana;
 import wagemaker.uk.items.BambooStack;
 import wagemaker.uk.items.Pebble;
@@ -31,6 +32,7 @@ import wagemaker.uk.targeting.TargetingMode;
 import wagemaker.uk.targeting.TargetingCallback;
 import wagemaker.uk.targeting.PlantingTargetValidator;
 import java.util.Map;
+import java.util.Random;
 
 public class Player {
     private float x, y;
@@ -73,8 +75,10 @@ public class Player {
     private Map<String, Banana> bananas;
     private Map<String, wagemaker.uk.items.BambooStack> bambooStacks;
     private Map<String, wagemaker.uk.items.BabyBamboo> babyBamboos;
+    private Map<String, BabyTree> babyTrees;
     private Map<String, WoodStack> woodStacks;
     private Map<String, Pebble> pebbles;
+    private Random random = new Random();
     private Map<String, Stone> stones;
     private Cactus cactus; // Single cactus reference
     private Object gameInstance; // Reference to MyGdxGame for cactus respawning
@@ -143,6 +147,10 @@ public class Player {
     
     public void setBabyBamboos(Map<String, wagemaker.uk.items.BabyBamboo> babyBamboos) {
         this.babyBamboos = babyBamboos;
+    }
+    
+    public void setBabyTrees(Map<String, BabyTree> babyTrees) {
+        this.babyTrees = babyTrees;
     }
     
     public void setWoodStacks(Map<String, WoodStack> woodStacks) {
@@ -419,6 +427,9 @@ public class Player {
         // Check for baby bamboo pickups
         checkBabyBambooPickups();
         
+        // Check for baby tree pickups
+        checkBabyTreePickups();
+        
         // Check for wood stack pickups
         checkWoodStackPickups();
         
@@ -664,11 +675,28 @@ public class Player {
                     attackedSomething = true;
                     
                     if (destroyed) {
-                        // Spawn WoodStack at tree position
-                        woodStacks.put(targetKey + "-woodstack", 
-                            new WoodStack(targetTree.getX(), targetTree.getY()));
+                        // Random drop selection (0, 1, or 2)
+                        int dropType = random.nextInt(3);
+                        float treeX = targetTree.getX();
+                        float treeY = targetTree.getY();
                         
-                        System.out.println("WoodStack dropped at: " + targetTree.getX() + ", " + targetTree.getY());
+                        switch (dropType) {
+                            case 0: // 2x BabyTree
+                                babyTrees.put(targetKey + "-item1", new BabyTree(treeX, treeY));
+                                babyTrees.put(targetKey + "-item2", new BabyTree(treeX + 8, treeY));
+                                System.out.println("Dropped 2x BabyTree at: " + treeX + ", " + treeY);
+                                break;
+                            case 1: // 2x WoodStack
+                                woodStacks.put(targetKey + "-item1", new WoodStack(treeX, treeY));
+                                woodStacks.put(targetKey + "-item2", new WoodStack(treeX + 8, treeY));
+                                System.out.println("Dropped 2x WoodStack at: " + treeX + ", " + treeY);
+                                break;
+                            case 2: // 1x BabyTree + 1x WoodStack
+                                babyTrees.put(targetKey + "-item1", new BabyTree(treeX, treeY));
+                                woodStacks.put(targetKey + "-item2", new WoodStack(treeX + 8, treeY));
+                                System.out.println("Dropped 1x BabyTree + 1x WoodStack at: " + treeX + ", " + treeY);
+                                break;
+                        }
                         
                         // Register for respawn before removing
                         if (gameInstance != null && gameInstance instanceof wagemaker.uk.gdx.MyGdxGame) {
@@ -1707,6 +1735,48 @@ public class Player {
                 babyBamboo.dispose();
                 babyBamboos.remove(babyBambooKey);
                 System.out.println("BabyBamboo removed from game");
+            }
+        }
+    }
+    
+    private void checkBabyTreePickups() {
+        if (babyTrees != null) {
+            // Check all baby trees for pickup
+            for (Map.Entry<String, BabyTree> entry : babyTrees.entrySet()) {
+                BabyTree babyTree = entry.getValue();
+                String babyTreeKey = entry.getKey();
+                
+                // Check if player is close enough to pick up baby tree (32px range)
+                float dx = Math.abs((x + 32) - (babyTree.getX() + 16)); // Player center to baby tree center
+                float dy = Math.abs((y + 32) - (babyTree.getY() + 16)); // BabyTree is 32x32, so center is +16
+                
+                if (dx <= 32 && dy <= 32) {
+                    // Pick up the baby tree
+                    pickupBabyTree(babyTreeKey);
+                    break; // Only pick up one baby tree per frame
+                }
+            }
+        }
+    }
+    
+    private void pickupBabyTree(String babyTreeKey) {
+        // Send pickup request to server in multiplayer mode
+        if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+            gameClient.sendItemPickup(babyTreeKey);
+            // In multiplayer, server handles item removal
+            // The server will broadcast the pickup to all clients
+        } else {
+            // Single-player mode: handle locally via inventory manager
+            if (inventoryManager != null) {
+                inventoryManager.collectItem(wagemaker.uk.inventory.ItemType.BABY_TREE);
+            }
+            
+            // Remove baby tree from game
+            if (babyTrees.containsKey(babyTreeKey)) {
+                BabyTree babyTree = babyTrees.get(babyTreeKey);
+                babyTree.dispose();
+                babyTrees.remove(babyTreeKey);
+                System.out.println("BabyTree removed from game");
             }
         }
     }

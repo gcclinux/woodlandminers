@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.backends.headless.HeadlessApplication;
+import com.badlogic.gdx.backends.headless.HeadlessApplicationConfiguration;
+import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import wagemaker.uk.inventory.InventoryManager;
@@ -25,13 +28,19 @@ public class HealthHungerIntegrationTest {
     private OrthographicCamera camera;
     
     @BeforeAll
-    public static void checkLibGDXAvailability() {
-        // Skip all tests if LibGDX is not initialized (headless environment)
-        assumeTrue(Gdx.files != null, "LibGDX not initialized - skipping tests that require graphics context");
+    public static void initializeLibGDX() {
+        // Initialize LibGDX headless backend for testing
+        if (Gdx.app == null) {
+            HeadlessApplicationConfiguration config = new HeadlessApplicationConfiguration();
+            new HeadlessApplication(new ApplicationAdapter() {}, config);
+        }
     }
     
     @BeforeEach
     public void setUp() {
+        // Skip tests that require texture loading in headless environment
+        assumeTrue(Gdx.gl != null, "Skipping test - requires graphics context");
+        
         camera = new OrthographicCamera();
         player = new Player(0, 0, camera);
         player.setHealth(100);

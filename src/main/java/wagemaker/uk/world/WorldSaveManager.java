@@ -240,6 +240,7 @@ public class WorldSaveManager {
                 saveData.setBananaCount(inventory.getBananaCount());
                 saveData.setBabyBambooCount(inventory.getBabyBambooCount());
                 saveData.setBambooStackCount(inventory.getBambooStackCount());
+                saveData.setBabyTreeCount(inventory.getBabyTreeCount());
                 saveData.setWoodStackCount(inventory.getWoodStackCount());
                 saveData.setPebbleCount(inventory.getPebbleCount());
             }

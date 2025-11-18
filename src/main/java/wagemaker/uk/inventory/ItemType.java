@@ -10,6 +10,7 @@ public enum ItemType {
     BABY_BAMBOO(false, 0, false),
     BAMBOO_STACK(false, 0, false),
     WOOD_STACK(false, 0, false),
+    BABY_TREE(false, 0, false),
     PEBBLE(false, 0, false);
     
     private final boolean restoresHealth;

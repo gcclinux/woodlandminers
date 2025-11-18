@@ -10,6 +10,7 @@ public class Inventory {
     private int bananaCount;
     private int babyBambooCount;
     private int bambooStackCount;
+    private int babyTreeCount;
     private int woodStackCount;
     private int pebbleCount;
     
@@ -18,6 +19,7 @@ public class Inventory {
         this.bananaCount = 0;
         this.babyBambooCount = 0;
         this.bambooStackCount = 0;
+        this.babyTreeCount = 0;
         this.woodStackCount = 0;
         this.pebbleCount = 0;
     }
@@ -106,6 +108,27 @@ public class Inventory {
         return false;
     }
     
+    // BabyTree methods
+    public int getBabyTreeCount() {
+        return babyTreeCount;
+    }
+    
+    public void setBabyTreeCount(int count) {
+        this.babyTreeCount = Math.max(0, count);
+    }
+    
+    public void addBabyTree(int amount) {
+        this.babyTreeCount += amount;
+    }
+    
+    public boolean removeBabyTree(int amount) {
+        if (babyTreeCount >= amount) {
+            babyTreeCount -= amount;
+            return true;
+        }
+        return false;
+    }
+    
     // WoodStack methods
     public int getWoodStackCount() {
         return woodStackCount;
@@ -156,6 +179,7 @@ public class Inventory {
         this.bananaCount = 0;
         this.babyBambooCount = 0;
         this.bambooStackCount = 0;
+        this.babyTreeCount = 0;
         this.woodStackCount = 0;
         this.pebbleCount = 0;
     }

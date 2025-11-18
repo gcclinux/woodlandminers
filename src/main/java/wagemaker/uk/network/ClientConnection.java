@@ -569,15 +569,67 @@ public class ClientConnection implements Runnable {
                     System.out.println("Items spawned: 2x BABY_BAMBOO at (" + quantizedX + ", " + quantizedY + ")");
                 }
             } else if (tree.getType() == TreeType.SMALL) {
-                // Spawn WoodStack at tree position
-                String woodStackId = UUID.randomUUID().toString();
-                ItemState woodStack = new ItemState(woodStackId, ItemType.WOOD_STACK, quantizedX, quantizedY, false);
-                server.getWorldState().addOrUpdateItem(woodStack);
+                // Randomly choose drop pattern: 
+                // 33% chance: 2 BabyTree
+                // 33% chance: 2 WoodStack
+                // 33% chance: 1 BabyTree + 1 WoodStack
+                float dropRoll = (float) Math.random();
                 
-                ItemSpawnMessage woodStackSpawnMsg = new ItemSpawnMessage("server", woodStackId, ItemType.WOOD_STACK, quantizedX, quantizedY);
-                server.broadcastToAll(woodStackSpawnMsg);
-                
-                System.out.println("Item spawned: WOOD_STACK at (" + quantizedX + ", " + quantizedY + ")");
+                if (dropRoll < 0.33f) {
+                    // Drop 2 BabyTree
+                    String babyTreeId1 = UUID.randomUUID().toString();
+                    ItemState babyTree1 = new ItemState(babyTreeId1, ItemType.BABY_TREE, quantizedX, quantizedY, false);
+                    server.getWorldState().addOrUpdateItem(babyTree1);
+                    
+                    ItemSpawnMessage babyTreeSpawnMsg1 = new ItemSpawnMessage("server", babyTreeId1, ItemType.BABY_TREE, quantizedX, quantizedY);
+                    server.broadcastToAll(babyTreeSpawnMsg1);
+                    
+                    String babyTreeId2 = UUID.randomUUID().toString();
+                    float babyTree2X = quantizePosition(tree.getX() + 8);
+                    ItemState babyTree2 = new ItemState(babyTreeId2, ItemType.BABY_TREE, babyTree2X, quantizedY, false);
+                    server.getWorldState().addOrUpdateItem(babyTree2);
+                    
+                    ItemSpawnMessage babyTreeSpawnMsg2 = new ItemSpawnMessage("server", babyTreeId2, ItemType.BABY_TREE, babyTree2X, quantizedY);
+                    server.broadcastToAll(babyTreeSpawnMsg2);
+                    
+                    System.out.println("Items spawned: 2x BABY_TREE at (" + quantizedX + ", " + quantizedY + ")");
+                } else if (dropRoll < 0.66f) {
+                    // Drop 2 WoodStack
+                    String woodStackId1 = UUID.randomUUID().toString();
+                    ItemState woodStack1 = new ItemState(woodStackId1, ItemType.WOOD_STACK, quantizedX, quantizedY, false);
+                    server.getWorldState().addOrUpdateItem(woodStack1);
+                    
+                    ItemSpawnMessage woodStackSpawnMsg1 = new ItemSpawnMessage("server", woodStackId1, ItemType.WOOD_STACK, quantizedX, quantizedY);
+                    server.broadcastToAll(woodStackSpawnMsg1);
+                    
+                    String woodStackId2 = UUID.randomUUID().toString();
+                    float woodStack2X = quantizePosition(tree.getX() + 8);
+                    ItemState woodStack2 = new ItemState(woodStackId2, ItemType.WOOD_STACK, woodStack2X, quantizedY, false);
+                    server.getWorldState().addOrUpdateItem(woodStack2);
+                    
+                    ItemSpawnMessage woodStackSpawnMsg2 = new ItemSpawnMessage("server", woodStackId2, ItemType.WOOD_STACK, woodStack2X, quantizedY);
+                    server.broadcastToAll(woodStackSpawnMsg2);
+                    
+                    System.out.println("Items spawned: 2x WOOD_STACK at (" + quantizedX + ", " + quantizedY + ")");
+                } else {
+                    // Drop 1 BabyTree + 1 WoodStack
+                    String babyTreeId = UUID.randomUUID().toString();
+                    ItemState babyTree = new ItemState(babyTreeId, ItemType.BABY_TREE, quantizedX, quantizedY, false);
+                    server.getWorldState().addOrUpdateItem(babyTree);
+                    
+                    ItemSpawnMessage babyTreeSpawnMsg = new ItemSpawnMessage("server", babyTreeId, ItemType.BABY_TREE, quantizedX, quantizedY);
+                    server.broadcastToAll(babyTreeSpawnMsg);
+                    
+                    String woodStackId = UUID.randomUUID().toString();
+                    float woodStackX = quantizePosition(tree.getX() + 8);
+                    ItemState woodStack = new ItemState(woodStackId, ItemType.WOOD_STACK, woodStackX, quantizedY, false);
+                    server.getWorldState().addOrUpdateItem(woodStack);
+                    
+                    ItemSpawnMessage woodStackSpawnMsg = new ItemSpawnMessage("server", woodStackId, ItemType.WOOD_STACK, woodStackX, quantizedY);
+                    server.broadcastToAll(woodStackSpawnMsg);
+                    
+                    System.out.println("Items spawned: BABY_TREE at (" + quantizedX + ", " + quantizedY + "), WOOD_STACK at (" + woodStackX + ", " + quantizedY + ")");
+                }
             }
         } else {
             // Broadcast health update
@@ -863,6 +915,7 @@ public class ClientConnection implements Runnable {
             playerState.getBananaCount(),
             playerState.getBabyBambooCount(),
             playerState.getBambooStackCount(),
+            playerState.getBabyTreeCount(),
             playerState.getWoodStackCount(),
             playerState.getPebbleCount()
         );
@@ -1184,6 +1237,7 @@ public class ClientConnection implements Runnable {
             !isValidInventoryCount(message.getBananaCount()) ||
             !isValidInventoryCount(message.getBabyBambooCount()) ||
             !isValidInventoryCount(message.getBambooStackCount()) ||
+            !isValidInventoryCount(message.getBabyTreeCount()) ||
             !isValidInventoryCount(message.getWoodStackCount()) ||
             !isValidInventoryCount(message.getPebbleCount())) {
             System.err.println("Invalid inventory counts from " + clientId);
@@ -1196,6 +1250,7 @@ public class ClientConnection implements Runnable {
         playerState.setBananaCount(message.getBananaCount());
         playerState.setBabyBambooCount(message.getBabyBambooCount());
         playerState.setBambooStackCount(message.getBambooStackCount());
+        playerState.setBabyTreeCount(message.getBabyTreeCount());
         playerState.setWoodStackCount(message.getWoodStackCount());
         playerState.setPebbleCount(message.getPebbleCount());
         
@@ -1207,6 +1262,7 @@ public class ClientConnection implements Runnable {
                          ", Bananas=" + message.getBananaCount() +
                          ", BabyBamboo=" + message.getBabyBambooCount() +
                          ", BambooStack=" + message.getBambooStackCount() +
+                         ", BabyTree=" + message.getBabyTreeCount() +
                          ", WoodStack=" + message.getWoodStackCount());
     }
     
@@ -1231,6 +1287,7 @@ public class ClientConnection implements Runnable {
             playerState.getBananaCount(),
             playerState.getBabyBambooCount(),
             playerState.getBambooStackCount(),
+            playerState.getBabyTreeCount(),
             playerState.getWoodStackCount(),
             playerState.getPebbleCount()
         );

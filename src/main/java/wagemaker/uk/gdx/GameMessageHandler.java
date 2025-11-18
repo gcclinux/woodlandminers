@@ -346,6 +346,7 @@ public class GameMessageHandler extends DefaultMessageHandler {
                 message.getBananaCount(),
                 message.getBabyBambooCount(),
                 message.getBambooStackCount(),
+                message.getBabyTreeCount(),
                 message.getWoodStackCount(),
                 message.getPebbleCount()
             );

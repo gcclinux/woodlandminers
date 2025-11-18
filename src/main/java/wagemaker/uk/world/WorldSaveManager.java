@@ -245,6 +245,17 @@ public class WorldSaveManager {
                 saveData.setPebbleCount(inventory.getPebbleCount());
             }
             
+            // Set planted trees and bamboos from world state
+            if (worldState.getPlantedTrees() != null) {
+                saveData.setPlantedTrees(worldState.getPlantedTrees());
+                System.out.println("Saved " + worldState.getPlantedTrees().size() + " planted trees");
+            }
+            
+            if (worldState.getPlantedBamboos() != null) {
+                saveData.setPlantedBamboos(worldState.getPlantedBamboos());
+                System.out.println("Saved " + worldState.getPlantedBamboos().size() + " planted bamboos");
+            }
+            
             // Set respawn data if provided
             if (respawnManager != null) {
                 try {

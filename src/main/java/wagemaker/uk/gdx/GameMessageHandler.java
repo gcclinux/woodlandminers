@@ -30,6 +30,8 @@ import wagemaker.uk.network.WorldStateMessage;
 import wagemaker.uk.network.WorldStateUpdateMessage;
 import wagemaker.uk.network.ResourceRespawnMessage;
 import wagemaker.uk.network.RespawnStateMessage;
+import wagemaker.uk.network.TreePlantMessage;
+import wagemaker.uk.network.TreeTransformMessage;
 import wagemaker.uk.player.RemotePlayer;
 
 /**
@@ -380,6 +382,35 @@ public class GameMessageHandler extends DefaultMessageHandler {
     protected void handleBambooTransform(wagemaker.uk.network.BambooTransformMessage message) {
         // Queue bamboo transformation to be processed on the main thread
         game.queueBambooTransform(message);
+    }
+    
+    @Override
+    protected void handleTreePlant(wagemaker.uk.network.TreePlantMessage message) {
+        String myClientId = game.getGameClient() != null ? game.getGameClient().getClientId() : "null";
+        String senderPlayerId = message.getPlayerId();
+        
+        System.out.println("[GameMessageHandler] Received TreePlantMessage:");
+        System.out.println("  - My Client ID: " + myClientId);
+        System.out.println("  - Sender Player ID: " + senderPlayerId);
+        System.out.println("  - Planted Tree ID: " + message.getPlantedTreeId());
+        System.out.println("  - Position: (" + message.getX() + ", " + message.getY() + ")");
+        
+        // Don't process our own planting messages (already handled locally)
+        if (game.getGameClient() != null && 
+            message.getPlayerId().equals(game.getGameClient().getClientId())) {
+            System.out.println("  - SKIPPING: This is my own planting message");
+            return;
+        }
+        
+        System.out.println("  - PROCESSING: This is a remote player's planting");
+        // Queue tree planting to be processed on the main thread
+        game.queueTreePlant(message);
+    }
+    
+    @Override
+    protected void handleTreeTransform(wagemaker.uk.network.TreeTransformMessage message) {
+        // Queue tree transformation to be processed on the main thread
+        game.queueTreeTransform(message);
     }
     
     @Override

@@ -27,6 +27,7 @@ import wagemaker.uk.items.Pebble;
 import wagemaker.uk.items.WoodStack;
 import wagemaker.uk.localization.LocalizationManager;
 import wagemaker.uk.planting.PlantedBamboo;
+import wagemaker.uk.planting.PlantedTree;
 import wagemaker.uk.planting.PlantingSystem;
 import wagemaker.uk.network.GameClient;
 import wagemaker.uk.network.GameServer;
@@ -188,6 +189,7 @@ public class MyGdxGame extends ApplicationAdapter {
     Map<String, WoodStack> woodStacks;
     Map<String, Pebble> pebbles;
     Map<String, PlantedBamboo> plantedBamboos;
+    Map<String, PlantedTree> plantedTrees;
     Map<String, Stone> stones;
     Map<String, Stone> stoneMap;
     Cactus cactus; // Single cactus near spawn
@@ -229,6 +231,8 @@ public class MyGdxGame extends ApplicationAdapter {
     private java.util.concurrent.ConcurrentLinkedQueue<TreeState> pendingTreeCreations;
     private java.util.concurrent.ConcurrentLinkedQueue<wagemaker.uk.network.BambooPlantMessage> pendingBambooPlants;
     private java.util.concurrent.ConcurrentLinkedQueue<wagemaker.uk.network.BambooTransformMessage> pendingBambooTransforms;
+    private java.util.concurrent.ConcurrentLinkedQueue<wagemaker.uk.network.TreePlantMessage> pendingTreePlants;
+    private java.util.concurrent.ConcurrentLinkedQueue<wagemaker.uk.network.TreeTransformMessage> pendingTreeTransforms;
     
     // Queue for operations that must execute on the render thread (e.g., OpenGL operations)
     private java.util.concurrent.ConcurrentLinkedQueue<Runnable> pendingDeferredOperations;
@@ -276,6 +280,7 @@ public class MyGdxGame extends ApplicationAdapter {
         woodStacks = new HashMap<>();
         pebbles = new HashMap<>();
         plantedBamboos = new HashMap<>();
+        plantedTrees = new HashMap<>();
         stones = new HashMap<>();
         stoneMap = new HashMap<>();
         clearedPositions = new HashMap<>();
@@ -292,6 +297,8 @@ public class MyGdxGame extends ApplicationAdapter {
         pendingTreeCreations = new java.util.concurrent.ConcurrentLinkedQueue<>();
         pendingBambooPlants = new java.util.concurrent.ConcurrentLinkedQueue<>();
         pendingBambooTransforms = new java.util.concurrent.ConcurrentLinkedQueue<>();
+        pendingTreePlants = new java.util.concurrent.ConcurrentLinkedQueue<>();
+        pendingTreeTransforms = new java.util.concurrent.ConcurrentLinkedQueue<>();
         
         // Initialize deferred operations queue
         pendingDeferredOperations = new java.util.concurrent.ConcurrentLinkedQueue<>();
@@ -370,6 +377,7 @@ public class MyGdxGame extends ApplicationAdapter {
         player.setPlantingSystem(plantingSystem);
         player.setBiomeManager(biomeManager);
         player.setPlantedBamboos(plantedBamboos);
+        player.setPlantedTrees(plantedTrees);
 
         // Initialize rain system
         rainSystem = new RainSystem(shapeRenderer);
@@ -412,6 +420,8 @@ public class MyGdxGame extends ApplicationAdapter {
         processPendingTreeRemovals();
         processPendingBambooPlants();
         processPendingBambooTransforms();
+        processPendingTreePlants();
+        processPendingTreeTransforms();
         processPendingTreeCreations();
         
         // Process pending world load operations on main thread (for OpenGL context)
@@ -555,6 +565,42 @@ public class MyGdxGame extends ApplicationAdapter {
             }
         }
         
+        // update planted trees and check for transformations
+        List<String> treesToTransform = new ArrayList<>();
+        for (Map.Entry<String, PlantedTree> entry : plantedTrees.entrySet()) {
+            PlantedTree planted = entry.getValue();
+            if (planted.update(deltaTime)) {
+                treesToTransform.add(entry.getKey());
+            }
+        }
+        
+        // transform mature planted trees into small trees
+        for (String key : treesToTransform) {
+            PlantedTree planted = plantedTrees.remove(key);
+            float x = planted.getX();
+            float y = planted.getY();
+            
+            // Generate small tree ID (reuse the planted tree key)
+            String smallTreeId = key;
+            
+            SmallTree tree = new SmallTree(x, y);
+            trees.put(smallTreeId, tree);
+            planted.dispose();
+            
+            // Send transformation message in multiplayer
+            if (gameClient != null && gameClient.isConnected()) {
+                wagemaker.uk.network.TreeTransformMessage message = 
+                    new wagemaker.uk.network.TreeTransformMessage(
+                        gameClient.getClientId(), 
+                        key, 
+                        smallTreeId, 
+                        x, 
+                        y
+                    );
+                gameClient.sendMessage(message);
+            }
+        }
+        
         // update cactus
         if (cactus != null) {
             cactus.update(deltaTime);
@@ -594,6 +640,8 @@ public class MyGdxGame extends ApplicationAdapter {
         }
         // draw planted bamboos (after terrain, before trees)
         drawPlantedBamboos();
+        // draw planted trees (after terrain, before trees)
+        drawPlantedTrees();
         // draw respawn indicators (after terrain, before trees)
         if (respawnManager != null) {
             respawnManager.renderIndicators(batch, deltaTime, 
@@ -1179,6 +1227,25 @@ public class MyGdxGame extends ApplicationAdapter {
                     batch.draw(texture, planted.getX(), planted.getY(), 64, 64);
                 } else {
                     System.err.println("[RENDER] PlantedBamboo at (" + planted.getX() + ", " + planted.getY() + ") has null texture!");
+                }
+            }
+        }
+    }
+    
+    private void drawPlantedTrees() {
+        float camX = camera.position.x;
+        float camY = camera.position.y;
+        float viewWidth = viewport.getWorldWidth() / 2;
+        float viewHeight = viewport.getWorldHeight() / 2;
+        
+        for (PlantedTree planted : plantedTrees.values()) {
+            if (Math.abs(planted.getX() - camX) < viewWidth && 
+                Math.abs(planted.getY() - camY) < viewHeight) {
+                Texture texture = planted.getTexture();
+                if (texture != null) {
+                    batch.draw(texture, planted.getX(), planted.getY(), 64, 64);
+                } else {
+                    System.err.println("[RENDER] PlantedTree at (" + planted.getX() + ", " + planted.getY() + ") has null texture!");
                 }
             }
         }
@@ -1878,11 +1945,32 @@ public class MyGdxGame extends ApplicationAdapter {
             }
             bananas.clear();
             
+            // CRITICAL FIX: Clear planted trees and bamboos to prevent singleplayer planted items
+            // from appearing in multiplayer mode
+            for (PlantedTree plantedTree : plantedTrees.values()) {
+                try {
+                    plantedTree.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing planted tree: " + e.getMessage());
+                }
+            }
+            plantedTrees.clear();
+            
+            for (PlantedBamboo plantedBamboo : plantedBamboos.values()) {
+                try {
+                    plantedBamboo.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing planted bamboo: " + e.getMessage());
+                }
+            }
+            plantedBamboos.clear();
+            
             // Clear cleared positions map
             clearedPositions.clear();
             
             long duration = System.currentTimeMillis() - startTime;
             System.out.println("Local world cleared successfully in " + duration + "ms");
+            System.out.println("Cleared planted trees and bamboos to prevent singleplayer items in multiplayer");
             
         } catch (Exception e) {
             System.err.println("Error clearing local world: " + e.getMessage());
@@ -2609,6 +2697,10 @@ public class MyGdxGame extends ApplicationAdapter {
         pendingItemSpawns.clear();
         pendingTreeRemovals.clear();
         pendingTreeCreations.clear();
+        pendingBambooPlants.clear();
+        pendingBambooTransforms.clear();
+        pendingTreePlants.clear();
+        pendingTreeTransforms.clear();
         pendingDeferredOperations.clear();
         
         // Reset player's game client reference
@@ -2884,6 +2976,34 @@ public class MyGdxGame extends ApplicationAdapter {
             worldState.setRainZones(rainSystem.getZoneManager().getRainZones());
         }
         
+        // Extract planted trees
+        Map<String, wagemaker.uk.network.PlantedTreeState> plantedTreeStates = new HashMap<>();
+        for (Map.Entry<String, PlantedTree> entry : plantedTrees.entrySet()) {
+            PlantedTree plantedTree = entry.getValue();
+            wagemaker.uk.network.PlantedTreeState treeState = new wagemaker.uk.network.PlantedTreeState(
+                entry.getKey(),
+                plantedTree.getX(),
+                plantedTree.getY(),
+                0.0f // Growth timer - PlantedTree doesn't expose this, so use 0
+            );
+            plantedTreeStates.put(entry.getKey(), treeState);
+        }
+        worldState.setPlantedTrees(plantedTreeStates);
+        
+        // Extract planted bamboos
+        Map<String, wagemaker.uk.network.PlantedBambooState> plantedBambooStates = new HashMap<>();
+        for (Map.Entry<String, PlantedBamboo> entry : plantedBamboos.entrySet()) {
+            PlantedBamboo plantedBamboo = entry.getValue();
+            wagemaker.uk.network.PlantedBambooState bambooState = new wagemaker.uk.network.PlantedBambooState(
+                entry.getKey(),
+                plantedBamboo.getX(),
+                plantedBamboo.getY(),
+                0.0f // Growth timer - PlantedBamboo doesn't expose this, so use 0
+            );
+            plantedBambooStates.put(entry.getKey(), bambooState);
+        }
+        worldState.setPlantedBamboos(plantedBambooStates);
+        
         return worldState;
     }
     
@@ -2942,6 +3062,18 @@ public class MyGdxGame extends ApplicationAdapter {
             if (saveData.getRainZones() != null && rainSystem != null) {
                 rainSystem.getZoneManager().setRainZones(saveData.getRainZones());
                 System.out.println("Restored " + saveData.getRainZones().size() + " rain zones");
+            }
+            
+            // Restore planted trees
+            if (saveData.getPlantedTrees() != null) {
+                restorePlantedTreesFromSave(saveData.getPlantedTrees());
+                System.out.println("Restored " + saveData.getPlantedTrees().size() + " planted trees");
+            }
+            
+            // Restore planted bamboos
+            if (saveData.getPlantedBamboos() != null) {
+                restorePlantedBamboosFromSave(saveData.getPlantedBamboos());
+                System.out.println("Restored " + saveData.getPlantedBamboos().size() + " planted bamboos");
             }
             
             // Restore player position and health from world save
@@ -3052,6 +3184,26 @@ public class MyGdxGame extends ApplicationAdapter {
                 }
             }
             bananas.clear();
+            
+            // Dispose and clear planted trees
+            for (PlantedTree plantedTree : plantedTrees.values()) {
+                try {
+                    plantedTree.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing planted tree: " + e.getMessage());
+                }
+            }
+            plantedTrees.clear();
+            
+            // Dispose and clear planted bamboos
+            for (PlantedBamboo plantedBamboo : plantedBamboos.values()) {
+                try {
+                    plantedBamboo.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing planted bamboo: " + e.getMessage());
+                }
+            }
+            plantedBamboos.clear();
             
             // Clear cleared positions
             clearedPositions.clear();
@@ -3171,6 +3323,42 @@ public class MyGdxGame extends ApplicationAdapter {
                 }
             } catch (Exception e) {
                 System.err.println("Error restoring item " + itemId + ": " + e.getMessage());
+            }
+        }
+    }
+    
+    /**
+     * Restores planted trees from save data.
+     * Creates PlantedTree instances based on the saved planted tree states.
+     */
+    private void restorePlantedTreesFromSave(Map<String, wagemaker.uk.network.PlantedTreeState> savedPlantedTrees) {
+        for (Map.Entry<String, wagemaker.uk.network.PlantedTreeState> entry : savedPlantedTrees.entrySet()) {
+            String plantedTreeId = entry.getKey();
+            wagemaker.uk.network.PlantedTreeState treeState = entry.getValue();
+            
+            try {
+                PlantedTree plantedTree = new PlantedTree(treeState.getX(), treeState.getY());
+                plantedTrees.put(plantedTreeId, plantedTree);
+            } catch (Exception e) {
+                System.err.println("Error restoring planted tree " + plantedTreeId + ": " + e.getMessage());
+            }
+        }
+    }
+    
+    /**
+     * Restores planted bamboos from save data.
+     * Creates PlantedBamboo instances based on the saved planted bamboo states.
+     */
+    private void restorePlantedBamboosFromSave(Map<String, wagemaker.uk.network.PlantedBambooState> savedPlantedBamboos) {
+        for (Map.Entry<String, wagemaker.uk.network.PlantedBambooState> entry : savedPlantedBamboos.entrySet()) {
+            String plantedBambooId = entry.getKey();
+            wagemaker.uk.network.PlantedBambooState bambooState = entry.getValue();
+            
+            try {
+                PlantedBamboo plantedBamboo = new PlantedBamboo(bambooState.getX(), bambooState.getY());
+                plantedBamboos.put(plantedBambooId, plantedBamboo);
+            } catch (Exception e) {
+                System.err.println("Error restoring planted bamboo " + plantedBambooId + ": " + e.getMessage());
             }
         }
     }
@@ -3749,6 +3937,22 @@ public class MyGdxGame extends ApplicationAdapter {
     }
     
     /**
+     * Queues a tree plant to be processed on the main thread.
+     * @param message The tree plant message
+     */
+    public void queueTreePlant(wagemaker.uk.network.TreePlantMessage message) {
+        pendingTreePlants.offer(message);
+    }
+    
+    /**
+     * Queues a tree transform to be processed on the main thread.
+     * @param message The tree transform message
+     */
+    public void queueTreeTransform(wagemaker.uk.network.TreeTransformMessage message) {
+        pendingTreeTransforms.offer(message);
+    }
+    
+    /**
      * Processes pending bamboo plants on the main render thread.
      * This ensures OpenGL operations happen in the correct context.
      */
@@ -3812,6 +4016,71 @@ public class MyGdxGame extends ApplicationAdapter {
             }
         }
     }
+    
+    /**
+     * Processes pending tree plants on the main render thread.
+     * This ensures OpenGL operations happen in the correct context.
+     */
+    private void processPendingTreePlants() {
+        int processedCount = 0;
+        wagemaker.uk.network.TreePlantMessage message;
+        while ((message = pendingTreePlants.poll()) != null) {
+            processedCount++;
+            String plantedTreeId = message.getPlantedTreeId();
+            float x = message.getX();
+            float y = message.getY();
+            
+            System.out.println("[MyGdxGame] Processing pending tree plant #" + processedCount + ":");
+            System.out.println("  - Planted Tree ID: " + plantedTreeId);
+            System.out.println("  - Position: (" + x + ", " + y + ")");
+            System.out.println("  - Already exists: " + plantedTrees.containsKey(plantedTreeId));
+            System.out.println("  - Current plantedTrees count: " + plantedTrees.size());
+            
+            // Create planted tree if it doesn't exist
+            if (!plantedTrees.containsKey(plantedTreeId)) {
+                PlantedTree plantedTree = new PlantedTree(x, y);
+                Texture texture = plantedTree.getTexture();
+                System.out.println("  - PlantedTree created, texture is: " + (texture != null ? "valid" : "NULL"));
+                
+                plantedTrees.put(plantedTreeId, plantedTree);
+                System.out.println("  - SUCCESS: Remote player planted tree at: " + plantedTreeId);
+                System.out.println("  - New plantedTrees count: " + plantedTrees.size());
+            } else {
+                System.out.println("  - SKIPPED: Tree already exists at this location");
+            }
+        }
+        
+        if (processedCount > 0) {
+            System.out.println("[MyGdxGame] Processed " + processedCount + " tree plants this frame. Total in map: " + plantedTrees.size());
+        }
+    }
+    
+    /**
+     * Processes pending tree transforms on the main render thread.
+     * This ensures OpenGL operations happen in the correct context.
+     */
+    private void processPendingTreeTransforms() {
+        wagemaker.uk.network.TreeTransformMessage message;
+        while ((message = pendingTreeTransforms.poll()) != null) {
+            String plantedTreeId = message.getPlantedTreeId();
+            String smallTreeId = message.getSmallTreeId();
+            float x = message.getX();
+            float y = message.getY();
+            
+            // Remove planted tree
+            PlantedTree plantedTree = plantedTrees.remove(plantedTreeId);
+            if (plantedTree != null) {
+                plantedTree.dispose();
+            }
+            
+            // Create small tree
+            if (!trees.containsKey(smallTreeId)) {
+                SmallTree smallTree = new SmallTree(x, y);
+                trees.put(smallTreeId, smallTree);
+                System.out.println("Tree transformed from planted to small tree: " + smallTreeId);
+            }
+        }
+    }
 
     /**
      * Gets the inventory manager instance.
@@ -3819,6 +4088,14 @@ public class MyGdxGame extends ApplicationAdapter {
      */
     public InventoryManager getInventoryManager() {
         return inventoryManager;
+    }
+    
+    /**
+     * Gets the planted trees map.
+     * @return The planted trees map
+     */
+    public Map<String, PlantedTree> getPlantedTrees() {
+        return plantedTrees;
     }
     
     /**
@@ -3977,6 +4254,9 @@ public class MyGdxGame extends ApplicationAdapter {
         for (PlantedBamboo planted : plantedBamboos.values()) {
             planted.dispose();
         }
+        for (PlantedTree planted : plantedTrees.values()) {
+            planted.dispose();
+        }
         for (Stone stone : stones.values()) {
             stone.dispose();
         }
@@ -4029,5 +4309,9 @@ public class MyGdxGame extends ApplicationAdapter {
         if (respawnManager != null) {
             respawnManager.disposeIndicators();
         }
+        
+        // Dispose shared textures
+        PlantedBamboo.disposeSharedTexture();
+        PlantedTree.disposeSharedTexture();
     }
 }

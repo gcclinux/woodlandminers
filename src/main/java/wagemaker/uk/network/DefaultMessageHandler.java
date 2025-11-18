@@ -119,6 +119,14 @@ public class DefaultMessageHandler implements MessageHandler {
                     handleBambooTransform((BambooTransformMessage) message);
                     break;
                     
+                case TREE_PLANT:
+                    handleTreePlant((TreePlantMessage) message);
+                    break;
+                    
+                case TREE_TRANSFORM:
+                    handleTreeTransform((TreeTransformMessage) message);
+                    break;
+                    
                 case TREE_CREATED:
                     handleTreeCreated((TreeCreatedMessage) message);
                     break;
@@ -376,6 +384,26 @@ public class DefaultMessageHandler implements MessageHandler {
     protected void handleBambooTransform(BambooTransformMessage message) {
         System.out.println("Bamboo transformed: " + message.getPlantedBambooId() + 
                          " -> " + message.getBambooTreeId() + 
+                         " at (" + message.getX() + ", " + message.getY() + ")");
+    }
+    
+    /**
+     * Handles TREE_PLANT message.
+     * Override this method to add planted trees to game world.
+     */
+    protected void handleTreePlant(TreePlantMessage message) {
+        System.out.println("Tree planted: " + message.getPlantedTreeId() + 
+                         " at (" + message.getX() + ", " + message.getY() + 
+                         ") by player " + message.getPlayerId());
+    }
+    
+    /**
+     * Handles TREE_TRANSFORM message.
+     * Override this method to transform planted trees into small trees.
+     */
+    protected void handleTreeTransform(TreeTransformMessage message) {
+        System.out.println("Tree transformed: " + message.getPlantedTreeId() + 
+                         " -> " + message.getSmallTreeId() + 
                          " at (" + message.getX() + ", " + message.getY() + ")");
     }
     

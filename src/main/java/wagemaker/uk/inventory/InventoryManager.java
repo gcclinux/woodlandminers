@@ -148,6 +148,9 @@ public class InventoryManager {
             
             gameClient.sendMessage(message);
         }
+        
+        // Auto-deselect if selected item count reaches 0
+        checkAndAutoDeselect();
     }
     
     /**
@@ -215,9 +218,15 @@ public class InventoryManager {
     
     /**
      * Clear the current inventory selection.
+     * Also deactivates the targeting system if it's currently active.
      */
     public void clearSelection() {
         this.selectedSlot = -1;
+        
+        // Deactivate targeting system when selection is cleared
+        if (player != null && player.getTargetingSystem() != null && player.getTargetingSystem().isActive()) {
+            player.getTargetingSystem().deactivate();
+        }
     }
     
     /**
@@ -269,6 +278,9 @@ public class InventoryManager {
                 
                 // Send inventory update in multiplayer
                 sendInventoryUpdate();
+                
+                // Auto-deselect if item count reaches 0
+                checkAndAutoDeselect();
                 return true;
             }
         }
@@ -281,11 +293,47 @@ public class InventoryManager {
                 
                 // Send inventory update in multiplayer
                 sendInventoryUpdate();
+                
+                // Auto-deselect if item count reaches 0
+                checkAndAutoDeselect();
                 return true;
             }
         }
         
         return false;
+    }
+    
+    /**
+     * Check if the currently selected item has 0 count and auto-deselect if so.
+     * Also notifies the player to update the targeting system when auto-deselection occurs.
+     */
+    public void checkAndAutoDeselect() {
+        if (selectedSlot == -1) {
+            return; // No selection to check
+        }
+        
+        Inventory inventory = getCurrentInventory();
+        int itemCount = 0;
+        
+        switch (selectedSlot) {
+            case 0: itemCount = inventory.getAppleCount(); break;
+            case 1: itemCount = inventory.getBananaCount(); break;
+            case 2: itemCount = inventory.getBabyBambooCount(); break;
+            case 3: itemCount = inventory.getBambooStackCount(); break;
+            case 4: itemCount = inventory.getBabyTreeCount(); break;
+            case 5: itemCount = inventory.getWoodStackCount(); break;
+            case 6: itemCount = inventory.getPebbleCount(); break;
+        }
+        
+        if (itemCount == 0) {
+            clearSelection();
+            
+            // Notify player to deactivate targeting system when auto-deselection occurs
+            if (player != null && player.getTargetingSystem() != null && player.getTargetingSystem().isActive()) {
+                player.getTargetingSystem().deactivate();
+                System.out.println("Auto-deselected item and deactivated targeting system");
+            }
+        }
     }
 }
 

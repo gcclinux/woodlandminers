@@ -5,13 +5,14 @@ import wagemaker.uk.biome.BiomeType;
 import wagemaker.uk.inventory.InventoryManager;
 import wagemaker.uk.player.Player;
 import wagemaker.uk.trees.BambooTree;
+import wagemaker.uk.trees.SmallTree;
 import java.util.Map;
 
 /**
  * Core planting logic and validation system.
- * Handles baby bamboo planting with comprehensive validation:
- * - Inventory checks (baby bamboo availability)
- * - Biome validation (sand tiles only)
+ * Handles baby bamboo planting (sand biomes) and baby tree planting (grass biomes):
+ * - Inventory checks (baby bamboo/tree availability)
+ * - Biome validation (sand for bamboo, grass for trees)
  * - Tile occupancy checks (no duplicate planting)
  * 
  * Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 5.1, 5.2, 5.3
@@ -131,8 +132,74 @@ public class PlantingSystem {
     }
     
     /**
+     * Check if a tile is valid for planting trees (grass biomes).
+     * 
+     * @param x The x-coordinate (tile-aligned)
+     * @param y The y-coordinate (tile-aligned)
+     * @param biomeManager The biome manager for tile type checking
+     * @return true if tile is grass biome, false otherwise
+     */
+    public boolean canPlantTree(float x, float y, BiomeManager biomeManager) {
+        if (biomeManager == null) {
+            return false;
+        }
+        
+        BiomeType biomeType = biomeManager.getBiomeAtPosition(x, y);
+        return biomeType == BiomeType.GRASS; // Trees plant on grass, bamboo on sand
+    }
+    
+    /**
+     * Attempt to plant a baby tree at the specified coordinates.
+     * Creates a PlantedTree instance and adds it to the provided map.
+     * 
+     * @param x The x-coordinate for planting (will be tile-aligned)
+     * @param y The y-coordinate for planting (will be tile-aligned)
+     * @param plantedTrees Map to add the planted tree to
+     * @return Unique ID of the planted tree, or null if planting failed
+     */
+    public String plantTree(float x, float y, Map<String, PlantedTree> plantedTrees) {
+        if (plantedTrees == null) {
+            return null;
+        }
+        
+        // Snap to tile grid
+        float tileX = snapToTileGrid(x);
+        float tileY = snapToTileGrid(y);
+        
+        // Generate unique key for this planted tree
+        String plantedTreeId = generatePlantedTreeKey(tileX, tileY);
+        
+        // Check if tile is already occupied
+        if (plantedTrees.containsKey(plantedTreeId)) {
+            return null; // Tile already has a planted tree
+        }
+        
+        // Create and add planted tree
+        PlantedTree plantedTree = new PlantedTree(tileX, tileY);
+        plantedTrees.put(plantedTreeId, plantedTree);
+        
+        System.out.println("Baby tree planted at tile: (" + tileX + ", " + tileY + ") with ID: " + plantedTreeId);
+        
+        return plantedTreeId;
+    }
+    
+    /**
+     * Generate unique key for planted tree based on tile coordinates.
+     * Format: "planted-tree-{tileX}-{tileY}"
+     * 
+     * @param x The x-coordinate (tile-aligned)
+     * @param y The y-coordinate (tile-aligned)
+     * @return Unique tile-based key string
+     */
+    private String generatePlantedTreeKey(float x, float y) {
+        int tileX = (int) x;
+        int tileY = (int) y;
+        return "planted-tree-" + tileX + "-" + tileY;
+    }
+    
+    /**
      * Snap coordinates to 64x64 tile grid.
-     * Ensures planted bamboos align with tile boundaries.
+     * Ensures planted bamboos and trees align with tile boundaries.
      * 
      * @param coordinate The world coordinate to snap
      * @return The snapped coordinate (tile-aligned)

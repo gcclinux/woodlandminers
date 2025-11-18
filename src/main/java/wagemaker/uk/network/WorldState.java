@@ -25,6 +25,8 @@ public class WorldState implements Serializable {
     private Map<String, TreeState> trees;
     private Map<String, StoneState> stones;
     private Map<String, ItemState> items;
+    private Map<String, PlantedTreeState> plantedTrees;
+    private Map<String, PlantedBambooState> plantedBamboos;
     private Set<String> clearedPositions;
     private List<RainZone> rainZones;
     private long lastUpdateTimestamp;
@@ -38,6 +40,8 @@ public class WorldState implements Serializable {
         this.trees = new ConcurrentHashMap<>();
         this.stones = new ConcurrentHashMap<>();
         this.items = new ConcurrentHashMap<>();
+        this.plantedTrees = new ConcurrentHashMap<>();
+        this.plantedBamboos = new ConcurrentHashMap<>();
         this.clearedPositions = ConcurrentHashMap.newKeySet();
         this.rainZones = new ArrayList<>();
         this.lastUpdateTimestamp = System.currentTimeMillis();
@@ -533,6 +537,30 @@ public class WorldState implements Serializable {
             snapshot.items.put(entry.getKey(), copy);
         }
         
+        // Deep copy planted trees
+        for (Map.Entry<String, PlantedTreeState> entry : this.plantedTrees.entrySet()) {
+            PlantedTreeState original = entry.getValue();
+            PlantedTreeState copy = new PlantedTreeState(
+                original.getPlantedTreeId(),
+                original.getX(),
+                original.getY(),
+                original.getGrowthTimer()
+            );
+            snapshot.plantedTrees.put(entry.getKey(), copy);
+        }
+        
+        // Deep copy planted bamboos
+        for (Map.Entry<String, PlantedBambooState> entry : this.plantedBamboos.entrySet()) {
+            PlantedBambooState original = entry.getValue();
+            PlantedBambooState copy = new PlantedBambooState(
+                original.getPlantedBambooId(),
+                original.getX(),
+                original.getY(),
+                original.getGrowthTimer()
+            );
+            snapshot.plantedBamboos.put(entry.getKey(), copy);
+        }
+        
         // Copy cleared positions
         snapshot.clearedPositions.addAll(this.clearedPositions);
         
@@ -711,6 +739,22 @@ public class WorldState implements Serializable {
     
     public void setRainZones(List<RainZone> rainZones) {
         this.rainZones = rainZones;
+    }
+    
+    public Map<String, PlantedTreeState> getPlantedTrees() {
+        return plantedTrees;
+    }
+    
+    public void setPlantedTrees(Map<String, PlantedTreeState> plantedTrees) {
+        this.plantedTrees = plantedTrees;
+    }
+    
+    public Map<String, PlantedBambooState> getPlantedBamboos() {
+        return plantedBamboos;
+    }
+    
+    public void setPlantedBamboos(Map<String, PlantedBambooState> plantedBamboos) {
+        this.plantedBamboos = plantedBamboos;
     }
     
     // Convenience methods for managing state
@@ -1122,6 +1166,36 @@ public class WorldState implements Serializable {
                 }
             }
             
+            // Restore planted trees with deep copy
+            this.plantedTrees.clear();
+            if (saveData.getPlantedTrees() != null) {
+                for (Map.Entry<String, PlantedTreeState> entry : saveData.getPlantedTrees().entrySet()) {
+                    PlantedTreeState original = entry.getValue();
+                    PlantedTreeState copy = new PlantedTreeState(
+                        original.getPlantedTreeId(),
+                        original.getX(),
+                        original.getY(),
+                        original.getGrowthTimer()
+                    );
+                    this.plantedTrees.put(entry.getKey(), copy);
+                }
+            }
+            
+            // Restore planted bamboos with deep copy
+            this.plantedBamboos.clear();
+            if (saveData.getPlantedBamboos() != null) {
+                for (Map.Entry<String, PlantedBambooState> entry : saveData.getPlantedBamboos().entrySet()) {
+                    PlantedBambooState original = entry.getValue();
+                    PlantedBambooState copy = new PlantedBambooState(
+                        original.getPlantedBambooId(),
+                        original.getX(),
+                        original.getY(),
+                        original.getGrowthTimer()
+                    );
+                    this.plantedBamboos.put(entry.getKey(), copy);
+                }
+            }
+            
             // Restore cleared positions
             this.clearedPositions.clear();
             if (saveData.getClearedPositions() != null) {
@@ -1190,6 +1264,18 @@ public class WorldState implements Serializable {
             this.items = new ConcurrentHashMap<>();
         }
         
+        if (this.plantedTrees != null) {
+            this.plantedTrees.clear();
+        } else {
+            this.plantedTrees = new ConcurrentHashMap<>();
+        }
+        
+        if (this.plantedBamboos != null) {
+            this.plantedBamboos.clear();
+        } else {
+            this.plantedBamboos = new ConcurrentHashMap<>();
+        }
+        
         if (this.clearedPositions != null) {
             this.clearedPositions.clear();
         } else {
@@ -1224,7 +1310,8 @@ public class WorldState implements Serializable {
         }
         
         // Check collections are not null
-        if (trees == null || stones == null || items == null || clearedPositions == null || rainZones == null) {
+        if (trees == null || stones == null || items == null || plantedTrees == null || 
+            plantedBamboos == null || clearedPositions == null || rainZones == null) {
             System.err.println("Restored state validation failed: Null collections after restoration");
             return false;
         }
@@ -1331,6 +1418,8 @@ public class WorldState implements Serializable {
             this.worldSeed = rollbackState.worldSeed;
             this.trees = new ConcurrentHashMap<>(rollbackState.trees);
             this.items = new ConcurrentHashMap<>(rollbackState.items);
+            this.plantedTrees = new ConcurrentHashMap<>(rollbackState.plantedTrees);
+            this.plantedBamboos = new ConcurrentHashMap<>(rollbackState.plantedBamboos);
             this.clearedPositions = ConcurrentHashMap.newKeySet();
             this.clearedPositions.addAll(rollbackState.clearedPositions);
             this.rainZones = new ArrayList<>(rollbackState.rainZones);

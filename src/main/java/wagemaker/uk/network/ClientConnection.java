@@ -255,6 +255,14 @@ public class ClientConnection implements Runnable {
                 handleBambooTransform((BambooTransformMessage) message);
                 break;
                 
+            case TREE_PLANT:
+                handleTreePlant((TreePlantMessage) message);
+                break;
+                
+            case TREE_TRANSFORM:
+                handleTreeTransform((TreeTransformMessage) message);
+                break;
+                
             case PLAYER_RESPAWN:
                 handlePlayerRespawn((PlayerRespawnMessage) message);
                 break;
@@ -1387,11 +1395,112 @@ public class ClientConnection implements Runnable {
             return;
         }
         
-        // Create bamboo tree in world state
+        // CRITICAL FIX: Create bamboo tree in server's world state
+        // This ensures the server knows about the tree when clients try to attack it
         TreeState bambooTree = new TreeState(bambooTreeId, TreeType.BAMBOO, x, y, 100.0f, true);
         server.getWorldState().addOrUpdateTree(bambooTree);
         
-        System.out.println("Bamboo transformed: " + plantedBambooId + " -> " + bambooTreeId + " at (" + x + ", " + y + ")");
+        System.out.println("[SERVER] Bamboo transformed: " + plantedBambooId + " -> " + bambooTreeId + " at (" + x + ", " + y + ")");
+        System.out.println("[SERVER] Added bamboo tree to server world state to prevent ghost tree issues");
+        
+        // Broadcast to all clients
+        server.broadcastToAll(message);
+    }
+    
+    /**
+     * Handles a tree plant message.
+     * Validates the planting action and broadcasts to all clients.
+     * @param message The tree plant message
+     */
+    private void handleTreePlant(TreePlantMessage message) {
+        // Validate message data
+        if (message == null) {
+            logSecurityViolation("Null tree plant message");
+            return;
+        }
+        
+        String plantedTreeId = message.getPlantedTreeId();
+        float x = message.getX();
+        float y = message.getY();
+        
+        // Validate planted tree ID
+        if (plantedTreeId == null || plantedTreeId.isEmpty()) {
+            System.err.println("Invalid planted tree ID from " + clientId);
+            logSecurityViolation("Invalid planted tree ID");
+            return;
+        }
+        
+        // Validate position
+        if (!isValidPosition(x, y)) {
+            System.err.println("Invalid tree plant position from " + clientId);
+            logSecurityViolation("Invalid tree plant position");
+            return;
+        }
+        
+        // Validate planting distance using configured max range
+        float dx = x - playerState.getX();
+        float dy = y - playerState.getY();
+        float distance = (float) Math.sqrt(dx * dx + dy * dy);
+        
+        int maxRange = server.getConfig().getPlantingMaxRange();
+        
+        if (distance > maxRange) {
+            System.out.println("Tree plant out of range from " + clientId + 
+                ": attempted distance=" + String.format("%.1f", distance) + 
+                " pixels, max allowed=" + maxRange + " pixels");
+            logSecurityViolation("Tree plant range check failed: attempted distance=" + 
+                String.format("%.1f", distance) + " pixels, max allowed=" + maxRange + " pixels");
+            return;
+        }
+        
+        System.out.println("[ClientConnection] Player " + clientId + " planted tree at (" + x + ", " + y + ")");
+        System.out.println("  - Planted Tree ID: " + plantedTreeId);
+        System.out.println("  - Broadcasting to all clients...");
+        
+        // Broadcast to all clients (including sender for confirmation)
+        server.broadcastToAll(message);
+        System.out.println("  - Broadcast complete");
+    }
+    
+    /**
+     * Handles a tree transform message.
+     * This is sent by clients when a planted tree matures into a small tree.
+     * @param message The tree transform message
+     */
+    private void handleTreeTransform(TreeTransformMessage message) {
+        // Validate message data
+        if (message == null) {
+            logSecurityViolation("Null tree transform message");
+            return;
+        }
+        
+        String plantedTreeId = message.getPlantedTreeId();
+        String smallTreeId = message.getSmallTreeId();
+        float x = message.getX();
+        float y = message.getY();
+        
+        // Validate IDs
+        if (plantedTreeId == null || plantedTreeId.isEmpty() ||
+            smallTreeId == null || smallTreeId.isEmpty()) {
+            System.err.println("Invalid tree transform IDs from " + clientId);
+            logSecurityViolation("Invalid tree transform IDs");
+            return;
+        }
+        
+        // Validate position
+        if (!isValidPosition(x, y)) {
+            System.err.println("Invalid tree transform position from " + clientId);
+            logSecurityViolation("Invalid tree transform position");
+            return;
+        }
+        
+        // CRITICAL FIX: Create small tree in server's world state
+        // This ensures the server knows about the tree when clients try to attack it
+        TreeState smallTree = new TreeState(smallTreeId, TreeType.SMALL, x, y, 100.0f, true);
+        server.getWorldState().addOrUpdateTree(smallTree);
+        
+        System.out.println("[SERVER] Tree transformed: " + plantedTreeId + " -> " + smallTreeId + " at (" + x + ", " + y + ")");
+        System.out.println("[SERVER] Added tree to server world state to prevent ghost tree issues");
         
         // Broadcast to all clients
         server.broadcastToAll(message);

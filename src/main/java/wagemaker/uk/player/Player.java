@@ -25,6 +25,7 @@ import wagemaker.uk.network.GameClient;
 import wagemaker.uk.inventory.InventoryManager;
 import wagemaker.uk.planting.PlantingSystem;
 import wagemaker.uk.planting.PlantedBamboo;
+import wagemaker.uk.planting.PlantedTree;
 import wagemaker.uk.biome.BiomeManager;
 import wagemaker.uk.targeting.TargetingSystem;
 import wagemaker.uk.targeting.TargetIndicatorRenderer;
@@ -90,6 +91,7 @@ public class Player {
     private PlantingSystem plantingSystem;
     private BiomeManager biomeManager;
     private Map<String, PlantedBamboo> plantedBamboos;
+    private Map<String, PlantedTree> plantedTrees;
     
     // Targeting system fields
     private TargetingSystem targetingSystem;
@@ -114,14 +116,17 @@ public class Player {
     
     public void setTrees(Map<String, SmallTree> trees) {
         this.trees = trees;
+        updateTargetingValidator();
     }
     
     public void setAppleTrees(Map<String, AppleTree> appleTrees) {
         this.appleTrees = appleTrees;
+        updateTargetingValidator();
     }
     
     public void setCoconutTrees(Map<String, CoconutTree> coconutTrees) {
         this.coconutTrees = coconutTrees;
+        updateTargetingValidator();
     }
     
     public void setBambooTrees(Map<String, BambooTree> bambooTrees) {
@@ -131,6 +136,7 @@ public class Player {
     
     public void setBananaTrees(Map<String, BananaTree> bananaTrees) {
         this.bananaTrees = bananaTrees;
+        updateTargetingValidator();
     }
     
     public void setApples(Map<String, Apple> apples) {
@@ -200,6 +206,11 @@ public class Player {
         updateTargetingValidator();
     }
     
+    public void setPlantedTrees(Map<String, PlantedTree> plantedTrees) {
+        this.plantedTrees = plantedTrees;
+        updateTargetingValidator();
+    }
+    
     /**
      * Update the targeting system validator with current dependencies.
      * Called whenever planting-related dependencies are updated.
@@ -210,6 +221,13 @@ public class Player {
             PlantingTargetValidator validator = new PlantingTargetValidator(
                 inventoryManager, biomeManager, plantedBamboos, bambooTrees
             );
+            
+            // Set all tree maps if available
+            if (plantedTrees != null && trees != null && appleTrees != null && 
+                coconutTrees != null && bananaTrees != null) {
+                validator.setTreeMaps(plantedTrees, trees, appleTrees, coconutTrees, bananaTrees);
+            }
+            
             targetingSystem.setValidator(validator);
         }
     }
@@ -1207,8 +1225,15 @@ public class Player {
                 System.out.println("No baby bamboo in inventory");
             }
         }
+        // Handle baby tree planting (slot 4)
+        else if (selectedSlot == 4) {
+            if (inventoryManager.getCurrentInventory().getBabyTreeCount() > 0) {
+                executeTreePlanting(targetX, targetY);
+            } else {
+                System.out.println("No baby tree in inventory");
+            }
+        }
         // Add handling for other items here in the future
-        // For now, only baby bamboo (slot 2) supports placement
         else {
             System.out.println("Selected item cannot be placed");
         }
@@ -1329,9 +1354,77 @@ public class Player {
                     
                     System.out.println("Planting rolled back due to network error");
                 }
+            } else {
+                // Single-player mode: check for auto-deselection
+                inventoryManager.checkAndAutoDeselect();
             }
         } else {
             System.out.println("Planting failed: invalid location or no baby bamboo in inventory");
+        }
+    }
+    
+    /**
+     * Execute tree planting at the specified target coordinates.
+     * Called by the targeting system callback when target is confirmed for baby trees.
+     * Includes error handling and state rollback on failure.
+     */
+    private void executeTreePlanting(float targetX, float targetY) {
+        // Store initial inventory state for potential rollback
+        int initialBabyTreeCount = inventoryManager.getCurrentInventory().getBabyTreeCount();
+        
+        // Validate grass biome for tree planting
+        if (!plantingSystem.canPlantTree(targetX, targetY, biomeManager)) {
+            System.out.println("Tree planting failed: can only plant trees on grass biomes");
+            return;
+        }
+        
+        // Attempt to plant baby tree at target coordinates
+        String plantedTreeId = plantingSystem.plantTree(targetX, targetY, plantedTrees);
+        
+        if (plantedTreeId != null) {
+            // Deduct baby tree from inventory
+            boolean removed = inventoryManager.getCurrentInventory().removeBabyTree(1);
+            if (!removed) {
+                // Failed to remove item - rollback planting
+                plantedTrees.remove(plantedTreeId);
+                System.out.println("Tree planting failed: could not deduct baby tree from inventory");
+                return;
+            }
+            
+            System.out.println("Baby tree planted successfully at: " + plantedTreeId);
+            
+            // Send planting message to server in multiplayer
+            if (gameClient != null && gameClient.isConnected()) {
+                try {
+                    // Extract coordinates from planted tree
+                    PlantedTree plantedTree = plantedTrees.get(plantedTreeId);
+                    if (plantedTree != null) {
+                        gameClient.sendTreePlant(plantedTreeId, plantedTree.getX(), plantedTree.getY());
+                        
+                        // Send inventory update after planting (baby tree was deducted)
+                        inventoryManager.sendInventoryUpdateToServer();
+                    }
+                } catch (Exception e) {
+                    // Network error - rollback state
+                    System.err.println("Failed to send tree planting message to server: " + e.getMessage());
+                    
+                    // Remove planted tree from local state
+                    PlantedTree plantedTree = plantedTrees.remove(plantedTreeId);
+                    if (plantedTree != null) {
+                        plantedTree.dispose();
+                    }
+                    
+                    // Restore inventory (add baby tree back)
+                    inventoryManager.getCurrentInventory().addBabyTree(1);
+                    
+                    System.out.println("Tree planting rolled back due to network error");
+                }
+            } else {
+                // Single-player mode: check for auto-deselection
+                inventoryManager.checkAndAutoDeselect();
+            }
+        } else {
+            System.out.println("Tree planting failed: invalid location or tile already occupied");
         }
     }
 
@@ -1562,6 +1655,8 @@ public class Player {
                 return wagemaker.uk.network.ItemType.BABY_BAMBOO;
             case BAMBOO_STACK:
                 return wagemaker.uk.network.ItemType.BAMBOO_STACK;
+            case BABY_TREE:
+                return wagemaker.uk.network.ItemType.BABY_TREE;
             case WOOD_STACK:
                 return wagemaker.uk.network.ItemType.WOOD_STACK;
             case PEBBLE:

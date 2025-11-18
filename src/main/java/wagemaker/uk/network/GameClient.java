@@ -445,6 +445,22 @@ public class GameClient {
     }
     
     /**
+     * Sends a tree planting action to the server.
+     * @param plantedTreeId The unique ID for the planted tree
+     * @param x The tile-aligned x position
+     * @param y The tile-aligned y position
+     */
+    public void sendTreePlant(String plantedTreeId, float x, float y) {
+        if (clientId == null) {
+            System.err.println("Cannot send tree plant: client ID not set");
+            return;
+        }
+        
+        TreePlantMessage message = new TreePlantMessage(clientId, plantedTreeId, x, y);
+        sendMessage(message);
+    }
+    
+    /**
      * Sends a heartbeat message to the server to maintain connection.
      */
     public void sendHeartbeat() {

@@ -3,6 +3,8 @@ package wagemaker.uk.world;
 import wagemaker.uk.network.TreeState;
 import wagemaker.uk.network.StoneState;
 import wagemaker.uk.network.ItemState;
+import wagemaker.uk.network.PlantedTreeState;
+import wagemaker.uk.network.PlantedBambooState;
 import wagemaker.uk.weather.RainZone;
 import wagemaker.uk.respawn.RespawnEntry;
 
@@ -27,6 +29,8 @@ public class WorldSaveData implements Serializable {
     private Map<String, TreeState> trees;
     private Map<String, StoneState> stones;
     private Map<String, ItemState> items;
+    private Map<String, PlantedTreeState> plantedTrees;
+    private Map<String, PlantedBambooState> plantedBamboos;
     private Set<String> clearedPositions;
     private List<RainZone> rainZones;
     
@@ -122,6 +126,9 @@ public class WorldSaveData implements Serializable {
         if (trees == null || stones == null || items == null || clearedPositions == null) {
             return false;
         }
+        
+        // PlantedTrees can be null for older saves (backward compatibility)
+        // but if present, should be valid
         
         // Check player health is valid
         if (playerHealth < 0 || playerHealth > 100) {
@@ -236,6 +243,22 @@ public class WorldSaveData implements Serializable {
     
     public void setRainZones(List<RainZone> rainZones) {
         this.rainZones = rainZones;
+    }
+    
+    public Map<String, PlantedTreeState> getPlantedTrees() {
+        return plantedTrees;
+    }
+    
+    public void setPlantedTrees(Map<String, PlantedTreeState> plantedTrees) {
+        this.plantedTrees = plantedTrees;
+    }
+    
+    public Map<String, PlantedBambooState> getPlantedBamboos() {
+        return plantedBamboos;
+    }
+    
+    public void setPlantedBamboos(Map<String, PlantedBambooState> plantedBamboos) {
+        this.plantedBamboos = plantedBamboos;
     }
     
     public float getPlayerX() {

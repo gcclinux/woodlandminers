@@ -3,7 +3,7 @@ plugins {
     id 'application'
 }
 
-version = '0.0.8'
+version = '0.0.16'
 
 repositories {
     mavenCentral()

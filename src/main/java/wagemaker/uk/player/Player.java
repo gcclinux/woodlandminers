@@ -101,6 +101,9 @@ public class Player {
     private enum Direction { UP, DOWN, LEFT, RIGHT }
     private Direction currentDirection = Direction.DOWN;
     private boolean isMoving = false;
+    
+    // Inventory navigation mode
+    private boolean inventoryNavigationMode = false;
 
     public Player(float startX, float startY, OrthographicCamera camera) {
         this.x = startX;
@@ -322,6 +325,31 @@ public class Player {
     public void update(float deltaTime) {
         isMoving = false;
         
+        // Handle inventory navigation mode toggle (only when menu is not open)
+        if (gameMenu != null && !gameMenu.isAnyMenuOpen()) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
+                toggleInventoryNavigationMode();
+            }
+            
+            // ESC exits inventory mode (if active and menu not open)
+            if (inventoryNavigationMode && Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+                inventoryNavigationMode = false;
+                if (inventoryManager != null) {
+                    inventoryManager.clearSelection();
+                }
+                System.out.println("Inventory navigation mode: OFF (ESC pressed, deselected)");
+            }
+        }
+        
+        // Exit inventory mode when menu opens
+        if (gameMenu != null && gameMenu.isAnyMenuOpen() && inventoryNavigationMode) {
+            inventoryNavigationMode = false;
+            if (inventoryManager != null) {
+                inventoryManager.clearSelection();
+            }
+            System.out.println("Inventory navigation mode: OFF (menu opened, deselected)");
+        }
+        
         // Track movement in both directions
         boolean movingLeft = false;
         boolean movingRight = false;
@@ -332,39 +360,42 @@ public class Player {
         float newX = x;
         float newY = y;
         
-        // Check horizontal movement
-        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) { 
-            float testX = x - speed * deltaTime;
-            if (!wouldCollide(testX, y)) {
-                newX = testX;
-                movingLeft = true;
-                isMoving = true;
+        // Only process movement if inventory navigation mode is OFF
+        if (!inventoryNavigationMode) {
+            // Check horizontal movement
+            if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) { 
+                float testX = x - speed * deltaTime;
+                if (!wouldCollide(testX, y)) {
+                    newX = testX;
+                    movingLeft = true;
+                    isMoving = true;
+                }
             }
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) { 
-            float testX = x + speed * deltaTime;
-            if (!wouldCollide(testX, y)) {
-                newX = testX;
-                movingRight = true;
-                isMoving = true;
+            if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) { 
+                float testX = x + speed * deltaTime;
+                if (!wouldCollide(testX, y)) {
+                    newX = testX;
+                    movingRight = true;
+                    isMoving = true;
+                }
             }
-        }
-        
-        // Check vertical movement
-        if (Gdx.input.isKeyPressed(Input.Keys.UP)) { 
-            float testY = y + speed * deltaTime;
-            if (!wouldCollide(newX, testY)) { // Use newX in case of diagonal movement
-                newY = testY;
-                movingUp = true;
-                isMoving = true;
+            
+            // Check vertical movement
+            if (Gdx.input.isKeyPressed(Input.Keys.UP)) { 
+                float testY = y + speed * deltaTime;
+                if (!wouldCollide(newX, testY)) { // Use newX in case of diagonal movement
+                    newY = testY;
+                    movingUp = true;
+                    isMoving = true;
+                }
             }
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) { 
-            float testY = y - speed * deltaTime;
-            if (!wouldCollide(newX, testY)) { // Use newX in case of diagonal movement
-                newY = testY;
-                movingDown = true;
-                isMoving = true;
+            if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) { 
+                float testY = y - speed * deltaTime;
+                if (!wouldCollide(newX, testY)) { // Use newX in case of diagonal movement
+                    newY = testY;
+                    movingDown = true;
+                    isMoving = true;
+                }
             }
         }
         
@@ -395,9 +426,11 @@ public class Player {
             gameClient.sendPlayerMovement(x, y, networkDirection, isMoving);
         }
 
-        // Handle inventory selection (only when menu is not open)
+        // Handle inventory navigation or targeting input (only when menu is not open)
         if (gameMenu != null && !gameMenu.isAnyMenuOpen()) {
-            handleInventorySelection();
+            if (inventoryNavigationMode) {
+                handleInventoryNavigation();
+            }
             handleTargetingInput();
             handlePlantingAction();
         }
@@ -1127,79 +1160,113 @@ public class Player {
     }
 
     /**
-     * Handle keyboard input for inventory item selection.
-     * Maps number keys 1-6 to inventory slots 0-5.
-     * Pressing the same key again will deselect the slot (toggle behavior).
-     * When an item is selected, the targeting system is activated.
-     * When an item is deselected, the targeting system is deactivated.
+     * Toggle inventory navigation mode on/off.
+     * When ON, arrow keys navigate inventory slots instead of moving player.
+     * When OFF, arrow keys move player normally.
      */
-    private void handleInventorySelection() {
+    private void toggleInventoryNavigationMode() {
+        inventoryNavigationMode = !inventoryNavigationMode;
+        
+        if (inventoryNavigationMode) {
+            // Entering mode: auto-select first slot
+            if (inventoryManager != null) {
+                inventoryManager.setSelectedSlot(0);
+                updateTargetingForSelection(0);
+            }
+            System.out.println("Inventory navigation mode: ON (slot 0 selected)");
+        } else {
+            // Exiting mode: deselect everything
+            if (inventoryManager != null) {
+                inventoryManager.clearSelection();
+            }
+            System.out.println("Inventory navigation mode: OFF (deselected)");
+        }
+    }
+    
+    /**
+     * Handle arrow key navigation in inventory mode.
+     * RIGHT/LEFT cycle through slots with wrap-around.
+     * UP/DOWN reserved for future multi-row support.
+     */
+    private void handleInventoryNavigation() {
         if (inventoryManager == null) {
             return;
         }
         
         int currentSelection = inventoryManager.getSelectedSlot();
         int previousSelection = currentSelection;
+        int newSelection = currentSelection;
         
-        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
-            // Toggle: if slot 0 is already selected, deselect it
-            inventoryManager.setSelectedSlot(currentSelection == 0 ? -1 : 0);
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) {
-            // Toggle: if slot 1 is already selected, deselect it
-            inventoryManager.setSelectedSlot(currentSelection == 1 ? -1 : 1);
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) {
-            // Toggle: if slot 2 is already selected, deselect it
-            inventoryManager.setSelectedSlot(currentSelection == 2 ? -1 : 2);
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_4)) {
-            // Toggle: if slot 3 is already selected, deselect it
-            inventoryManager.setSelectedSlot(currentSelection == 3 ? -1 : 3);
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_5)) {
-            // Toggle: if slot 4 is already selected, deselect it
-            inventoryManager.setSelectedSlot(currentSelection == 4 ? -1 : 4);
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_6)) {
-            // Toggle: if slot 5 is already selected, deselect it
-            inventoryManager.setSelectedSlot(currentSelection == 5 ? -1 : 5);
+        // RIGHT arrow: move to next slot (wrap around)
+        if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
+            if (currentSelection == -1) {
+                newSelection = 0; // Start at first slot
+            } else {
+                newSelection = (currentSelection + 1) % 7; // Wrap to 0 after slot 6
+            }
+        }
+        // LEFT arrow: move to previous slot (wrap around)
+        else if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
+            if (currentSelection == -1) {
+                newSelection = 6; // Start at last slot
+            } else {
+                newSelection = (currentSelection - 1 + 7) % 7; // Wrap to 6 from slot 0
+            }
+        }
+        // UP/DOWN: Reserved for future multi-row layout
+        else if (Gdx.input.isKeyJustPressed(Input.Keys.UP) || Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+            // No-op for now, reserved for future enhancement
+            return;
         }
         
-        // Check if selection changed
-        int newSelection = inventoryManager.getSelectedSlot();
+        // Apply selection change if different
         if (newSelection != previousSelection) {
-            // Selection changed - update targeting system
-            if (newSelection == -1) {
-                // Item deselected - deactivate targeting
-                if (targetingSystem.isActive()) {
-                    targetingSystem.deactivate();
+            inventoryManager.setSelectedSlot(newSelection);
+            
+            // Update targeting system based on new selection
+            updateTargetingForSelection(newSelection);
+        }
+    }
+    
+    /**
+     * Update targeting system when inventory selection changes.
+     * Activates targeting for plantable items, deactivates for consumables.
+     */
+    private void updateTargetingForSelection(int slot) {
+        if (slot == -1) {
+            // Item deselected - deactivate targeting
+            if (targetingSystem.isActive()) {
+                targetingSystem.deactivate();
+            }
+        } else {
+            // Item selected - check if it's a plantable item
+            wagemaker.uk.inventory.ItemType selectedItemType = inventoryManager.getSelectedItemType();
+            
+            // Only activate targeting for plantable items (not consumables)
+            boolean isPlantable = selectedItemType != null && 
+                                 !selectedItemType.restoresHealth() && 
+                                 !selectedItemType.reducesHunger();
+            
+            if (isPlantable) {
+                // Plantable item - activate targeting at player position
+                if (!targetingSystem.isActive()) {
+                    targetingSystem.activate(x, y, TargetingMode.ADJACENT, new TargetingCallback() {
+                        @Override
+                        public void onTargetConfirmed(float targetX, float targetY) {
+                            // Handle planting based on selected item
+                            handleItemPlacement(targetX, targetY);
+                        }
+                        
+                        @Override
+                        public void onTargetCancelled() {
+                            System.out.println("Item placement cancelled");
+                        }
+                    });
                 }
             } else {
-                // Item selected - check if it's a plantable item
-                wagemaker.uk.inventory.ItemType selectedItemType = inventoryManager.getSelectedItemType();
-                
-                // Only activate targeting for plantable items (not consumables)
-                boolean isPlantable = selectedItemType != null && 
-                                     !selectedItemType.restoresHealth() && 
-                                     !selectedItemType.reducesHunger();
-                
-                if (isPlantable) {
-                    // Plantable item - activate targeting at player position
-                    if (!targetingSystem.isActive()) {
-                        targetingSystem.activate(x, y, TargetingMode.ADJACENT, new TargetingCallback() {
-                            @Override
-                            public void onTargetConfirmed(float targetX, float targetY) {
-                                // Handle planting based on selected item
-                                handleItemPlacement(targetX, targetY);
-                            }
-                            
-                            @Override
-                            public void onTargetCancelled() {
-                                System.out.println("Item placement cancelled");
-                            }
-                        });
-                    }
-                } else {
-                    // Consumable item - deactivate targeting if active
-                    if (targetingSystem.isActive()) {
-                        targetingSystem.deactivate();
-                    }
+                // Consumable item - deactivate targeting if active
+                if (targetingSystem.isActive()) {
+                    targetingSystem.deactivate();
                 }
             }
         }

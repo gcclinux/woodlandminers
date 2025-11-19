@@ -11,6 +11,7 @@ import wagemaker.uk.items.BabyBamboo;
 import wagemaker.uk.items.BabyTree;
 import wagemaker.uk.items.Banana;
 import wagemaker.uk.items.BambooStack;
+import wagemaker.uk.items.PalmFiber;
 import wagemaker.uk.items.Pebble;
 import wagemaker.uk.items.WoodStack;
 import wagemaker.uk.objects.Stone;
@@ -79,6 +80,7 @@ public class Player {
     private Map<String, BabyTree> babyTrees;
     private Map<String, WoodStack> woodStacks;
     private Map<String, Pebble> pebbles;
+    private Map<String, PalmFiber> palmFibers;
     private Random random = new Random();
     private Map<String, Stone> stones;
     private Cactus cactus; // Single cactus reference
@@ -168,6 +170,10 @@ public class Player {
     
     public void setPebbles(Map<String, Pebble> pebbles) {
         this.pebbles = pebbles;
+    }
+    
+    public void setPalmFibers(Map<String, PalmFiber> palmFibers) {
+        this.palmFibers = palmFibers;
     }
     
     public void setStones(Map<String, Stone> stones) {
@@ -486,6 +492,9 @@ public class Player {
         
         // Check for pebble pickups
         checkPebblePickups();
+        
+        // Check for palm fiber pickups
+        checkPalmFiberPickups();
         
         // Track previous health for change detection
         previousHealth = health;
@@ -883,6 +892,10 @@ public class Player {
                                 );
                             }
                         }
+                        
+                        // Spawn palm fiber at tree position
+                        palmFibers.put(targetKey, new PalmFiber(targetCoconutTree.getX(), targetCoconutTree.getY()));
+                        System.out.println("PalmFiber dropped at: " + targetCoconutTree.getX() + ", " + targetCoconutTree.getY());
                         
                         targetCoconutTree.dispose();
                         coconutTrees.remove(targetKey);
@@ -1728,6 +1741,8 @@ public class Player {
                 return wagemaker.uk.network.ItemType.WOOD_STACK;
             case PEBBLE:
                 return wagemaker.uk.network.ItemType.PEBBLE;
+            case PALM_FIBER:
+                return wagemaker.uk.network.ItemType.PALM_FIBER;
             default:
                 return null;
         }
@@ -2023,6 +2038,48 @@ public class Player {
                 pebble.dispose();
                 pebbles.remove(pebbleKey);
                 System.out.println("Pebble removed from game");
+            }
+        }
+    }
+    
+    private void checkPalmFiberPickups() {
+        if (palmFibers != null) {
+            // Check all palm fibers for pickup
+            for (Map.Entry<String, PalmFiber> entry : palmFibers.entrySet()) {
+                PalmFiber palmFiber = entry.getValue();
+                String palmFiberKey = entry.getKey();
+                
+                // Check if player is close enough to pick up palm fiber (32px range)
+                float dx = Math.abs((x + 32) - (palmFiber.getX() + 16)); // Player center to palm fiber center
+                float dy = Math.abs((y + 32) - (palmFiber.getY() + 16)); // PalmFiber is 32x32, so center is +16
+                
+                if (dx <= 32 && dy <= 32) {
+                    // Pick up the palm fiber
+                    pickupPalmFiber(palmFiberKey);
+                    break; // Only pick up one palm fiber per frame
+                }
+            }
+        }
+    }
+    
+    private void pickupPalmFiber(String palmFiberKey) {
+        // Send pickup request to server in multiplayer mode
+        if (gameClient != null && gameClient.isConnected() && isLocalPlayer) {
+            gameClient.sendItemPickup(palmFiberKey);
+            // In multiplayer, server handles item removal
+            // The server will broadcast the pickup to all clients
+        } else {
+            // Single-player mode: handle locally via inventory manager
+            if (inventoryManager != null) {
+                inventoryManager.collectItem(wagemaker.uk.inventory.ItemType.PALM_FIBER);
+            }
+            
+            // Remove palm fiber from game
+            if (palmFibers.containsKey(palmFiberKey)) {
+                PalmFiber palmFiber = palmFibers.get(palmFiberKey);
+                palmFiber.dispose();
+                palmFibers.remove(palmFiberKey);
+                System.out.println("PalmFiber removed from game");
             }
         }
     }

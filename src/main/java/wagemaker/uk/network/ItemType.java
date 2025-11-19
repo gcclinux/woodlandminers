@@ -12,5 +12,6 @@ public enum ItemType implements Serializable {
     BAMBOO_STACK,
     WOOD_STACK,
     BABY_TREE,
-    PEBBLE
+    PEBBLE,
+    PALM_FIBER
 }

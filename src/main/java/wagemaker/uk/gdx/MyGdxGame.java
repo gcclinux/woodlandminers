@@ -23,6 +23,7 @@ import wagemaker.uk.items.BabyBamboo;
 import wagemaker.uk.items.BabyTree;
 import wagemaker.uk.items.BambooStack;
 import wagemaker.uk.items.Banana;
+import wagemaker.uk.items.PalmFiber;
 import wagemaker.uk.items.Pebble;
 import wagemaker.uk.items.WoodStack;
 import wagemaker.uk.localization.LocalizationManager;
@@ -188,6 +189,7 @@ public class MyGdxGame extends ApplicationAdapter {
     Map<String, BabyTree> babyTrees;
     Map<String, WoodStack> woodStacks;
     Map<String, Pebble> pebbles;
+    Map<String, PalmFiber> palmFibers;
     Map<String, PlantedBamboo> plantedBamboos;
     Map<String, PlantedTree> plantedTrees;
     Map<String, Stone> stones;
@@ -279,6 +281,7 @@ public class MyGdxGame extends ApplicationAdapter {
         babyTrees = new HashMap<>();
         woodStacks = new HashMap<>();
         pebbles = new HashMap<>();
+        palmFibers = new HashMap<>();
         plantedBamboos = new HashMap<>();
         plantedTrees = new HashMap<>();
         stones = new HashMap<>();
@@ -325,6 +328,7 @@ public class MyGdxGame extends ApplicationAdapter {
         player.setBabyTrees(babyTrees);
         player.setWoodStacks(woodStacks);
         player.setPebbles(pebbles);
+        player.setPalmFibers(palmFibers);
         player.setStones(stones);
         player.setCactus(cactus);
         player.setGameInstance(this);
@@ -660,6 +664,7 @@ public class MyGdxGame extends ApplicationAdapter {
         drawBabyTrees();
         drawWoodStacks();
         drawPebbles();
+        drawPalmFibers();
         drawCactus();
         // draw player before apple trees so foliage appears in front
         batch.draw(player.getCurrentFrame(), player.getX(), player.getY(), 100, 100);
@@ -1291,6 +1296,20 @@ public class MyGdxGame extends ApplicationAdapter {
             if (Math.abs(pebble.getX() - camX) < viewWidth && 
                 Math.abs(pebble.getY() - camY) < viewHeight) {
                 batch.draw(pebble.getTexture(), pebble.getX(), pebble.getY(), 32, 32);
+            }
+        }
+    }
+    
+    private void drawPalmFibers() {
+        float camX = camera.position.x;
+        float camY = camera.position.y;
+        float viewWidth = viewport.getWorldWidth() / 2;
+        float viewHeight = viewport.getWorldHeight() / 2;
+        
+        for (PalmFiber palmFiber : palmFibers.values()) {
+            if (Math.abs(palmFiber.getX() - camX) < viewWidth && 
+                Math.abs(palmFiber.getY() - camY) < viewHeight) {
+                batch.draw(palmFiber.getTexture(), palmFiber.getX(), palmFiber.getY(), 32, 32);
             }
         }
     }
@@ -1945,6 +1964,15 @@ public class MyGdxGame extends ApplicationAdapter {
             }
             bananas.clear();
             
+            for (PalmFiber palmFiber : palmFibers.values()) {
+                try {
+                    palmFiber.dispose();
+                } catch (Exception e) {
+                    System.err.println("Error disposing palm fiber: " + e.getMessage());
+                }
+            }
+            palmFibers.clear();
+            
             // CRITICAL FIX: Clear planted trees and bamboos to prevent singleplayer planted items
             // from appearing in multiplayer mode
             for (PlantedTree plantedTree : plantedTrees.values()) {
@@ -2332,6 +2360,9 @@ public class MyGdxGame extends ApplicationAdapter {
         if (pebbles.containsKey(itemId)) {
             return wagemaker.uk.inventory.ItemType.PEBBLE;
         }
+        if (palmFibers.containsKey(itemId)) {
+            return wagemaker.uk.inventory.ItemType.PALM_FIBER;
+        }
         return null;
     }
     
@@ -2383,6 +2414,13 @@ public class MyGdxGame extends ApplicationAdapter {
         if (pebble != null) {
             // Defer texture disposal to render thread
             deferOperation(() -> pebble.dispose());
+            return;
+        }
+        
+        PalmFiber palmFiber = palmFibers.remove(itemId);
+        if (palmFiber != null) {
+            // Defer texture disposal to render thread
+            deferOperation(() -> palmFiber.dispose());
         }
     }
     
@@ -3851,6 +3889,11 @@ public class MyGdxGame extends ApplicationAdapter {
                         pebbles.put(itemId, new Pebble(x, y));
                     }
                     break;
+                case PALM_FIBER:
+                    if (!palmFibers.containsKey(itemId)) {
+                        palmFibers.put(itemId, new PalmFiber(x, y));
+                    }
+                    break;
             }
         }
     }
@@ -4262,6 +4305,9 @@ public class MyGdxGame extends ApplicationAdapter {
         }
         for (Pebble pebble : pebbles.values()) {
             pebble.dispose();
+        }
+        for (PalmFiber palmFiber : palmFibers.values()) {
+            palmFiber.dispose();
         }
         if (cactus != null) {
             cactus.dispose();

@@ -383,6 +383,12 @@ public class GameMenu implements LanguageChangeListener {
                     } catch (Exception e) {
                         // Pebble field doesn't exist in old saves
                     }
+                    int spPalmFiber = 0;
+                    try {
+                        spPalmFiber = parseJsonObjectInt(jsonContent, "\"singleplayerInventory\"", "palmFiber");
+                    } catch (Exception e) {
+                        // PalmFiber field doesn't exist in old saves
+                    }
                     
                     wagemaker.uk.inventory.Inventory spInv = inventoryManager.getSingleplayerInventory();
                     spInv.setAppleCount(spApple);
@@ -392,6 +398,7 @@ public class GameMenu implements LanguageChangeListener {
                     spInv.setBabyTreeCount(spBabyTree);
                     spInv.setWoodStackCount(spWoodStack);
                     spInv.setPebbleCount(spPebble);
+                    spInv.setPalmFiberCount(spPalmFiber);
                     
                     System.out.println("Singleplayer inventory loaded: Apple=" + spApple + 
                                       ", Banana=" + spBanana + ", BabyBamboo=" + spBabyBamboo + 
@@ -420,6 +427,12 @@ public class GameMenu implements LanguageChangeListener {
                     } catch (Exception e) {
                         // Pebble field doesn't exist in old saves
                     }
+                    int mpPalmFiber = 0;
+                    try {
+                        mpPalmFiber = parseJsonObjectInt(jsonContent, "\"multiplayerInventory\"", "palmFiber");
+                    } catch (Exception e) {
+                        // PalmFiber field doesn't exist in old saves
+                    }
                     
                     wagemaker.uk.inventory.Inventory mpInv = inventoryManager.getMultiplayerInventory();
                     mpInv.setAppleCount(mpApple);
@@ -429,6 +442,7 @@ public class GameMenu implements LanguageChangeListener {
                     mpInv.setBabyTreeCount(mpBabyTree);
                     mpInv.setWoodStackCount(mpWoodStack);
                     mpInv.setPebbleCount(mpPebble);
+                    mpInv.setPalmFiberCount(mpPalmFiber);
                     
                     System.out.println("Multiplayer inventory loaded: Apple=" + mpApple + 
                                       ", Banana=" + mpBanana + ", BabyBamboo=" + mpBabyBamboo + 
@@ -1389,7 +1403,8 @@ public class GameMenu implements LanguageChangeListener {
                 jsonBuilder.append(String.format("    \"bambooStack\": %d,\n", spInv.getBambooStackCount()));
                 jsonBuilder.append(String.format("    \"babyTree\": %d,\n", spInv.getBabyTreeCount()));
                 jsonBuilder.append(String.format("    \"woodStack\": %d,\n", spInv.getWoodStackCount()));
-                jsonBuilder.append(String.format("    \"pebble\": %d\n", spInv.getPebbleCount()));
+                jsonBuilder.append(String.format("    \"pebble\": %d,\n", spInv.getPebbleCount()));
+                jsonBuilder.append(String.format("    \"palmFiber\": %d\n", spInv.getPalmFiberCount()));
                 jsonBuilder.append("  },\n");
             }
             
@@ -1415,7 +1430,8 @@ public class GameMenu implements LanguageChangeListener {
                 jsonBuilder.append(String.format("    \"bambooStack\": %d,\n", mpInv.getBambooStackCount()));
                 jsonBuilder.append(String.format("    \"babyTree\": %d,\n", mpInv.getBabyTreeCount()));
                 jsonBuilder.append(String.format("    \"woodStack\": %d,\n", mpInv.getWoodStackCount()));
-                jsonBuilder.append(String.format("    \"pebble\": %d\n", mpInv.getPebbleCount()));
+                jsonBuilder.append(String.format("    \"pebble\": %d,\n", mpInv.getPebbleCount()));
+                jsonBuilder.append(String.format("    \"palmFiber\": %d\n", mpInv.getPalmFiberCount()));
                 jsonBuilder.append("  },\n");
             }
             

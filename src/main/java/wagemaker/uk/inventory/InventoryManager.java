@@ -120,6 +120,9 @@ public class InventoryManager {
             case PEBBLE:
                 inventory.addPebble(amount);
                 break;
+            case PALM_FIBER:
+                inventory.addPalmFiber(amount);
+                break;
         }
         
         // Send inventory update to server in multiplayer mode
@@ -143,7 +146,8 @@ public class InventoryManager {
                 inventory.getBambooStackCount(),
                 inventory.getBabyTreeCount(),
                 inventory.getWoodStackCount(),
-                inventory.getPebbleCount()
+                inventory.getPebbleCount(),
+                inventory.getPalmFiberCount()
             );
             
             gameClient.sendMessage(message);
@@ -173,7 +177,7 @@ public class InventoryManager {
      * @param pebbleCount The pebble count from server
      */
     public void syncFromServer(int appleCount, int bananaCount, int babyBambooCount, 
-                                int bambooStackCount, int babyTreeCount, int woodStackCount, int pebbleCount) {
+                                int bambooStackCount, int babyTreeCount, int woodStackCount, int pebbleCount, int palmFiberCount) {
         if (!isMultiplayerMode) {
             return; // Only sync in multiplayer mode
         }
@@ -186,6 +190,7 @@ public class InventoryManager {
         inventory.setBabyTreeCount(babyTreeCount);
         inventory.setWoodStackCount(woodStackCount);
         inventory.setPebbleCount(pebbleCount);
+        inventory.setPalmFiberCount(palmFiberCount);
         
         System.out.println("Inventory synced from server: Apples=" + appleCount +
                          ", Bananas=" + bananaCount +
@@ -193,7 +198,8 @@ public class InventoryManager {
                          ", BambooStack=" + bambooStackCount +
                          ", BabyTree=" + babyTreeCount +
                          ", WoodStack=" + woodStackCount +
-                         ", Pebbles=" + pebbleCount);
+                         ", Pebbles=" + pebbleCount +
+                         ", PalmFibers=" + palmFiberCount);
     }
     
     /**
@@ -201,7 +207,7 @@ public class InventoryManager {
      * @param slot The slot index (0-6 for valid slots, any other value clears selection)
      */
     public void setSelectedSlot(int slot) {
-        if (slot >= 0 && slot <= 6) {
+        if (slot >= 0 && slot <= 7) {
             this.selectedSlot = slot;
         } else {
             this.selectedSlot = -1; // Clear selection
@@ -242,6 +248,7 @@ public class InventoryManager {
             case 4: return ItemType.BABY_TREE;
             case 5: return ItemType.WOOD_STACK;
             case 6: return ItemType.PEBBLE;
+            case 7: return ItemType.PALM_FIBER;
             default: return null;
         }
     }
@@ -323,6 +330,7 @@ public class InventoryManager {
             case 4: itemCount = inventory.getBabyTreeCount(); break;
             case 5: itemCount = inventory.getWoodStackCount(); break;
             case 6: itemCount = inventory.getPebbleCount(); break;
+            case 7: itemCount = inventory.getPalmFiberCount(); break;
         }
         
         if (itemCount == 0) {

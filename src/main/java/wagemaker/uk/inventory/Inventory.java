@@ -13,6 +13,7 @@ public class Inventory {
     private int babyTreeCount;
     private int woodStackCount;
     private int pebbleCount;
+    private int palmFiberCount;
     
     public Inventory() {
         this.appleCount = 0;
@@ -22,6 +23,7 @@ public class Inventory {
         this.babyTreeCount = 0;
         this.woodStackCount = 0;
         this.pebbleCount = 0;
+        this.palmFiberCount = 0;
     }
     
     // Apple methods
@@ -171,6 +173,27 @@ public class Inventory {
         return false;
     }
     
+    // PalmFiber methods
+    public int getPalmFiberCount() {
+        return palmFiberCount;
+    }
+    
+    public void setPalmFiberCount(int count) {
+        this.palmFiberCount = Math.max(0, count);
+    }
+    
+    public void addPalmFiber(int amount) {
+        this.palmFiberCount += amount;
+    }
+    
+    public boolean removePalmFiber(int amount) {
+        if (palmFiberCount >= amount) {
+            palmFiberCount -= amount;
+            return true;
+        }
+        return false;
+    }
+    
     /**
      * Clear all items from inventory, resetting all counts to 0.
      */
@@ -182,5 +205,6 @@ public class Inventory {
         this.babyTreeCount = 0;
         this.woodStackCount = 0;
         this.pebbleCount = 0;
+        this.palmFiberCount = 0;
     }
 }

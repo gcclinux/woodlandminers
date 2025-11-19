@@ -514,6 +514,16 @@ public class ClientConnection implements Runnable {
                 server.broadcastToAll(spawnMsg);
                 
                 System.out.println("Item spawned: " + itemType + " at (" + quantizedX + ", " + quantizedY + ")");
+            } else if (tree.getType() == TreeType.COCONUT) {
+                // Drop PalmFiber when CoconutTree is destroyed
+                String itemId = UUID.randomUUID().toString();
+                ItemState item = new ItemState(itemId, ItemType.PALM_FIBER, quantizedX, quantizedY, false);
+                server.getWorldState().addOrUpdateItem(item);
+                
+                ItemSpawnMessage spawnMsg = new ItemSpawnMessage("server", itemId, ItemType.PALM_FIBER, quantizedX, quantizedY);
+                server.broadcastToAll(spawnMsg);
+                
+                System.out.println("Item spawned: PALM_FIBER at (" + quantizedX + ", " + quantizedY + ")");
             } else if (tree.getType() == TreeType.BAMBOO) {
                 // Randomly choose drop pattern: 
                 // 33% chance: 1 BambooStack + 1 BabyBamboo
@@ -750,23 +760,53 @@ public class ClientConnection implements Runnable {
         // Remove item
         server.getWorldState().removeItem(itemId);
         
-        // Update player health (only for food items)
-        float oldHealth = playerState.getHealth();
-        if (item.getType() == ItemType.APPLE || item.getType() == ItemType.BANANA) {
-            float healthRestore = 20; // Both restore 20 HP
-            playerState.setHealth(Math.min(100, playerState.getHealth() + healthRestore));
-            server.getWorldState().addOrUpdatePlayer(playerState);
-            
-            System.out.println("Player " + clientId + " picked up " + item.getType() + 
-                             " (Health: " + oldHealth + " -> " + playerState.getHealth() + ")");
-            
-            // Broadcast health update
-            PlayerHealthUpdateMessage healthMsg = new PlayerHealthUpdateMessage("server", clientId, playerState.getHealth());
-            server.broadcastToAll(healthMsg);
-        } else {
-            // BambooStack or BabyBamboo - no health restoration
-            System.out.println("Player " + clientId + " picked up " + item.getType());
+        // Update player inventory based on item type
+        switch (item.getType()) {
+            case APPLE:
+                playerState.setAppleCount(playerState.getAppleCount() + 1);
+                break;
+            case BANANA:
+                playerState.setBananaCount(playerState.getBananaCount() + 1);
+                break;
+            case BABY_BAMBOO:
+                playerState.setBabyBambooCount(playerState.getBabyBambooCount() + 1);
+                break;
+            case BAMBOO_STACK:
+                playerState.setBambooStackCount(playerState.getBambooStackCount() + 1);
+                break;
+            case BABY_TREE:
+                playerState.setBabyTreeCount(playerState.getBabyTreeCount() + 1);
+                break;
+            case WOOD_STACK:
+                playerState.setWoodStackCount(playerState.getWoodStackCount() + 1);
+                break;
+            case PEBBLE:
+                playerState.setPebbleCount(playerState.getPebbleCount() + 1);
+                break;
+            case PALM_FIBER:
+                playerState.setPalmFiberCount(playerState.getPalmFiberCount() + 1);
+                break;
         }
+        
+        // Update player state in world
+        server.getWorldState().addOrUpdatePlayer(playerState);
+        
+        System.out.println("Player " + clientId + " picked up " + item.getType());
+        
+        // Broadcast inventory update
+        InventoryUpdateMessage inventoryMsg = new InventoryUpdateMessage(
+            "server",
+            clientId,
+            playerState.getAppleCount(),
+            playerState.getBananaCount(),
+            playerState.getBabyBambooCount(),
+            playerState.getBambooStackCount(),
+            playerState.getBabyTreeCount(),
+            playerState.getWoodStackCount(),
+            playerState.getPebbleCount(),
+            playerState.getPalmFiberCount()
+        );
+        server.broadcastToAll(inventoryMsg);
         
         // Broadcast pickup confirmation
         ItemPickupMessage pickupMsg = new ItemPickupMessage(clientId, itemId, clientId);
@@ -925,7 +965,8 @@ public class ClientConnection implements Runnable {
             playerState.getBambooStackCount(),
             playerState.getBabyTreeCount(),
             playerState.getWoodStackCount(),
-            playerState.getPebbleCount()
+            playerState.getPebbleCount(),
+            playerState.getPalmFiberCount()
         );
         server.broadcastToAll(inventoryMsg);
     }
@@ -1297,7 +1338,8 @@ public class ClientConnection implements Runnable {
             playerState.getBambooStackCount(),
             playerState.getBabyTreeCount(),
             playerState.getWoodStackCount(),
-            playerState.getPebbleCount()
+            playerState.getPebbleCount(),
+            playerState.getPalmFiberCount()
         );
         sendMessage(syncMsg);
     }

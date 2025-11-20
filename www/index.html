@@ -35,7 +35,7 @@
             <p>The goal was simple yet audacious: build a complete, enjoyable multiplayer game in Java using only AI prompts and requests. No direct code writing. No manual debugging. Just describing what we wanted, and letting Kiro AI bring it to life.</p>
             
             <h3>📊 Project Status & Progress</h3>
-            <p><strong>Current Build Version:</strong> 0.0.17 | <strong>Status:</strong> Active Development</p>
+            <p><strong>Current Build Version:</strong> 0.0.18 | <strong>Status:</strong> Active Development</p>
             <p>Woodlanders has evolved from concept to a feature-rich multiplayer game with 20+ completed systems. The project uses two complementary development approaches:</p>
             <ul style="text-align: left; max-width: 800px; margin: 1rem auto; list-style: none;">
                 <li>🌊 <strong>Kiro AI Vibe:</strong> Rapid prototyping and iterative feature additions through natural conversation</li>
@@ -72,163 +72,268 @@
 
         <section id="features">
             <h2>✨ FEATURED GAMEPLAY ✨</h2>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <img src="images/mp-location-compas.png" alt="Woodlanders multiplayer gameplay with location compass" class="feature-image">
-                    <h3>🌐 Real-time Multiplayer</h3>
-                    <p>Play with friends in a synchronized world. Keep track of other players with the location compass and monitor connection with the ping display.</p>
+            <div class="gameplay-carousel">
+                <button class="carousel-nav prev" aria-label="Previous">‹</button>
+                <div class="carousel-container">
+                    <div class="carousel-slide active">
+                        <div class="gameplay-content">
+                            <div class="gameplay-image-wrapper">
+                                <img src="images/mp-location-compas.png" alt="Woodlanders multiplayer gameplay with location compass" class="gameplay-image">
+                            </div>
+                            <div class="gameplay-info">
+                                <h3>🌐 Real-time Multiplayer</h3>
+                                <p>Play with friends in a synchronized world. Keep track of other players with the location compass and monitor connection with the ping display.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="carousel-slide">
+                        <div class="gameplay-content">
+                            <div class="gameplay-image-wrapper">
+                                <img src="images/rain-planting-.png" alt="Planting bamboo in the rain in Woodlanders" class="gameplay-image">
+                            </div>
+                            <div class="gameplay-info">
+                                <h3>🌧️ Dynamic World</h3>
+                                <p>Experience dynamic weather like rain, and shape the environment by planting new resources like bamboo.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="carousel-slide">
+                        <div class="gameplay-content">
+                            <div class="gameplay-image-wrapper">
+                                <img src="images/hurt-healthbar-attack.png" alt="Player attacking another player in Woodlanders" class="gameplay-image">
+                            </div>
+                            <div class="gameplay-info">
+                                <h3>⚔️ Combat & Resources</h3>
+                                <p>Engage in combat with other players and interact with the environment. Health bars on players and trees provide clear feedback on damage and harvesting.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="carousel-slide">
+                        <div class="gameplay-content">
+                            <div class="gameplay-image-wrapper">
+                                <img src="images/miles-exploring.png" alt="Exploring the open world of Woodlanders" class="gameplay-image">
+                            </div>
+                            <div class="gameplay-info">
+                                <h3>🗺️ Infinite Procedurally Generated World</h3>
+                                <p>Explore endlessly with dynamic terrain generation across multiple biomes. Set custom coordinates to navigate to specific destinations, track target locations, or return to spawn at 0,0 using the compass navigation system.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="carousel-slide">
+                        <div class="gameplay-content">
+                            <div class="gameplay-image-wrapper">
+                                <img src="images/health-hunger.png" alt="Health and Hunger system in Woodlanders" class="gameplay-image">
+                            </div>
+                            <div class="gameplay-info">
+                                <h3>❤️ Health & Hunger System</h3>
+                                <p>Manage your survival with dual health and hunger mechanics. Destroy Apple Trees to restore health and collect apples. Destroy Banana Trees to reduce hunger and gather bananas. All collected items are stored in your inventory for later use. Monitor your status with the unified health bar showing both health (red) and hunger (blue) levels.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="carousel-slide">
+                        <div class="gameplay-content">
+                            <div class="gameplay-image-wrapper">
+                                <img src="images/controls-menu.png" alt="In-game controls menu in Woodlanders" class="gameplay-image">
+                            </div>
+                            <div class="gameplay-info">
+                                <h3>⌨️ Controls Menu</h3>
+                                <p>Access a comprehensive controls guide directly from the main menu. Learn all movement, combat, inventory, and targeting controls without leaving the game. Available in all supported languages.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="carousel-slide">
+                        <div class="gameplay-content">
+                            <div class="gameplay-image-wrapper">
+                                <img src="images/player-profile.png" alt="Player profile menu in Woodlanders" class="gameplay-image">
+                            </div>
+                            <div class="gameplay-info">
+                                <h3>👤 Player Profile Menu</h3>
+                                <p>New player profile menu where you set player name, select language, select preferred font and save player profile. Customize your gaming experience with multi-language support and font preferences that persist across sessions.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="feature-card">
-                    <img src="images/rain-planting-.png" alt="Planting bamboo in the rain in Woodlanders" class="feature-image">
-                    <h3>🌧️ Dynamic World</h3>
-                    <p>Experience dynamic weather like rain, and shape the environment by planting new resources like bamboo.</p>
-                </div>
-                <div class="feature-card">
-                    <img src="images/hurt-healthbar-attack.png" alt="Player attacking another player in Woodlanders" class="feature-image">
-                    <h3>⚔️ Combat & Resources</h3>
-                    <p>Engage in combat with other players and interact with the environment. Health bars on players and trees provide clear feedback on damage and harvesting.</p>
-                </div>
-                <div class="feature-card">
-                    <img src="images/miles-exploring.png" alt="Exploring the open world of Woodlanders" class="feature-image">
-                    <h3>🗺️ Infinite Procedurally Generated World</h3>
-                    <p>Explore endlessly with dynamic terrain generation across multiple biomes. Set custom coordinates to navigate to specific destinations, track target locations, or return to spawn at 0,0 using the compass navigation system.</p>
-                </div>
-                <div class="feature-card">
-                    <img src="images/health-hunger.png" alt="Health and Hunger system in Woodlanders" class="feature-image">
-                    <h3>❤️ Health & Hunger System</h3>
-                    <p>Manage your survival with dual health and hunger mechanics. Destroy Apple Trees to restore health and collect apples. Destroy Banana Trees to reduce hunger and gather bananas. All collected items are stored in your inventory for later use. Monitor your status with the unified health bar showing both health (red) and hunger (blue) levels.</p>
-                </div>
-                <div class="feature-card">
-                    <img src="images/controls-menu.png" alt="In-game controls menu in Woodlanders" class="feature-image">
-                    <h3>⌨️ Controls Menu</h3>
-                    <p>Access a comprehensive controls guide directly from the main menu. Learn all movement, combat, inventory, and targeting controls without leaving the game. Available in all supported languages.</p>
-                </div>
-                <div class="feature-card">
-                    <img src="images/player-profile.png" alt="Player profile menu in Woodlanders" class="feature-image">
-                    <h3>👤 Player Profile Menu</h3>
-                    <p>New player profile menu where you set player name, select language, select preferred font and save player profile. Customize your gaming experience with multi-language support and font preferences that persist across sessions.</p>
-                </div>
+                <button class="carousel-nav next" aria-label="Next">›</button>
             </div>
+            <div class="carousel-dots"></div>
         </section>
 
         <section id="feature-highlights">
             <h2>🎯 COMPLETE FEATURE SET 🎯</h2>
-            <div class="features-grid">
-                <div class="feature-category-card">
-                    <h3>🌍 World & Environment</h3>
-                    <ul>
-                        <li>✨ Infinite Procedurally Generated World</li>
-                        <li>🏜️ Multiple Biomes</li>
-                        <li>🌧️ Dynamic Weather System</li>
-                        <li>🧭 Compass Navigation</li>
-                        <li>💾 World Save/Load System</li>
-                    </ul>
+            <div class="feature-showcase">
+                <div class="feature-tabs-vertical">
+                    <button class="feature-tab-btn active" data-feature="world">🌍 World</button>
+                    <button class="feature-tab-btn" data-feature="character">🏃 Character</button>
+                    <button class="feature-tab-btn" data-feature="resources">🌳 Resources</button>
+                    <button class="feature-tab-btn" data-feature="inventory">🎒 Inventory</button>
+                    <button class="feature-tab-btn" data-feature="multiplayer">👥 Multiplayer</button>
+                    <button class="feature-tab-btn" data-feature="ui">🎨 Interface</button>
                 </div>
-                <div class="feature-category-card">
-                    <h3>🏃 Character & Movement</h3>
-                    <ul>
-                        <li>🏃 Animated Player Character</li>
-                        <li>❤️ Health System</li>
-                        <li>🎯 Precise Collision Detection</li>
-                    </ul>
-                </div>
-                <div class="feature-category-card">
-                    <h3>🌳 Trees & Resources</h3>
-                    <ul>
-                        <li>🌳 Multiple Tree Types</li>
-                        <li>⚔️ Combat System</li>
-                        <li>🔄 Health Regeneration</li>
-                        <li>🌵 Environmental Hazards</li>
-                        <li>🎋 Bamboo Planting System</li>
-                        <li>🎯 Tile Targeting System</li>
-                    </ul>
-                </div>
-                <div class="feature-category-card">
-                    <h3>🎒 Inventory & Items</h3>
-                    <ul>
-                        <li>🎒 Inventory System</li>
-                        <li>🍎 Collectible Items</li>
-                        <li>🍌 Auto-Consumption</li>
-                        <li>📦 Item Drops</li>
-                        <li>🔄 Network Sync</li>
-                    </ul>
-                </div>
-                <div class="feature-category-card">
-                    <h3>👥 Multiplayer</h3>
-                    <ul>
-                        <li>🌐 Dedicated Server</li>
-                        <li>👥 Real-time Multiplayer</li>
-                        <li>📡 Connection Quality Indicator</li>
-                        <li>💾 Separate Positions</li>
-                        <li>🔌 Disconnect/Reconnect</li>
-                    </ul>
-                </div>
-                <div class="feature-category-card">
-                    <h3>🎨 User Interface</h3>
-                    <ul>
-                        <li>📋 In-Game Menu System</li>
-                        <li>👤 Player Name Customization</li>
-                        <li>🖥️ HUD Elements</li>
-                        <li>💾 World Management</li>
-                        <li>🎨 Custom Fonts</li>
-                        <li>🌍 Multi-Language Support</li>
-                    </ul>
+                <div class="feature-display">
+                    <div class="feature-panel active" id="world">
+                        <h3>🌍 World & Environment</h3>
+                        <div class="feature-list">
+                            <div class="feature-badge">✨ Infinite Procedurally Generated World</div>
+                            <div class="feature-badge">🏜️ Multiple Biomes</div>
+                            <div class="feature-badge">🌧️ Dynamic Weather System</div>
+                            <div class="feature-badge">🧭 Compass Navigation</div>
+                            <div class="feature-badge">💾 World Save/Load System</div>
+                        </div>
+                    </div>
+                    <div class="feature-panel" id="character">
+                        <h3>🏃 Character & Movement</h3>
+                        <div class="feature-list">
+                            <div class="feature-badge">🏃 Animated Player Character</div>
+                            <div class="feature-badge">❤️ Health & Hunger System</div>
+                            <div class="feature-badge">🎯 Precise Collision Detection</div>
+                            <div class="feature-badge">💀 Death & Respawn Mechanics</div>
+                            <div class="feature-badge">🎨 Directional Sprites</div>
+                        </div>
+                    </div>
+                    <div class="feature-panel" id="resources">
+                        <h3>🌳 Trees & Resources</h3>
+                        <div class="feature-list">
+                            <div class="feature-badge">🌳 6 Unique Tree Types</div>
+                            <div class="feature-badge">⚔️ Combat System</div>
+                            <div class="feature-badge">🔄 Health Regeneration</div>
+                            <div class="feature-badge">🌵 Environmental Hazards</div>
+                            <div class="feature-badge">🎋 Bamboo Planting System</div>
+                            <div class="feature-badge">🎯 Tile Targeting System</div>
+                            <div class="feature-badge">⏱️ Resource Respawn (15min)</div>
+                        </div>
+                    </div>
+                    <div class="feature-panel" id="inventory">
+                        <h3>🎒 Inventory & Items</h3>
+                        <div class="feature-list">
+                            <div class="feature-badge">🎒 6-Slot Inventory System</div>
+                            <div class="feature-badge">🍎 Collectible Items</div>
+                            <div class="feature-badge">🍌 Manual Consumption</div>
+                            <div class="feature-badge">📦 Item Drops from Trees</div>
+                            <div class="feature-badge">🔄 Network Synchronization</div>
+                            <div class="feature-badge">🎯 Auto-Pickup System</div>
+                        </div>
+                    </div>
+                    <div class="feature-panel" id="multiplayer">
+                        <h3>👥 Multiplayer</h3>
+                        <div class="feature-list">
+                            <div class="feature-badge">🌐 Dedicated Server</div>
+                            <div class="feature-badge">👥 Real-time Synchronization</div>
+                            <div class="feature-badge">📡 Connection Quality Indicator</div>
+                            <div class="feature-badge">💾 Separate SP/MP Positions</div>
+                            <div class="feature-badge">🔌 Graceful Disconnect/Reconnect</div>
+                            <div class="feature-badge">🔒 Server-Authoritative</div>
+                            <div class="feature-badge">📨 22+ Message Types</div>
+                        </div>
+                    </div>
+                    <div class="feature-panel" id="ui">
+                        <h3>🎨 User Interface</h3>
+                        <div class="feature-list">
+                            <div class="feature-badge">📋 In-Game Menu System</div>
+                            <div class="feature-badge">👤 Player Name Customization</div>
+                            <div class="feature-badge">🖥️ Comprehensive HUD</div>
+                            <div class="feature-badge">💾 World Management</div>
+                            <div class="feature-badge">🎨 Custom Retro Fonts</div>
+                            <div class="feature-badge">🌍 5 Language Support</div>
+                            <div class="feature-badge">⌨️ In-Game Controls Guide</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
 
         <section id="controls">
             <h2>⌨️ MASTER THE CONTROLS ⌨️</h2>
-            <div class="controls-container">
-                <div class="control-category">
-                    <h4>🎮 MOVEMENT</h4>
-                    <ul>
-                        <li><strong>Arrow Keys:</strong> Move character (Up/Down/Left/Right).</li>
-                        <li>Character automatically animates based on movement direction.</li>
-                    </ul>
+            <div class="controls-tabs">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" data-tab="movement">🎮 Movement</button>
+                    <button class="tab-btn" data-tab="actions">⚡ Actions</button>
+                    <button class="tab-btn" data-tab="targeting">🎯 Targeting</button>
+                    <button class="tab-btn" data-tab="inventory">🎒 Inventory</button>
+                    <button class="tab-btn" data-tab="interface">🖥️ Interface</button>
                 </div>
-                <div class="control-category">
-                    <h4>⚡ ACTIONS</h4>
-                    <ul>
-                        <li><strong>Spacebar:</strong> Context-sensitive action key:
-                            <ul>
-                                <li>When no item selected: Attack nearby trees.</li>
-                                <li>When item selected: Plant item at target location.</li>
-                            </ul>
-                        </li>
-                        <li><strong>Automatic Pickup:</strong> Items are automatically collected when walking near them (within 32 pixels).</li>
-                    </ul>
-                </div>
-                <div class="control-category">
-                    <h4>🎯 TARGETING SYSTEM</h4>
-                    <p>When you select a placeable item (e.g., baby bamboo with key '3'), a white targeting indicator appears:</p>
-                    <ul>
-                        <li><strong>A, W, S, D:</strong> Move target (Left, Up, Down, Right).</li>
-                        <li><strong>Spacebar or P:</strong> Plant item at current target location.</li>
-                        <li><strong>ESC:</strong> Cancel targeting.</li>
-                        <li>Press the item key again to deselect and hide the indicator.</li>
-                    </ul>
-                </div>
-                <div class="control-category">
-                    <h4>🎒 INVENTORY</h4>
-                    <p>Access your inventory to manage items and consumables:</p>
-                    <ul>
-                        <li><strong>"i" Key:</strong> Activate inventory mode</li>
-                        <li><strong>Arrow Keys:</strong> Navigate between items</li>
-                        <li><strong>Spacebar:</strong> Selected item or consume</li>
-                        <li><strong>"i" Key Again:</strong> Deselect inventory and return to player movement</li>
-                        <li><strong>Visual Feedback:</strong> Selected items display a yellow highlight box</li>
-                        <li><strong>Auto-Deselect:</strong> Consuming all items automatically deselects and returns to player control</li>
-                    </ul>
-                </div>
-                <div class="control-category">
-                    <h4>🎮 INTERFACE & MENUS</h4>
-                    <ul>
-                        <li><strong>Escape:</strong> Open/close game menu.</li>
-                        <li><strong>Arrow Keys:</strong> Navigate menu options.</li>
-                        <li><strong>Enter:</strong> Select menu option.</li>
-                        <li><strong>X:</strong> Delete selected save file.</li>
-                    </ul>
+                <div class="tab-content-wrapper">
+                    <div class="tab-content active" id="movement">
+                        <h3>🎮 Movement Controls</h3>
+                        <div class="control-item">
+                            <span class="key-display">↑ ↓ ← →</span>
+                            <p>Move your character in any direction</p>
+                        </div>
+                        <div class="control-note">
+                            <p>💡 Your character automatically animates based on movement direction</p>
+                        </div>
+                    </div>
+                    <div class="tab-content" id="actions">
+                        <h3>⚡ Action Controls</h3>
+                        <div class="control-item">
+                            <span class="key-display">SPACE</span>
+                            <p><strong>No item selected:</strong> Attack nearby trees</p>
+                            <p><strong>Item selected:</strong> Plant item at target location</p>
+                        </div>
+                        <div class="control-note">
+                            <p>💡 Items are automatically collected when you walk near them (within 32 pixels)</p>
+                        </div>
+                    </div>
+                    <div class="tab-content" id="targeting">
+                        <h3>🎯 Targeting System</h3>
+                        <p class="tab-intro">When you select a placeable item, a white targeting indicator appears:</p>
+                        <div class="control-item">
+                            <span class="key-display">W A S D</span>
+                            <p>Move target indicator (Up, Left, Down, Right)</p>
+                        </div>
+                        <div class="control-item">
+                            <span class="key-display">SPACE / P</span>
+                            <p>Plant item at current target location</p>
+                        </div>
+                        <div class="control-item">
+                            <span class="key-display">ESC</span>
+                            <p>Cancel targeting mode</p>
+                        </div>
+                        <div class="control-note">
+                            <p>💡 Press the item key again to deselect and hide the indicator</p>
+                        </div>
+                    </div>
+                    <div class="tab-content" id="inventory">
+                        <h3>🎒 Inventory Management</h3>
+                        <div class="control-item">
+                            <span class="key-display">I</span>
+                            <p>Activate inventory mode</p>
+                        </div>
+                        <div class="control-item">
+                            <span class="key-display">↑ ↓ ← →</span>
+                            <p>Navigate between items in inventory</p>
+                        </div>
+                        <div class="control-item">
+                            <span class="key-display">SPACE</span>
+                            <p>Use selected item or consume food</p>
+                        </div>
+                        <div class="control-item">
+                            <span class="key-display">I</span>
+                            <p>Deselect inventory and return to player movement</p>
+                        </div>
+                        <div class="control-note">
+                            <p>💡 Selected items display a yellow highlight box</p>
+                            <p>💡 Consuming all items automatically returns to player control</p>
+                        </div>
+                    </div>
+                    <div class="tab-content" id="interface">
+                        <h3>🖥️ Interface & Menus</h3>
+                        <div class="control-item">
+                            <span class="key-display">ESC</span>
+                            <p>Open/close game menu</p>
+                        </div>
+                        <div class="control-item">
+                            <span class="key-display">↑ ↓</span>
+                            <p>Navigate menu options</p>
+                        </div>
+                        <div class="control-item">
+                            <span class="key-display">ENTER</span>
+                            <p>Select menu option</p>
+                        </div>
+                        <div class="control-item">
+                            <span class="key-display">X</span>
+                            <p>Delete selected save file</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -246,7 +351,7 @@
     </main>
 
     <footer>
-        <p>&copy; 2024 Woodlanders. Built with AI. Powered by Passion. 🎮</p>
+        <p>&copy; 2025 Woodlanders. Built with AI. Powered by Passion. 🎮</p>
     </footer>
 
     <script src="main.js"></script>

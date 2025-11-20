@@ -1,6 +1,7 @@
 {
   "menu": {
     "player_name": "Spielername",
+    "player_profile": "Spielerprofil",
     "player_location": "Spielerposition",
     "controls": "Steuerung",
     "save_world": "Welt Speichern",
@@ -10,6 +11,13 @@
     "language": "Sprache",
     "disconnect": "Trennen",
     "exit": "Beenden"
+  },
+  "player_profile_menu": {
+    "title": "Spielerprofil",
+    "player_name": "Spielername",
+    "save_player": "Spieler Speichern",
+    "language": "Sprache",
+    "back": "Zurück"
   },
   "language_dialog": {
     "title": "Sprache Wählen",

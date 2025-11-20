@@ -1,6 +1,7 @@
 {
   "menu": {
     "player_name": "Nome do Jogador",
+    "player_profile": "Perfil do Jogador",
     "player_location": "Localização do Jogador",
     "controls": "Controles",
     "save_world": "Salvar Mundo",
@@ -10,6 +11,13 @@
     "language": "Idioma",
     "disconnect": "Desconectar",
     "exit": "Sair"
+  },
+  "player_profile_menu": {
+    "title": "Perfil do Jogador",
+    "player_name": "Nome do Jogador",
+    "save_player": "Salvar Jogador",
+    "language": "Idioma",
+    "back": "Voltar"
   },
   "language_dialog": {
     "title": "Selecionar Idioma",

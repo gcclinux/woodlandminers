@@ -1,6 +1,7 @@
 {
   "menu": {
     "player_name": "Imię Gracza",
+    "player_profile": "Profil Gracza",
     "player_location": "Lokalizacja Gracza",
     "controls": "Sterowanie",
     "save_world": "Zapisz Świat",
@@ -10,6 +11,13 @@
     "language": "Język",
     "disconnect": "Rozłącz",
     "exit": "Wyjście"
+  },
+  "player_profile_menu": {
+    "title": "Profil Gracza",
+    "player_name": "Imię Gracza",
+    "save_player": "Zapisz Gracza",
+    "language": "Język",
+    "back": "Wstecz"
   },
   "language_dialog": {
     "title": "Wybierz Język",

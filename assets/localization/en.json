@@ -1,6 +1,7 @@
 {
   "menu": {
     "player_name": "Player Name",
+    "player_profile": "Player Profile",
     "player_location": "Player Location",
     "controls": "Controls",
     "save_world": "Save World",
@@ -10,6 +11,13 @@
     "language": "Language",
     "disconnect": "Disconnect",
     "exit": "Exit"
+  },
+  "player_profile_menu": {
+    "title": "Player Profile",
+    "player_name": "Player Name",
+    "save_player": "Save Player",
+    "language": "Language",
+    "back": "Back"
   },
   "language_dialog": {
     "title": "Select Language",

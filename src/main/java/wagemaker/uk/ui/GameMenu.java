@@ -36,7 +36,7 @@ public class GameMenu implements LanguageChangeListener {
     private wagemaker.uk.gdx.MyGdxGame gameInstance;
     private wagemaker.uk.inventory.InventoryManager inventoryManager;
     private static final float MENU_WIDTH = 400; // Increased by 60% (250 * 1.6 = 400)
-    private static final float MENU_HEIGHT = 340; // Increased to fit all 9 menu items comfortably
+    private static final float MENU_HEIGHT = 280; // Reduced to fit 7 menu items (was 340 for 9 items)
     private static final float NAME_DIALOG_WIDTH = 384; // Increased by 20% (320 * 1.2 = 384)
     private static final float NAME_DIALOG_HEIGHT = 220;
     
@@ -51,6 +51,9 @@ public class GameMenu implements LanguageChangeListener {
     private ServerHostDialog serverHostDialog;
     private ConnectDialog connectDialog;
     private ErrorDialog errorDialog;
+    
+    // Player profile menu
+    private PlayerProfileMenu playerProfileMenu;
     
     // World save/load components
     private WorldSaveDialog worldSaveDialog;
@@ -86,6 +89,9 @@ public class GameMenu implements LanguageChangeListener {
         serverHostDialog = new ServerHostDialog();
         connectDialog = new ConnectDialog();
         errorDialog = new ErrorDialog();
+        
+        // Initialize player profile menu
+        playerProfileMenu = new PlayerProfileMenu();
         
         // Initialize world save/load components
         worldSaveManager = new WorldSaveManager();
@@ -157,26 +163,22 @@ public class GameMenu implements LanguageChangeListener {
         LocalizationManager loc = LocalizationManager.getInstance();
         
         singleplayerMenuItems = new String[] {
-            loc.getText("menu.player_name"),
+            loc.getText("menu.player_profile"),
             loc.getText("menu.player_location"),
             loc.getText("menu.controls"),
             loc.getText("menu.save_world"),
             loc.getText("menu.load_world"),
             loc.getText("menu.multiplayer"),
-            loc.getText("menu.save_player"),
-            loc.getText("menu.language"),
             loc.getText("menu.exit")
         };
         
         multiplayerMenuItems = new String[] {
-            loc.getText("menu.player_name"),
+            loc.getText("menu.player_profile"),
             loc.getText("menu.player_location"),
             loc.getText("menu.controls"),
             loc.getText("menu.save_world"),
             loc.getText("menu.load_world"),
-            loc.getText("menu.save_player"),
             loc.getText("menu.disconnect"),
-            loc.getText("menu.language"),
             loc.getText("menu.exit")
         };
     }
@@ -689,6 +691,20 @@ public class GameMenu implements LanguageChangeListener {
             return;
         }
         
+        // Handle player profile menu
+        if (playerProfileMenu.isOpen()) {
+            playerProfileMenu.update();
+            // Check if user selected an option
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+                handlePlayerProfileMenuSelection();
+            }
+            // Check if menu was closed (e.g., via ESC key)
+            if (!playerProfileMenu.isOpen()) {
+                isOpen = true; // Return to main menu
+            }
+            return;
+        }
+        
         // Handle multiplayer menu
         if (multiplayerMenu.isOpen()) {
             multiplayerMenu.update();
@@ -775,7 +791,7 @@ public class GameMenu implements LanguageChangeListener {
             return;
         }
         
-        if (!isOpen && !nameDialogOpen && !multiplayerMenu.isOpen()) return;
+        if (!isOpen && !nameDialogOpen && !multiplayerMenu.isOpen() && !playerProfileMenu.isOpen()) return;
 
         batch.begin();
         
@@ -856,6 +872,11 @@ public class GameMenu implements LanguageChangeListener {
         if (multiplayerMenu.isOpen()) {
             multiplayerMenu.render(batch, shapeRenderer, camX, camY, viewWidth, viewHeight);
         }
+        
+        // Render player profile menu if open
+        if (playerProfileMenu.isOpen()) {
+            playerProfileMenu.render(batch, shapeRenderer, camX, camY, viewWidth, viewHeight);
+        }
     }
 
     private void executeMenuItem(int index) {
@@ -864,7 +885,9 @@ public class GameMenu implements LanguageChangeListener {
         
         LocalizationManager loc = LocalizationManager.getInstance();
         
-        if (selectedItem.equals(loc.getText("menu.player_name"))) {
+        if (selectedItem.equals(loc.getText("menu.player_profile"))) {
+            openPlayerProfileMenu();
+        } else if (selectedItem.equals(loc.getText("menu.player_name"))) {
             openNameDialog();
         } else if (selectedItem.equals(loc.getText("menu.player_location"))) {
             openPlayerLocationDialog();
@@ -950,6 +973,14 @@ public class GameMenu implements LanguageChangeListener {
     private void openMultiplayerMenu() {
         isOpen = false; // Close main menu
         multiplayerMenu.open();
+    }
+    
+    /**
+     * Opens the player profile menu.
+     */
+    private void openPlayerProfileMenu() {
+        isOpen = false; // Close main menu
+        playerProfileMenu.open();
     }
     
     /**
@@ -1256,6 +1287,29 @@ public class GameMenu implements LanguageChangeListener {
             connectDialog.show(lastServer);
         } else if (selectedIndex == 2) { // Back
             multiplayerMenu.close();
+            isOpen = true; // Return to main menu
+        }
+    }
+    
+    /**
+     * Handles selection in the player profile menu.
+     */
+    private void handlePlayerProfileMenuSelection() {
+        int selectedIndex = playerProfileMenu.getSelectedIndex();
+        LocalizationManager loc = LocalizationManager.getInstance();
+        
+        if (selectedIndex == 0) { // Player Name
+            playerProfileMenu.close();
+            openNameDialog();
+        } else if (selectedIndex == 1) { // Save Player
+            playerProfileMenu.close();
+            savePlayerPosition();
+            isOpen = true; // Return to main menu after saving
+        } else if (selectedIndex == 2) { // Language
+            playerProfileMenu.close();
+            openLanguageDialog();
+        } else if (selectedIndex == 3) { // Back
+            playerProfileMenu.close();
             isOpen = true; // Return to main menu
         }
     }
@@ -1595,7 +1649,8 @@ public class GameMenu implements LanguageChangeListener {
     public boolean isAnyMenuOpen() {
         return isOpen || 
                nameDialogOpen || 
-               multiplayerMenu.isOpen() || 
+               multiplayerMenu.isOpen() ||
+               playerProfileMenu.isOpen() ||
                errorDialog.isVisible() || 
                connectDialog.isVisible() || 
                serverHostDialog.isVisible() ||
@@ -1698,6 +1753,9 @@ public class GameMenu implements LanguageChangeListener {
         }
         if (multiplayerMenu != null) {
             multiplayerMenu.dispose();
+        }
+        if (playerProfileMenu != null) {
+            playerProfileMenu.dispose();
         }
         if (serverHostDialog != null) {
             serverHostDialog.dispose();

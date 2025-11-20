@@ -1,6 +1,7 @@
 {
   "menu": {
     "player_name": "Spelersnaam",
+    "player_profile": "Spelersprofiel",
     "player_location": "Speler Locatie",
     "controls": "Besturing",
     "save_world": "Wereld Opslaan",
@@ -10,6 +11,13 @@
     "language": "Taal",
     "disconnect": "Verbinding Verbreken",
     "exit": "Afsluiten"
+  },
+  "player_profile_menu": {
+    "title": "Spelersprofiel",
+    "player_name": "Spelersnaam",
+    "save_player": "Speler Opslaan",
+    "language": "Taal",
+    "back": "Terug"
   },
   "language_dialog": {
     "title": "Selecteer Taal",

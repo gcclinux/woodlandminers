@@ -105,21 +105,16 @@ When you select a placeable item (e.g., baby bamboo with key '3'), a white targe
 - **W** - Move target up
 - **D** - Move target right
 - **S** - Move target down
-- **Spacebar** or **P** - Plant item at current target location
+- **Spacebar** - Plant item at current target location
 - **ESC** - Cancel targeting
 - **Press item key again** - Deselect item and hide targeting indicator
 
 The targeting system stays active as long as an item is selected, allowing you to plant multiple items quickly without reactivating targeting.
 
 ### Inventory
-- **1-6 Keys** - Select/deselect inventory slots (toggle selection)
-  - **1** - Apples (consumable)
-  - **2** - Bananas (consumable)
-  - **3** - Baby Bamboo (placeable on sand)
-  - **4** - Bamboo Stack (resource)
-  - **5** - Wood Stack (resource)
-  - **6** - Pebbles (resource)
-- **Tab** - Toggle inventory display
+- **"i" Keys** - "i" to activate inventory slots (toggle selection)
+  -  **Arrow Keys** - Move between items (Up/Down/Left/Right)
+  - **Spacebar** - Plant item or consume food
 - Selected items show a yellow highlight box
 
 ### Interface

@@ -35,7 +35,7 @@
             <p>The goal was simple yet audacious: build a complete, enjoyable multiplayer game in Java using only AI prompts and requests. No direct code writing. No manual debugging. Just describing what we wanted, and letting Kiro AI bring it to life.</p>
             
             <h3>📊 Project Status & Progress</h3>
-            <p><strong>Current Version:</strong> 0.0.16 | <strong>Status:</strong> Active Development</p>
+            <p><strong>Current Build Version:</strong> 0.0.17 | <strong>Status:</strong> Active Development</p>
             <p>Woodlanders has evolved from concept to a feature-rich multiplayer game with 20+ completed systems. The project uses two complementary development approaches:</p>
             <ul style="text-align: left; max-width: 800px; margin: 1rem auto; list-style: none;">
                 <li>🌊 <strong>Kiro AI Vibe:</strong> Rapid prototyping and iterative feature additions through natural conversation</li>
@@ -91,7 +91,12 @@
                 <div class="feature-card">
                     <img src="images/miles-exploring.png" alt="Exploring the open world of Woodlanders" class="feature-image">
                     <h3>🗺️ Infinite Procedurally Generated World</h3>
-                    <p>Explore endlessly with dynamic terrain generation across multiple biomes.</p>
+                    <p>Explore endlessly with dynamic terrain generation across multiple biomes. Set custom coordinates to navigate to specific destinations, track target locations, or return to spawn at 0,0 using the compass navigation system.</p>
+                </div>
+                <div class="feature-card">
+                    <img src="images/health-hunger.png" alt="Health and Hunger system in Woodlanders" class="feature-image">
+                    <h3>❤️ Health & Hunger System</h3>
+                    <p>Manage your survival with dual health and hunger mechanics. Destroy Apple Trees to restore health and collect apples. Destroy Banana Trees to reduce hunger and gather bananas. All collected items are stored in your inventory for later use. Monitor your status with the unified health bar showing both health (red) and hunger (blue) levels.</p>
                 </div>
             </div>
         </section>
@@ -196,17 +201,14 @@
                 </div>
                 <div class="control-category">
                     <h4>🎒 INVENTORY</h4>
+                    <p>Access your inventory to manage items and consumables:</p>
                     <ul>
-                        <li><strong>1-6 Keys:</strong> Select/deselect inventory slots.</li>
-                        <ul>
-                            <li><strong>1:</strong> Apples (consumable)</li>
-                            <li><strong>2:</strong> Bananas (consumable)</li>
-                            <li><strong>3:</strong> Baby Bamboo (placeable)</li>
-                            <li><strong>4:</strong> Bamboo Stack (resource)</li>
-                            <li><strong>5:</strong> Wood Stack (resource)</li>
-                            <li><strong>6:</strong> Pebbles (resource)</li>
-                        </ul>
-                        <li><strong>Tab:</strong> Toggle inventory display.</li>
+                        <li><strong>"i" Key:</strong> Activate inventory mode</li>
+                        <li><strong>Arrow Keys:</strong> Navigate between items</li>
+                        <li><strong>Spacebar:</strong> Selected item or consume</li>
+                        <li><strong>"i" Key Again:</strong> Deselect inventory and return to player movement</li>
+                        <li><strong>Visual Feedback:</strong> Selected items display a yellow highlight box</li>
+                        <li><strong>Auto-Deselect:</strong> Consuming all items automatically deselects and returns to player control</li>
                     </ul>
                 </div>
                 <div class="control-category">

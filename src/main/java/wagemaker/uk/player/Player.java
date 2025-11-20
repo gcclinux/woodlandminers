@@ -814,14 +814,9 @@ public class Player {
                     attackedSomething = true;
                     
                     if (destroyed) {
-                        // FIRST: Immediate health restoration (10%)
-                        float currentHealth = health;
-                        health = Math.min(100, currentHealth + 10);
-                        System.out.println("Apple tree destroyed! Health restored: 10% (from " + currentHealth + " to " + health + ")");
-                        
-                        // THEN: Spawn apple at tree position
+                        // Spawn apple at tree position (no automatic healing)
                         apples.put(targetKey, new Apple(targetAppleTree.getX(), targetAppleTree.getY()));
-                        System.out.println("Apple dropped at: " + targetAppleTree.getX() + ", " + targetAppleTree.getY());
+                        System.out.println("Apple tree destroyed! Apple dropped at: " + targetAppleTree.getX() + ", " + targetAppleTree.getY());
                         
                         // Register for respawn before removing
                         if (gameInstance != null && gameInstance instanceof wagemaker.uk.gdx.MyGdxGame) {

@@ -14,6 +14,7 @@ public class PlayerConfig {
     private String lastServer;
     private Float compassTargetX;
     private Float compassTargetY;
+    private String language;
     
     /**
      * Private constructor. Use load() to create instances.
@@ -22,6 +23,7 @@ public class PlayerConfig {
         this.lastServer = null;
         this.compassTargetX = null;
         this.compassTargetY = null;
+        this.language = null;
     }
     
     /**
@@ -92,6 +94,9 @@ public class PlayerConfig {
             // Parse the lastServer field
             config.lastServer = parseJsonString(jsonContent, "\"lastServer\":");
             
+            // Parse the language field
+            config.language = parseJsonString(jsonContent, "\"language\":");
+            
             // Parse the compassTarget fields
             String compassTargetXStr = parseJsonNumber(jsonContent, "\"compassTarget\":", "\"x\":");
             String compassTargetYStr = parseJsonNumber(jsonContent, "\"compassTarget\":", "\"y\":");
@@ -118,6 +123,9 @@ public class PlayerConfig {
             }
             if (config.compassTargetX != null && config.compassTargetY != null) {
                 System.out.println("Compass target: (" + config.compassTargetX + ", " + config.compassTargetY + ")");
+            }
+            if (config.language != null) {
+                System.out.println("Language: " + config.language);
             }
             
         } catch (IOException e) {
@@ -335,6 +343,14 @@ public class PlayerConfig {
             hasFields = true;
         }
         
+        if (language != null && !language.isEmpty()) {
+            if (hasFields) {
+                json.append(",\n");
+            }
+            json.append("  \"language\": \"").append(language).append("\"");
+            hasFields = true;
+        }
+        
         if (compassTargetX != null && compassTargetY != null) {
             if (hasFields) {
                 json.append(",\n");
@@ -518,6 +534,30 @@ public class PlayerConfig {
         } catch (Exception e) {
             // Catch any unexpected exceptions to ensure this method never crashes the application
             System.err.println("Unexpected error clearing compass target: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Retrieves the saved language preference.
+     * 
+     * @return The language code, or null if not set
+     */
+    public String getLanguage() {
+        return language;
+    }
+    
+    /**
+     * Saves the language preference and persists it to disk.
+     * 
+     * @param languageCode The language code to save
+     */
+    public void saveLanguage(String languageCode) {
+        try {
+            this.language = languageCode;
+            save();
+            System.out.println("Saved language preference: " + languageCode);
+        } catch (Exception e) {
+            System.err.println("Unexpected error saving language preference: " + e.getMessage());
         }
     }
     

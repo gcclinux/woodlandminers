@@ -1,5 +1,7 @@
 # Woodlanders - A 2D Multiplayer Adventure
 
+## 🌐 [Play Woodlanders - Official Game Homepage](https://gcclinux.github.io/Woodlanders/)
+
 ## 🎮 The AI-Driven Game Development Story
 
 **Woodlanders** is an ambitious experiment in AI-assisted game development - a fully functional multiplayer 2D adventure game built entirely through conversational AI within the **Kiro IDE**. This project demonstrates what's possible when human creativity meets AI capabilities: no manual coding, just natural language prompts, specifications, and iterative refinement.
@@ -17,8 +19,8 @@ The goal was simple yet audacious: **build a complete, enjoyable multiplayer gam
 <div align="center">
 
 ### Player Location Compass
-![Latest 0.0.12](screenshots/mp-location-compas.png)
-*The compass can now guide you until the other players if entred their location*
+![Latest 0.0.17](www/images/health-hunger.png)
+*Demonstrating the Health and Hunger player statusBar*
 
 </div>
 

@@ -24,6 +24,8 @@ dependencies {
     testImplementation 'org.mockito:mockito-junit-jupiter:5.5.0'
     testImplementation "com.badlogicgames.gdx:gdx-backend-headless:$gdxVersion"
     testImplementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+    testImplementation 'com.pholser:junit-quickcheck-core:1.0'
+    testImplementation 'com.pholser:junit-quickcheck-generators:1.0'
 }
 
 test {

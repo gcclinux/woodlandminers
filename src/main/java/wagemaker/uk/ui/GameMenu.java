@@ -36,7 +36,7 @@ public class GameMenu implements LanguageChangeListener {
     private wagemaker.uk.gdx.MyGdxGame gameInstance;
     private wagemaker.uk.inventory.InventoryManager inventoryManager;
     private static final float MENU_WIDTH = 400; // Increased by 60% (250 * 1.6 = 400)
-    private static final float MENU_HEIGHT = 310; // Increased to fit all 8 menu items comfortably
+    private static final float MENU_HEIGHT = 340; // Increased to fit all 9 menu items comfortably
     private static final float NAME_DIALOG_WIDTH = 384; // Increased by 20% (320 * 1.2 = 384)
     private static final float NAME_DIALOG_HEIGHT = 220;
     
@@ -63,6 +63,9 @@ public class GameMenu implements LanguageChangeListener {
     
     // Player location dialog
     private PlayerLocationDialog playerLocationDialog;
+    
+    // Controls dialog
+    private ControlsDialog controlsDialog;
     
     // Compass reference for custom target
     private Compass compass;
@@ -95,6 +98,9 @@ public class GameMenu implements LanguageChangeListener {
         
         // Initialize player location dialog
         playerLocationDialog = new PlayerLocationDialog();
+        
+        // Initialize controls dialog
+        controlsDialog = new ControlsDialog();
         
         // Register as language change listener
         LocalizationManager.getInstance().addLanguageChangeListener(this);
@@ -153,6 +159,7 @@ public class GameMenu implements LanguageChangeListener {
         singleplayerMenuItems = new String[] {
             loc.getText("menu.player_name"),
             loc.getText("menu.player_location"),
+            loc.getText("menu.controls"),
             loc.getText("menu.save_world"),
             loc.getText("menu.load_world"),
             loc.getText("menu.multiplayer"),
@@ -164,6 +171,7 @@ public class GameMenu implements LanguageChangeListener {
         multiplayerMenuItems = new String[] {
             loc.getText("menu.player_name"),
             loc.getText("menu.player_location"),
+            loc.getText("menu.controls"),
             loc.getText("menu.save_world"),
             loc.getText("menu.load_world"),
             loc.getText("menu.save_player"),
@@ -671,6 +679,11 @@ public class GameMenu implements LanguageChangeListener {
             return;
         }
         
+        if (controlsDialog.isVisible()) {
+            controlsDialog.handleInput();
+            return;
+        }
+        
         if (nameDialogOpen) {
             handleNameDialogInput();
             return;
@@ -754,6 +767,11 @@ public class GameMenu implements LanguageChangeListener {
         
         if (playerLocationDialog.isVisible()) {
             playerLocationDialog.render(batch, shapeRenderer, camX, camY);
+            return;
+        }
+        
+        if (controlsDialog.isVisible()) {
+            controlsDialog.render(batch, shapeRenderer, camX, camY);
             return;
         }
         
@@ -850,6 +868,8 @@ public class GameMenu implements LanguageChangeListener {
             openNameDialog();
         } else if (selectedItem.equals(loc.getText("menu.player_location"))) {
             openPlayerLocationDialog();
+        } else if (selectedItem.equals(loc.getText("menu.controls"))) {
+            openControlsDialog();
         } else if (selectedItem.equals(loc.getText("menu.save_world"))) {
             openWorldSaveDialog();
         } else if (selectedItem.equals(loc.getText("menu.load_world"))) {
@@ -883,6 +903,14 @@ public class GameMenu implements LanguageChangeListener {
         isOpen = false; // Close main menu
         PlayerConfig config = PlayerConfig.load();
         playerLocationDialog.show(player, compass, config);
+    }
+    
+    /**
+     * Opens the controls dialog.
+     */
+    private void openControlsDialog() {
+        isOpen = false; // Close main menu
+        controlsDialog.show();
     }
     
     /**
@@ -1440,6 +1468,10 @@ public class GameMenu implements LanguageChangeListener {
                 jsonBuilder.append(String.format("  \"lastServer\": \"%s\",\n", lastServer));
             }
             
+            // Include current language
+            String currentLanguage = LocalizationManager.getInstance().getCurrentLanguage();
+            jsonBuilder.append(String.format("  \"language\": \"%s\",\n", currentLanguage));
+            
             jsonBuilder.append(String.format("  \"savedAt\": \"%s\"\n", new java.util.Date().toString()));
             jsonBuilder.append("}");
             
@@ -1571,7 +1603,8 @@ public class GameMenu implements LanguageChangeListener {
                worldLoadDialog.isVisible() ||
                worldManageDialog.isVisible() ||
                languageDialog.isVisible() ||
-               playerLocationDialog.isVisible();
+               playerLocationDialog.isVisible() ||
+               controlsDialog.isVisible();
     }
     
     /**
@@ -1689,6 +1722,9 @@ public class GameMenu implements LanguageChangeListener {
         }
         if (playerLocationDialog != null) {
             playerLocationDialog.dispose();
+        }
+        if (controlsDialog != null) {
+            controlsDialog.dispose();
         }
         
         // Unregister from language change listener

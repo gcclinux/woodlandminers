@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
+import wagemaker.uk.client.PlayerConfig;
 
 import java.util.*;
 
@@ -57,8 +58,9 @@ public class LocalizationManager {
         // Load fallback language first
         loadLanguageFile(DEFAULT_LANGUAGE, fallbackTranslations);
         
-        // Check for saved language preference
-        String savedLanguage = loadLanguagePreference();
+        // Check for saved language preference in PlayerConfig
+        PlayerConfig config = PlayerConfig.load();
+        String savedLanguage = config.getLanguage();
         
         String languageToLoad;
         if (savedLanguage != null && isSupportedLanguage(savedLanguage)) {
@@ -316,8 +318,9 @@ public class LocalizationManager {
         loadLanguageFile(languageCode, translations);
         currentLanguage = languageCode;
         
-        // Save preference
-        saveLanguagePreference(languageCode);
+        // Save preference to PlayerConfig
+        PlayerConfig config = PlayerConfig.load();
+        config.saveLanguage(languageCode);
         
         // Notify listeners
         notifyLanguageChanged();
@@ -360,43 +363,5 @@ public class LocalizationManager {
         }
     }
     
-    /**
-     * Save the language preference to player configuration.
-     * Uses LibGDX Preferences for simple key-value storage.
-     * 
-     * @param languageCode The language code to save
-     */
-    private void saveLanguagePreference(String languageCode) {
-        try {
-            com.badlogic.gdx.Preferences prefs = Gdx.app.getPreferences("woodlanders");
-            prefs.putString("language", languageCode);
-            prefs.flush();
-            System.out.println("Language preference saved: " + languageCode);
-        } catch (Exception e) {
-            System.err.println("Error saving language preference: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-    
-    /**
-     * Load the saved language preference from player configuration.
-     * 
-     * @return The saved language code, or null if not found
-     */
-    private String loadLanguagePreference() {
-        try {
-            com.badlogic.gdx.Preferences prefs = Gdx.app.getPreferences("woodlanders");
-            String savedLanguage = prefs.getString("language", null);
-            
-            if (savedLanguage != null) {
-                System.out.println("Loaded language preference: " + savedLanguage);
-            }
-            
-            return savedLanguage;
-        } catch (Exception e) {
-            System.err.println("Error loading language preference: " + e.getMessage());
-            e.printStackTrace();
-            return null;
-        }
-    }
+
 }

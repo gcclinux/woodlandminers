@@ -14,10 +14,17 @@
   },
   "player_profile_menu": {
     "title": "Profil Gracza",
-    "player_name": "Imię Gracza",
+    "player_name": "Nazwa Gracza",
     "save_player": "Zapisz Gracza",
     "language": "Język",
+    "menu_font": "Menu Czcionki",
     "back": "Wstecz"
+  },
+  "font_selection_dialog": {
+    "title": "Wybierz Czcionkę Menu",
+    "current": "Obecna Czcionka",
+    "select_instruction": "Góra/Dół aby wybrać, Enter aby potwierdzić",
+    "cancel_instruction": "ESC aby anulować"
   },
   "language_dialog": {
     "title": "Wybierz Język",

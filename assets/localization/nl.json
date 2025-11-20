@@ -13,11 +13,18 @@
     "exit": "Afsluiten"
   },
   "player_profile_menu": {
-    "title": "Spelersprofiel",
+    "title": "Spelerprofiel",
     "player_name": "Spelersnaam",
     "save_player": "Speler Opslaan",
     "language": "Taal",
+    "menu_font": "Lettertype Menu",
     "back": "Terug"
+  },
+  "font_selection_dialog": {
+    "title": "Selecteer Menu Lettertype",
+    "current": "Huidig Lettertype",
+    "select_instruction": "Omhoog/Omlaag om te selecteren, Enter om te bevestigen",
+    "cancel_instruction": "ESC om te annuleren"
   },
   "language_dialog": {
     "title": "Selecteer Taal",

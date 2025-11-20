@@ -17,7 +17,14 @@
     "player_name": "Player Name",
     "save_player": "Save Player",
     "language": "Language",
+    "menu_font": "Font Menu",
     "back": "Back"
+  },
+  "font_selection_dialog": {
+    "title": "Select Menu Font",
+    "current": "Current Font",
+    "select_instruction": "Up/Down to select, Enter to confirm",
+    "cancel_instruction": "ESC to cancel"
   },
   "language_dialog": {
     "title": "Select Language",

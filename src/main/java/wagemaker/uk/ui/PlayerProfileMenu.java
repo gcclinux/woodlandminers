@@ -18,14 +18,14 @@ import wagemaker.uk.localization.LanguageChangeListener;
  * This menu appears when "Player Profile" is selected from the main menu.
  * It contains options for Player Name, Save Player, and Language.
  */
-public class PlayerProfileMenu implements LanguageChangeListener {
+public class PlayerProfileMenu implements LanguageChangeListener, FontChangeListener {
     private boolean isOpen = false;
     private int selectedIndex = 0;
     private String[] menuOptions;
     
     // Visual properties
     private static final float MENU_WIDTH = 400;
-    private static final float MENU_HEIGHT = 240;
+    private static final float MENU_HEIGHT = 275;
     
     // Wooden plank background
     private Texture woodenPlank;
@@ -43,6 +43,9 @@ public class PlayerProfileMenu implements LanguageChangeListener {
         // Register as language change listener
         LocalizationManager.getInstance().addLanguageChangeListener(this);
         
+        // Register as font change listener
+        FontManager.getInstance().addFontChangeListener(this);
+        
         // Initialize menu options with localized text
         updateMenuOptions();
     }
@@ -51,26 +54,8 @@ public class PlayerProfileMenu implements LanguageChangeListener {
      * Creates a custom font for the menu.
      */
     private void createMenuFont() {
-        try {
-            FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/Sancreek-Regular.ttf"));
-            FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-            parameter.size = 16;
-            parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS + "ąćęłńóśźżĄĆĘŁŃÓŚŹŻãõâêôáéíóúàçÃÕÂÊÔÁÉÍÓÚÀÇäöüßÄÖÜ";
-            parameter.color = Color.WHITE;
-            parameter.borderWidth = 1;
-            parameter.borderColor = Color.BLACK;
-            parameter.shadowOffsetX = 1;
-            parameter.shadowOffsetY = 1;
-            parameter.shadowColor = Color.BLACK;
-            
-            menuFont = generator.generateFont(parameter);
-            generator.dispose();
-        } catch (Exception e) {
-            System.out.println("Could not load custom font for PlayerProfileMenu, using default: " + e.getMessage());
-            menuFont = new BitmapFont();
-            menuFont.getData().setScale(1.2f);
-            menuFont.setColor(Color.WHITE);
-        }
+        // Use FontManager to get the current font
+        menuFont = FontManager.getInstance().getCurrentFont();
     }
     
     /**
@@ -83,6 +68,7 @@ public class PlayerProfileMenu implements LanguageChangeListener {
             loc.getText("player_profile_menu.player_name"),
             loc.getText("player_profile_menu.save_player"),
             loc.getText("player_profile_menu.language"),
+            loc.getText("player_profile_menu.menu_font"),
             loc.getText("player_profile_menu.back")
         };
     }
@@ -97,6 +83,13 @@ public class PlayerProfileMenu implements LanguageChangeListener {
     public void onLanguageChanged(String newLanguage) {
         System.out.println("PlayerProfileMenu: Language changed to " + newLanguage);
         updateMenuOptions();
+    }
+    
+    @Override
+    public void onFontChanged(FontType newFont) {
+        System.out.println("PlayerProfileMenu: Font changed to " + newFont.getDisplayName());
+        // Reload the font
+        createMenuFont();
     }
     
     /**
@@ -236,11 +229,12 @@ public class PlayerProfileMenu implements LanguageChangeListener {
         if (woodenPlank != null) {
             woodenPlank.dispose();
         }
-        if (menuFont != null) {
-            menuFont.dispose();
-        }
+        // Don't dispose menuFont - it's managed by FontManager
         
         // Unregister from language change listener
         LocalizationManager.getInstance().removeLanguageChangeListener(this);
+        
+        // Unregister from font change listener
+        FontManager.getInstance().removeFontChangeListener(this);
     }
 }

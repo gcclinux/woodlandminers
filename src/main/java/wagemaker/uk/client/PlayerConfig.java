@@ -15,6 +15,7 @@ public class PlayerConfig {
     private Float compassTargetX;
     private Float compassTargetY;
     private String language;
+    private String fontName;
     
     /**
      * Private constructor. Use load() to create instances.
@@ -24,6 +25,7 @@ public class PlayerConfig {
         this.compassTargetX = null;
         this.compassTargetY = null;
         this.language = null;
+        this.fontName = null;
     }
     
     /**
@@ -97,6 +99,9 @@ public class PlayerConfig {
             // Parse the language field
             config.language = parseJsonString(jsonContent, "\"language\":");
             
+            // Parse the fontName field
+            config.fontName = parseJsonString(jsonContent, "\"fontName\":");
+            
             // Parse the compassTarget fields
             String compassTargetXStr = parseJsonNumber(jsonContent, "\"compassTarget\":", "\"x\":");
             String compassTargetYStr = parseJsonNumber(jsonContent, "\"compassTarget\":", "\"y\":");
@@ -126,6 +131,9 @@ public class PlayerConfig {
             }
             if (config.language != null) {
                 System.out.println("Language: " + config.language);
+            }
+            if (config.fontName != null) {
+                System.out.println("Font: " + config.fontName);
             }
             
         } catch (IOException e) {
@@ -351,6 +359,14 @@ public class PlayerConfig {
             hasFields = true;
         }
         
+        if (fontName != null && !fontName.isEmpty()) {
+            if (hasFields) {
+                json.append(",\n");
+            }
+            json.append("  \"fontName\": \"").append(fontName).append("\"");
+            hasFields = true;
+        }
+        
         if (compassTargetX != null && compassTargetY != null) {
             if (hasFields) {
                 json.append(",\n");
@@ -558,6 +574,30 @@ public class PlayerConfig {
             System.out.println("Saved language preference: " + languageCode);
         } catch (Exception e) {
             System.err.println("Unexpected error saving language preference: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Retrieves the saved font preference.
+     * 
+     * @return The font name, or null if not set
+     */
+    public String getFontName() {
+        return fontName;
+    }
+    
+    /**
+     * Saves the font preference and persists it to disk.
+     * 
+     * @param fontName The font name to save
+     */
+    public void setFontName(String fontName) {
+        try {
+            this.fontName = fontName;
+            save();
+            System.out.println("Saved font preference: " + fontName);
+        } catch (Exception e) {
+            System.err.println("Unexpected error saving font preference: " + e.getMessage());
         }
     }
     

@@ -6,6 +6,7 @@ import com.badlogic.gdx.backends.headless.HeadlessApplication;
 import com.badlogic.gdx.backends.headless.HeadlessApplicationConfiguration;
 import org.junit.jupiter.api.*;
 
+import java.io.File;
 import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -46,12 +47,37 @@ public class LocalizationIntegrationTest {
     
     @BeforeEach
     public void setUp() {
+        // Delete PlayerConfig file to ensure clean state for each test
+        deletePlayerConfig();
+        
         // Clear any saved preferences before each test
         try {
             Gdx.app.getPreferences("woodlanders").clear();
             Gdx.app.getPreferences("woodlanders").flush();
         } catch (Exception e) {
             // Ignore if preferences don't exist
+        }
+    }
+    
+    private void deletePlayerConfig() {
+        try {
+            String userHome = System.getProperty("user.home");
+            String os = System.getProperty("os.name").toLowerCase();
+            File configFile;
+            
+            if (os.contains("win")) {
+                configFile = new File(userHome, "AppData/Roaming/Woodlanders/woodlanders.json");
+            } else if (os.contains("mac")) {
+                configFile = new File(userHome, "Library/Application Support/Woodlanders/woodlanders.json");
+            } else {
+                configFile = new File(userHome, ".config/woodlanders/woodlanders.json");
+            }
+            
+            if (configFile.exists()) {
+                configFile.delete();
+            }
+        } catch (Exception e) {
+            // Ignore errors during test cleanup
         }
     }
     

@@ -15,9 +15,16 @@
   "player_profile_menu": {
     "title": "Spielerprofil",
     "player_name": "Spielername",
-    "save_player": "Spieler Speichern",
+    "save_player": "Spieler speichern",
     "language": "Sprache",
+    "menu_font": "Schriftart-Menü",
     "back": "Zurück"
+  },
+  "font_selection_dialog": {
+    "title": "Menüschriftart wählen",
+    "current": "Aktuelle Schriftart",
+    "select_instruction": "Hoch/Runter zum Auswählen, Enter zum Bestätigen",
+    "cancel_instruction": "ESC zum Abbrechen"
   },
   "language_dialog": {
     "title": "Sprache Wählen",

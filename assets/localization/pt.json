@@ -17,7 +17,14 @@
     "player_name": "Nome do Jogador",
     "save_player": "Salvar Jogador",
     "language": "Idioma",
+    "menu_font": "Menu de Fonte",
     "back": "Voltar"
+  },
+  "font_selection_dialog": {
+    "title": "Selecionar Fonte do Menu",
+    "current": "Fonte Atual",
+    "select_instruction": "Cima/Baixo para selecionar, Enter para confirmar",
+    "cancel_instruction": "ESC para cancelar"
   },
   "language_dialog": {
     "title": "Selecionar Idioma",

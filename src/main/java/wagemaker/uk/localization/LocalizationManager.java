@@ -58,12 +58,6 @@ public class LocalizationManager {
         // Load fallback language first
         loadLanguageFile(DEFAULT_LANGUAGE, fallbackTranslations);
         
-        // TEMPORARY: Force English as default for testing
-        // TODO: Remove this and restore original logic once testing is complete
-        String languageToLoad = "en";
-        System.out.println("TESTING MODE: Forcing English language");
-        
-        /* Original code - commented out for testing:
         // Check for saved language preference in PlayerConfig
         PlayerConfig config = PlayerConfig.load();
         String savedLanguage = config.getLanguage();
@@ -77,7 +71,6 @@ public class LocalizationManager {
             languageToLoad = detectSystemLocale();
             System.out.println("Detected system language: " + languageToLoad);
         }
-        */
         
         // Load the selected language
         loadLanguageFile(languageToLoad, translations);

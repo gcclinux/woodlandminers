@@ -23,7 +23,7 @@ import wagemaker.uk.world.WorldSaveData;
 import wagemaker.uk.localization.LocalizationManager;
 import wagemaker.uk.localization.LanguageChangeListener;
 
-public class GameMenu implements LanguageChangeListener {
+public class GameMenu implements LanguageChangeListener, FontChangeListener {
     private boolean isOpen = false;
     private Texture woodenPlank;
     private BitmapFont font;
@@ -36,12 +36,13 @@ public class GameMenu implements LanguageChangeListener {
     private wagemaker.uk.gdx.MyGdxGame gameInstance;
     private wagemaker.uk.inventory.InventoryManager inventoryManager;
     private static final float MENU_WIDTH = 400; // Increased by 60% (250 * 1.6 = 400)
-    private static final float MENU_HEIGHT = 280; // Reduced to fit 7 menu items (was 340 for 9 items)
+    private static final float MENU_HEIGHT = 340; // Increased to fit 9 menu items
     private static final float NAME_DIALOG_WIDTH = 384; // Increased by 20% (320 * 1.2 = 384)
     private static final float NAME_DIALOG_HEIGHT = 220;
     
     // Player name dialog
     private boolean nameDialogOpen = false;
+    private boolean nameDialogFromProfile = false; // Track if opened from player profile
     private String playerName = "Player";
     private String inputBuffer = "";
     private Texture nameDialogPlank; // Separate texture for name dialog
@@ -64,11 +65,19 @@ public class GameMenu implements LanguageChangeListener {
     // Language dialog
     private LanguageDialog languageDialog;
     
+    // Font selection dialog
+    private FontSelectionDialog fontSelectionDialog;
+    
     // Player location dialog
     private PlayerLocationDialog playerLocationDialog;
     
     // Controls dialog
     private ControlsDialog controlsDialog;
+    
+    // Notification system for save confirmation
+    private boolean showSaveNotification = false;
+    private float saveNotificationTimer = 0f;
+    private static final float SAVE_NOTIFICATION_DURATION = 2.0f; // 2 seconds
     
     // Compass reference for custom target
     private Compass compass;
@@ -102,6 +111,9 @@ public class GameMenu implements LanguageChangeListener {
         // Initialize language dialog
         languageDialog = new LanguageDialog();
         
+        // Initialize font selection dialog
+        fontSelectionDialog = new FontSelectionDialog();
+        
         // Initialize player location dialog
         playerLocationDialog = new PlayerLocationDialog();
         
@@ -111,32 +123,16 @@ public class GameMenu implements LanguageChangeListener {
         // Register as language change listener
         LocalizationManager.getInstance().addLanguageChangeListener(this);
         
+        // Register as font change listener
+        FontManager.getInstance().addFontChangeListener(this);
+        
         // Initialize menu items with localized text
         updateMenuItems();
     }
     
     private void createPlayerNameFont() {
-        try {
-            FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/Sancreek-Regular.ttf"));
-            FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-            parameter.size = 16; // Font size for player name
-            parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS + "ąćęłńóśźżĄĆĘŁŃÓŚŹŻãõâêôáéíóúàçÃÕÂÊÔÁÉÍÓÚÀÇäöüßÄÖÜ";
-            parameter.color = Color.WHITE;
-            parameter.borderWidth = 1;
-            parameter.borderColor = Color.BLACK;
-            parameter.shadowOffsetX = 1;
-            parameter.shadowOffsetY = 1;
-            parameter.shadowColor = Color.BLACK;
-            
-            playerNameFont = generator.generateFont(parameter);
-            generator.dispose();
-        } catch (Exception e) {
-            System.out.println("Could not load custom font, using default: " + e.getMessage());
-            // Fallback to default font if custom font fails
-            playerNameFont = new BitmapFont();
-            playerNameFont.getData().setScale(1.2f);
-            playerNameFont.setColor(Color.WHITE);
-        }
+        // Use FontManager to get the current font
+        playerNameFont = FontManager.getInstance().getCurrentFont();
     }
     
     public void setPlayer(Player player) {
@@ -195,6 +191,13 @@ public class GameMenu implements LanguageChangeListener {
         updateMenuItems();
     }
     
+    @Override
+    public void onFontChanged(FontType newFont) {
+        System.out.println("GameMenu: Font changed to " + newFont.getDisplayName());
+        // Reload the font
+        createPlayerNameFont();
+    }
+    
     private void openNameDialog() {
         nameDialogOpen = true;
         inputBuffer = playerName; // Start with current name
@@ -222,6 +225,12 @@ public class GameMenu implements LanguageChangeListener {
                 playerName = inputBuffer;
                 nameDialogOpen = false;
                 System.out.println("Player name set to: " + playerName);
+                // Return to player profile menu if opened from there
+                if (nameDialogFromProfile) {
+                    playerProfileMenu.open();
+                    isOpen = false;
+                    nameDialogFromProfile = false;
+                }
             } else {
                 // Validation message is displayed in the dialog, just log it
                 System.out.println("Name must be at least 3 characters long");
@@ -232,6 +241,12 @@ public class GameMenu implements LanguageChangeListener {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             nameDialogOpen = false;
             inputBuffer = playerName; // Reset to original name
+            // Return to player profile menu if opened from there
+            if (nameDialogFromProfile) {
+                playerProfileMenu.open();
+                isOpen = false;
+                nameDialogFromProfile = false;
+            }
         }
     }
     
@@ -361,6 +376,19 @@ public class GameMenu implements LanguageChangeListener {
             
             // Load player name (shared between modes)
             String loadedName = parseJsonString(jsonContent, "\"playerName\":");
+            
+            // Load font preference
+            try {
+                String savedFont = parseJsonString(jsonContent, "\"fontName\":");
+                if (savedFont != null && !savedFont.isEmpty()) {
+                    FontType fontType = FontType.fromDisplayName(savedFont);
+                    FontManager.getInstance().setFont(fontType);
+                    System.out.println("Font loaded: " + savedFont);
+                }
+            } catch (Exception e) {
+                // No font saved or error parsing, use default
+                System.out.println("No saved font found, using default");
+            }
             
             // Set player position, health, and hunger
             player.setPosition(x, y);
@@ -636,6 +664,14 @@ public class GameMenu implements LanguageChangeListener {
     }
 
     public void update() {
+        // Update save notification timer
+        if (showSaveNotification) {
+            saveNotificationTimer -= Gdx.graphics.getDeltaTime();
+            if (saveNotificationTimer <= 0) {
+                showSaveNotification = false;
+            }
+        }
+        
         // Handle dialogs first (highest priority)
         if (errorDialog.isVisible()) {
             errorDialog.handleInput();
@@ -672,6 +708,15 @@ public class GameMenu implements LanguageChangeListener {
         if (languageDialog.isVisible()) {
             languageDialog.handleInput();
             handleLanguageDialogResult();
+            return;
+        }
+        
+        if (fontSelectionDialog.isOpen()) {
+            fontSelectionDialog.update();
+            if (!fontSelectionDialog.isOpen()) {
+                playerProfileMenu.open(); // Return to Player Profile menu after dialog closes
+                isOpen = false; // Ensure main menu stays closed
+            }
             return;
         }
         
@@ -781,6 +826,11 @@ public class GameMenu implements LanguageChangeListener {
             return;
         }
         
+        if (fontSelectionDialog.isOpen()) {
+            fontSelectionDialog.render(batch, playerNameFont, woodenPlank, camX, camY);
+            return;
+        }
+        
         if (playerLocationDialog.isVisible()) {
             playerLocationDialog.render(batch, shapeRenderer, camX, camY);
             return;
@@ -876,6 +926,38 @@ public class GameMenu implements LanguageChangeListener {
         // Render player profile menu if open
         if (playerProfileMenu.isOpen()) {
             playerProfileMenu.render(batch, shapeRenderer, camX, camY, viewWidth, viewHeight);
+            
+            // Render save notification overlay if active
+            if (showSaveNotification) {
+                // Create a semi-transparent background for the notification
+                float notifWidth = 200;
+                float notifHeight = 60;
+                float notifX = camX - notifWidth / 2;
+                float notifY = camY + 100; // Position above center
+                
+                // Draw background
+                shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+                shapeRenderer.setColor(0.2f, 0.5f, 0.2f, 0.9f); // Green with transparency
+                shapeRenderer.rect(notifX, notifY, notifWidth, notifHeight);
+                shapeRenderer.end();
+                
+                // Draw border
+                shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+                shapeRenderer.setColor(0.1f, 0.3f, 0.1f, 1.0f); // Darker green border
+                shapeRenderer.rect(notifX, notifY, notifWidth, notifHeight);
+                shapeRenderer.end();
+                
+                // Draw "Saved!" text
+                batch.begin();
+                playerNameFont.setColor(Color.WHITE);
+                String savedText = "Saved!";
+                com.badlogic.gdx.graphics.g2d.GlyphLayout layout = new com.badlogic.gdx.graphics.g2d.GlyphLayout();
+                layout.setText(playerNameFont, savedText);
+                float textX = notifX + (notifWidth - layout.width) / 2;
+                float textY = notifY + notifHeight / 2 + layout.height / 2;
+                playerNameFont.draw(batch, savedText, textX, textY);
+                batch.end();
+            }
         }
     }
 
@@ -917,6 +999,14 @@ public class GameMenu implements LanguageChangeListener {
     private void openLanguageDialog() {
         isOpen = false; // Close main menu
         languageDialog.show();
+    }
+    
+    /**
+     * Opens the font selection dialog.
+     */
+    private void openFontSelectionDialog() {
+        isOpen = false; // Close main menu
+        fontSelectionDialog.open();
     }
     
     /**
@@ -1082,10 +1172,12 @@ public class GameMenu implements LanguageChangeListener {
     private void handleLanguageDialogResult() {
         if (languageDialog.isConfirmed()) {
             languageDialog.hide();
-            isOpen = true; // Return to main menu
+            playerProfileMenu.open(); // Return to Player Profile menu
+            isOpen = false; // Ensure main menu stays closed
         } else if (!languageDialog.isVisible()) {
             // Dialog was cancelled
-            isOpen = true; // Return to main menu
+            playerProfileMenu.open(); // Return to Player Profile menu
+            isOpen = false; // Ensure main menu stays closed
         }
     }
     
@@ -1300,15 +1392,20 @@ public class GameMenu implements LanguageChangeListener {
         
         if (selectedIndex == 0) { // Player Name
             playerProfileMenu.close();
+            nameDialogFromProfile = true; // Track that we came from player profile
             openNameDialog();
         } else if (selectedIndex == 1) { // Save Player
-            playerProfileMenu.close();
             savePlayerPosition();
-            isOpen = true; // Return to main menu after saving
+            showSaveNotification = true;
+            saveNotificationTimer = SAVE_NOTIFICATION_DURATION;
+            // Stay in Player Profile menu
         } else if (selectedIndex == 2) { // Language
             playerProfileMenu.close();
             openLanguageDialog();
-        } else if (selectedIndex == 3) { // Back
+        } else if (selectedIndex == 3) { // Menu Font
+            playerProfileMenu.close();
+            openFontSelectionDialog();
+        } else if (selectedIndex == 4) { // Back
             playerProfileMenu.close();
             isOpen = true; // Return to main menu
         }
@@ -1526,6 +1623,10 @@ public class GameMenu implements LanguageChangeListener {
             String currentLanguage = LocalizationManager.getInstance().getCurrentLanguage();
             jsonBuilder.append(String.format("  \"language\": \"%s\",\n", currentLanguage));
             
+            // Include current font
+            String currentFont = FontManager.getInstance().getCurrentFontType().getDisplayName();
+            jsonBuilder.append(String.format("  \"fontName\": \"%s\",\n", currentFont));
+            
             jsonBuilder.append(String.format("  \"savedAt\": \"%s\"\n", new java.util.Date().toString()));
             jsonBuilder.append("}");
             
@@ -1539,6 +1640,7 @@ public class GameMenu implements LanguageChangeListener {
             System.out.println("Player health saved: " + player.getHealth());
             System.out.println("Player hunger saved: " + player.getHunger());
             System.out.println("Player name saved: " + playerName);
+            System.out.println("Font saved: " + FontManager.getInstance().getCurrentFontType().getDisplayName());
             System.out.println("Mode: " + (isMultiplayer ? "Multiplayer" : "Singleplayer"));
             if (lastServer != null) {
                 System.out.println("Last server preserved: " + lastServer);
@@ -1658,6 +1760,7 @@ public class GameMenu implements LanguageChangeListener {
                worldLoadDialog.isVisible() ||
                worldManageDialog.isVisible() ||
                languageDialog.isVisible() ||
+               fontSelectionDialog.isOpen() ||
                playerLocationDialog.isVisible() ||
                controlsDialog.isVisible();
     }
@@ -1748,9 +1851,7 @@ public class GameMenu implements LanguageChangeListener {
             nameDialogPlank.dispose();
         }
         font.dispose();
-        if (playerNameFont != null) {
-            playerNameFont.dispose();
-        }
+        // Don't dispose playerNameFont - it's managed by FontManager
         if (multiplayerMenu != null) {
             multiplayerMenu.dispose();
         }

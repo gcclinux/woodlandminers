@@ -6,6 +6,7 @@
     "controls": "Steuerung",
     "save_world": "Welt Speichern",
     "load_world": "Welt Laden",
+    "free_world": "Freie Welt",
     "multiplayer": "Mehrspieler",
     "save_player": "Spieler Speichern",
     "language": "Sprache",
@@ -203,6 +204,9 @@
     "cannot_save_not_initialized": "Welt kann nicht gespeichert werden: Spiel oder Spieler nicht initialisiert.",
     "cannot_load_not_initialized": "Welt kann nicht geladen werden: Spiel nicht initialisiert.",
     "failed_extract_state": "Extrahieren des Weltzustands fehlgeschlagen. Bitte versuchen Sie es erneut.",
-    "failed_restore_state": "Wiederherstellen des Weltzustands fehlgeschlagen. Bitte versuchen Sie es erneut."
+    "failed_restore_state": "Wiederherstellen des Weltzustands fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "free_world_activated": "Freie Welt Aktiviert",
+    "free_world_message": "Du hast 250 von jedem Gegenstand erhalten.\n\nSpeichern ist jetzt deaktiviert.",
+    "save_disabled_free_world": "Speichern im Freie Welt Modus deaktiviert"
   }
 }

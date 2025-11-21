@@ -6,6 +6,7 @@
     "controls": "Sterowanie",
     "save_world": "Zapisz Świat",
     "load_world": "Wczytaj Świat",
+    "free_world": "Wolny Świat",
     "multiplayer": "Multiplayer",
     "save_player": "Zapisz Gracza",
     "language": "Język",
@@ -202,6 +203,9 @@
     "cannot_save_not_initialized": "Nie można zapisać świata: Gra lub gracz nie został zainicjalizowany.",
     "cannot_load_not_initialized": "Nie można wczytać świata: Gra nie została zainicjalizowana.",
     "failed_extract_state": "Nie udało się wyodrębnić stanu świata. Spróbuj ponownie.",
-    "failed_restore_state": "Nie udało się przywrócić stanu świata. Spróbuj ponownie."
+    "failed_restore_state": "Nie udało się przywrócić stanu świata. Spróbuj ponownie.",
+    "free_world_activated": "Wolny Świat Aktywowany",
+    "free_world_message": "Otrzymałeś 250 sztuk każdego przedmiotu.\n\nZapisywanie jest teraz wyłączone.",
+    "save_disabled_free_world": "Zapisywanie wyłączone w trybie Wolnego Świata"
   }
 }

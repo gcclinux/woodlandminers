@@ -1,5 +1,6 @@
 package wagemaker.uk.world;
 
+import wagemaker.uk.freeworld.FreeWorldManager;
 import wagemaker.uk.network.WorldState;
 import wagemaker.uk.respawn.RespawnEntry;
 import wagemaker.uk.respawn.RespawnManager;

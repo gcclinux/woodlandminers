@@ -1608,8 +1608,8 @@ public class MyGdxGame extends ApplicationAdapter {
         System.out.println("Starting multiplayer host...");
         
         try {
-            // Save current singleplayer position before switching modes
-            if (gameMenu != null) {
+            // Save current singleplayer position before switching modes (unless Free World is active)
+            if (gameMenu != null && !wagemaker.uk.freeworld.FreeWorldManager.isFreeWorldActive()) {
                 gameMenu.savePlayerPosition();
             }
             
@@ -1702,8 +1702,8 @@ public class MyGdxGame extends ApplicationAdapter {
         System.out.println("Connecting to server at " + serverAddress + ":" + port);
         
         try {
-            // Save current singleplayer position before switching modes
-            if (gameMenu != null) {
+            // Save current singleplayer position before switching modes (unless Free World is active)
+            if (gameMenu != null && !wagemaker.uk.freeworld.FreeWorldManager.isFreeWorldActive()) {
                 gameMenu.savePlayerPosition();
             }
             

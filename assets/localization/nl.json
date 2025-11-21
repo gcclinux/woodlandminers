@@ -6,6 +6,7 @@
     "controls": "Besturing",
     "save_world": "Wereld Opslaan",
     "load_world": "Wereld Laden",
+    "free_world": "Vrije Wereld",
     "multiplayer": "Multiplayer",
     "save_player": "Speler Opslaan",
     "language": "Taal",
@@ -202,6 +203,9 @@
     "cannot_save_not_initialized": "Kan wereld niet opslaan: Game of speler niet geïnitialiseerd.",
     "cannot_load_not_initialized": "Kan wereld niet laden: Game niet geïnitialiseerd.",
     "failed_extract_state": "Wereld status extraheren mislukt. Probeer het opnieuw.",
-    "failed_restore_state": "Wereld status herstellen mislukt. Probeer het opnieuw."
+    "failed_restore_state": "Wereld status herstellen mislukt. Probeer het opnieuw.",
+    "free_world_activated": "Vrije Wereld Geactiveerd",
+    "free_world_message": "Je hebt 250 van elk item ontvangen.\n\nOpslaan is nu uitgeschakeld.",
+    "save_disabled_free_world": "Opslaan uitgeschakeld in Vrije Wereld modus"
   }
 }

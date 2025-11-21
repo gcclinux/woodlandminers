@@ -17,6 +17,7 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import wagemaker.uk.client.PlayerConfig;
+import wagemaker.uk.freeworld.FreeWorldManager;
 import wagemaker.uk.player.Player;
 import wagemaker.uk.world.WorldSaveManager;
 import wagemaker.uk.world.WorldSaveData;
@@ -164,6 +165,7 @@ public class GameMenu implements LanguageChangeListener, FontChangeListener {
             loc.getText("menu.controls"),
             loc.getText("menu.save_world"),
             loc.getText("menu.load_world"),
+            loc.getText("menu.free_world"),
             loc.getText("menu.multiplayer"),
             loc.getText("menu.exit")
         };
@@ -174,6 +176,7 @@ public class GameMenu implements LanguageChangeListener, FontChangeListener {
             loc.getText("menu.controls"),
             loc.getText("menu.save_world"),
             loc.getText("menu.load_world"),
+            loc.getText("menu.free_world"),
             loc.getText("menu.disconnect"),
             loc.getText("menu.exit")
         };
@@ -979,6 +982,8 @@ public class GameMenu implements LanguageChangeListener, FontChangeListener {
             openWorldSaveDialog();
         } else if (selectedItem.equals(loc.getText("menu.load_world"))) {
             openWorldLoadDialog();
+        } else if (selectedItem.equals(loc.getText("menu.free_world"))) {
+            activateFreeWorld();
         } else if (selectedItem.equals(loc.getText("menu.multiplayer"))) {
             openMultiplayerMenu();
         } else if (selectedItem.equals(loc.getText("menu.disconnect"))) {
@@ -988,9 +993,48 @@ public class GameMenu implements LanguageChangeListener, FontChangeListener {
         } else if (selectedItem.equals(loc.getText("menu.save_player"))) {
             savePlayerPosition();
         } else if (selectedItem.equals(loc.getText("menu.exit"))) {
-            savePlayerPosition(); // Auto-save before exit
+            if (!FreeWorldManager.isFreeWorldActive()) {
+                savePlayerPosition(); // Auto-save before exit (unless Free World is active)
+            }
             Gdx.app.exit();
         }
+    }
+    
+    /**
+     * Activates Free World mode and grants 250 of each item.
+     */
+    private void activateFreeWorld() {
+        if (inventoryManager == null) {
+            System.err.println("Cannot activate Free World: InventoryManager not set");
+            return;
+        }
+        
+        // Activate Free World mode
+        FreeWorldManager.activateFreeWorld();
+        
+        // Grant 250 items to current inventory
+        FreeWorldManager.grantFreeWorldItems(inventoryManager.getCurrentInventory());
+        
+        // Send inventory update to server in multiplayer
+        if (inventoryManager != null) {
+            inventoryManager.sendInventoryUpdateToServer();
+        }
+        
+        // Broadcast to all clients in multiplayer
+        if (gameInstance != null && gameInstance.getGameMode() == wagemaker.uk.gdx.MyGdxGame.GameMode.MULTIPLAYER_HOST) {
+            wagemaker.uk.network.FreeWorldActivationMessage freeWorldMsg = 
+                new wagemaker.uk.network.FreeWorldActivationMessage(true);
+            gameInstance.getGameServer().broadcastToAll(freeWorldMsg);
+            System.out.println("Free World activation broadcasted to all clients");
+        }
+        
+        // Show confirmation message
+        LocalizationManager loc = LocalizationManager.getInstance();
+        String title = loc.getText("messages.free_world_activated");
+        String message = loc.getText("messages.free_world_message");
+        showSuccess(message, title);
+        
+        isOpen = false; // Close menu
     }
     
     /**
@@ -1122,6 +1166,14 @@ public class GameMenu implements LanguageChangeListener, FontChangeListener {
             return !isWorldSaveAllowed();
         }
         
+        if (menuItem.equals(loc.getText("menu.free_world"))) {
+            // Hide Free World for multiplayer clients
+            if (gameInstance != null && 
+                gameInstance.getGameMode() == wagemaker.uk.gdx.MyGdxGame.GameMode.MULTIPLAYER_CLIENT) {
+                return true;
+            }
+        }
+        
         // Other menu items are always enabled
         return false;
     }
@@ -1240,18 +1292,32 @@ public class GameMenu implements LanguageChangeListener, FontChangeListener {
             
             boolean isMultiplayer = isCurrentlyMultiplayer();
             
-            // Get current inventory from inventory manager
+            // If Free World is active, don't save player data (position, health, inventory)
+            float saveX, saveY, saveHealth;
             wagemaker.uk.inventory.Inventory currentInventory = null;
-            if (inventoryManager != null) {
-                currentInventory = inventoryManager.getCurrentInventory();
+            
+            if (FreeWorldManager.isFreeWorldActive()) {
+                // Save with spawn position and default values
+                saveX = 0;
+                saveY = 0;
+                saveHealth = 100;
+                currentInventory = null;
+            } else {
+                // Save actual player data
+                saveX = player.getX();
+                saveY = player.getY();
+                saveHealth = player.getHealth();
+                if (inventoryManager != null) {
+                    currentInventory = inventoryManager.getCurrentInventory();
+                }
             }
             
             boolean success = WorldSaveManager.saveWorld(
                 saveName, 
                 currentWorldState,
-                player.getX(), 
-                player.getY(), 
-                player.getHealth(),
+                saveX, 
+                saveY, 
+                saveHealth,
                 currentInventory,
                 isMultiplayer
             );
@@ -1395,9 +1461,11 @@ public class GameMenu implements LanguageChangeListener, FontChangeListener {
             nameDialogFromProfile = true; // Track that we came from player profile
             openNameDialog();
         } else if (selectedIndex == 1) { // Save Player
-            savePlayerPosition();
-            showSaveNotification = true;
-            saveNotificationTimer = SAVE_NOTIFICATION_DURATION;
+            if (!FreeWorldManager.isFreeWorldActive()) {
+                savePlayerPosition();
+                showSaveNotification = true;
+                saveNotificationTimer = SAVE_NOTIFICATION_DURATION;
+            }
             // Stay in Player Profile menu
         } else if (selectedIndex == 2) { // Language
             playerProfileMenu.close();
@@ -1456,6 +1524,10 @@ public class GameMenu implements LanguageChangeListener, FontChangeListener {
     }
     
     public void savePlayerPosition() {
+        if (FreeWorldManager.isFreeWorldActive()) {
+            System.out.println("Save blocked: Free World mode is active");
+            return;
+        }
         if (player == null) {
             System.out.println("Cannot save: Player reference not set");
             return;

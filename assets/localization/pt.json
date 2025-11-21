@@ -6,6 +6,7 @@
     "controls": "Controles",
     "save_world": "Salvar Mundo",
     "load_world": "Carregar Mundo",
+    "free_world": "Mundo Livre",
     "multiplayer": "Multijogador",
     "save_player": "Salvar Jogador",
     "language": "Idioma",
@@ -202,6 +203,9 @@
     "cannot_save_not_initialized": "Não é possível salvar mundo: Jogo ou jogador não inicializado.",
     "cannot_load_not_initialized": "Não é possível carregar mundo: Jogo não inicializado.",
     "failed_extract_state": "Falha ao extrair estado do mundo. Por favor, tente novamente.",
-    "failed_restore_state": "Falha ao restaurar estado do mundo. Por favor, tente novamente."
+    "failed_restore_state": "Falha ao restaurar estado do mundo. Por favor, tente novamente.",
+    "free_world_activated": "Mundo Livre Ativado",
+    "free_world_message": "Você recebeu 250 de cada item.\n\nO salvamento está agora desativado.",
+    "save_disabled_free_world": "Salvamento desativado no modo Mundo Livre"
   }
 }

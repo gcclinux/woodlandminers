@@ -1,7 +1,9 @@
 package wagemaker.uk.gdx;
 
 import wagemaker.uk.client.PlayerConfig;
+import wagemaker.uk.freeworld.FreeWorldManager;
 import wagemaker.uk.network.ConnectionAcceptedMessage;
+import wagemaker.uk.network.FreeWorldActivationMessage;
 import wagemaker.uk.network.DefaultMessageHandler;
 import wagemaker.uk.network.InventorySyncMessage;
 import wagemaker.uk.network.ItemConsumptionMessage;
@@ -497,6 +499,18 @@ public class GameMessageHandler extends DefaultMessageHandler {
             remotePlayer.updateHealth(health);
             remotePlayer.updateHunger(hunger);
             System.out.println("Remote player " + playerId + " respawned");
+        }
+    }
+    
+    @Override
+    protected void handleFreeWorldActivation(FreeWorldActivationMessage message) {
+        if (message.isActivated()) {
+            FreeWorldManager.activateFreeWorld();
+            if (game.getInventoryManager() != null) {
+                FreeWorldManager.grantFreeWorldItems(game.getInventoryManager().getCurrentInventory());
+                game.getInventoryManager().sendInventoryUpdateToServer();
+            }
+            System.out.println("Free World mode activated by host");
         }
     }
 }

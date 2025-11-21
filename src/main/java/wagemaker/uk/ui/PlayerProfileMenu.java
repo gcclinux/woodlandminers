@@ -12,6 +12,7 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 
 import wagemaker.uk.localization.LocalizationManager;
 import wagemaker.uk.localization.LanguageChangeListener;
+import wagemaker.uk.freeworld.FreeWorldManager;
 
 /**
  * Player Profile submenu that displays player-related options.
@@ -174,8 +175,13 @@ public class PlayerProfileMenu implements LanguageChangeListener, FontChangeList
         
         // Draw menu options
         for (int i = 0; i < menuOptions.length; i++) {
-            // Highlight selected option in yellow
-            if (i == selectedIndex) {
+            // Disable Save Player option if Free World is active
+            boolean isDisabled = (i == 1 && FreeWorldManager.isFreeWorldActive());
+            
+            // Highlight selected option in yellow, disabled in gray
+            if (isDisabled) {
+                menuFont.setColor(Color.GRAY);
+            } else if (i == selectedIndex) {
                 menuFont.setColor(Color.YELLOW);
             } else {
                 menuFont.setColor(Color.WHITE);

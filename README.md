@@ -18,9 +18,9 @@ The goal was simple yet audacious: **build a complete, enjoyable multiplayer gam
 
 <div align="center">
 
-### Player Location Compass
-![Latest 0.0.18](www/images/health-hunger.png)
-*Demonstrating the Health and Hunger player statusBar*
+### Free World Play
+![Latest 0.0.20](../screenshots/free_world_play.png)
+*The Free World gives player the opportunity to explore and be creative with plenty of resources*
 
 </div>
 
@@ -165,6 +165,13 @@ For a comprehensive list of all game features, mechanics, and technical details,
 - 📦 **Item Drops** - Trees drop resources when destroyed
 - 🔄 **Network Sync** - Inventory synchronized across multiplayer sessions
 - ⏱️ **Hunger Accumulation** - Hunger increases by 1% every 60 seconds; death occurs at 100% hunger
+
+#### Free World Mode
+- 🎨 **Creative Exploration** - Activate Free World mode to receive 250 of each item type instantly
+- 🚫 **No Save Restrictions** - All save functionality is disabled to prevent inventory persistence
+- 🎮 **Perfect for Creativity** - Explore and build without resource constraints or survival pressure
+- 👑 **Host-Only Activation** - In multiplayer, only the host can activate Free World for all players
+- ⚠️ **Session-Only** - Free World state resets when you exit the game
 
 #### Multiplayer
 - 🌐 **Dedicated Server** - Standalone server with configurable settings

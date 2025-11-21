@@ -147,6 +147,10 @@ public class DefaultMessageHandler implements MessageHandler {
                     handlePlayerRespawn((PlayerRespawnMessage) message);
                     break;
                     
+                case FREE_WORLD_ACTIVATION:
+                    handleFreeWorldActivation((FreeWorldActivationMessage) message);
+                    break;
+                    
                 default:
                     System.err.println("Unknown message type: " + message.getType());
             }
@@ -455,5 +459,13 @@ public class DefaultMessageHandler implements MessageHandler {
                          message.getX() + ", " + message.getY() + 
                          ") with health=" + message.getHealth() + 
                          ", hunger=" + message.getHunger());
+    }
+    
+    /**
+     * Handles FREE_WORLD_ACTIVATION message.
+     * Override this method to activate Free World mode and grant items.
+     */
+    protected void handleFreeWorldActivation(FreeWorldActivationMessage message) {
+        System.out.println("Free World activation: " + message.isActivated());
     }
 }

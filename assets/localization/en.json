@@ -6,6 +6,7 @@
     "controls": "Controls",
     "save_world": "Save World",
     "load_world": "Load World",
+    "free_world": "Free World",
     "multiplayer": "Multiplayer",
     "save_player": "Save Player",
     "language": "Language",
@@ -202,6 +203,9 @@
     "cannot_save_not_initialized": "Cannot save world: Game or player not initialized.",
     "cannot_load_not_initialized": "Cannot load world: Game not initialized.",
     "failed_extract_state": "Failed to extract world state. Please try again.",
-    "failed_restore_state": "Failed to restore world state. Please try again."
+    "failed_restore_state": "Failed to restore world state. Please try again.",
+    "free_world_activated": "Free World Activated",
+    "free_world_message": "You have received 250 of each item.\n\nSaving is now disabled.",
+    "save_disabled_free_world": "Saving disabled in Free World mode"
   }
 }

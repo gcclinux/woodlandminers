@@ -5,6 +5,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import wagemaker.uk.freeworld.FreeWorldManager;
 
 /**
  * Manages player-specific configuration settings including the last connected server address.
@@ -294,6 +295,10 @@ public class PlayerConfig {
      * If save fails, logs an error but doesn't throw an exception.
      */
     public void save() {
+        if (FreeWorldManager.isFreeWorldActive()) {
+            System.out.println("Save blocked: Free World mode is active");
+            return;
+        }
         try {
             File configDir = getConfigDirectory();
             if (!configDir.exists()) {

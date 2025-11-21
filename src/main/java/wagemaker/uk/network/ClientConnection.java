@@ -269,6 +269,7 @@ public class ClientConnection implements Runnable {
                 
             case RESOURCE_RESPAWN:
             case RESPAWN_STATE:
+            case FREE_WORLD_ACTIVATION:
                 // These messages are server-to-client only
                 // Clients should not send these to the server
                 System.err.println("Client " + clientId + " sent server-only message: " + message.getType());
@@ -1288,7 +1289,8 @@ public class ClientConnection implements Runnable {
             !isValidInventoryCount(message.getBambooStackCount()) ||
             !isValidInventoryCount(message.getBabyTreeCount()) ||
             !isValidInventoryCount(message.getWoodStackCount()) ||
-            !isValidInventoryCount(message.getPebbleCount())) {
+            !isValidInventoryCount(message.getPebbleCount()) ||
+            !isValidInventoryCount(message.getPalmFiberCount())) {
             System.err.println("Invalid inventory counts from " + clientId);
             logSecurityViolation("Invalid inventory counts");
             return;
@@ -1302,6 +1304,7 @@ public class ClientConnection implements Runnable {
         playerState.setBabyTreeCount(message.getBabyTreeCount());
         playerState.setWoodStackCount(message.getWoodStackCount());
         playerState.setPebbleCount(message.getPebbleCount());
+        playerState.setPalmFiberCount(message.getPalmFiberCount());
         
         // Update in world state
         server.getWorldState().addOrUpdatePlayer(playerState);
@@ -1312,7 +1315,9 @@ public class ClientConnection implements Runnable {
                          ", BabyBamboo=" + message.getBabyBambooCount() +
                          ", BambooStack=" + message.getBambooStackCount() +
                          ", BabyTree=" + message.getBabyTreeCount() +
-                         ", WoodStack=" + message.getWoodStackCount());
+                         ", WoodStack=" + message.getWoodStackCount() +
+                         ", Pebbles=" + message.getPebbleCount() +
+                         ", PalmFiber=" + message.getPalmFiberCount());
     }
     
     /**

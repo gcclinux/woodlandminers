@@ -10,10 +10,17 @@
     <header>
         <nav>
             <ul>
-                <li><a href="#about">About</a></li>
-                <li><a href="#features">Features</a></li>
-                <li><a href="#controls">Controls</a></li>
-                <li><a href="#community">Community</a></li>
+                <li><a href="#about" data-i18n="nav_about">About</a></li>
+                <li><a href="#features" data-i18n="nav_features">Features</a></li>
+                <li><a href="#controls" data-i18n="nav_controls">Controls</a></li>
+                <li><a href="#community" data-i18n="nav_community">Community</a></li>
+                <li><select id="langSelector" class="lang-selector">
+                    <option value="en">🇬🇧 EN</option>
+                    <option value="pl">🇵🇱 PL</option>
+                    <option value="de">🇩🇪 DE</option>
+                    <option value="nl">🇳🇱 NL</option>
+                    <option value="pt">🇧🇷 BR</option>
+                </select></li>
             </ul>
         </nav>
     </header>
@@ -21,46 +28,46 @@
     <main>
         <section id="hero">
             <div class="hero-content">
-                <h1>🌲 WOODLANDERS 🌲</h1>
-                <p>A 2D Multiplayer Adventure Built with AI</p>
-                <a href="#about" class="btn">⚔️ START EXPLORING ⚔️</a>
+                <h1 data-i18n="hero_title">🌲 WOODLANDERS 🌲</h1>
+                <p data-i18n="hero_subtitle">A 2D Multiplayer Adventure Built with AI</p>
+                <a href="#about" class="btn" data-i18n="hero_btn">⚔️ START EXPLORING ⚔️</a>
             </div>
         </section>
 
         <section id="about">
-            <h2>🎮 THE ADVENTURE BEGINS 🎮</h2>
-            <p>Woodlanders is an ambitious experiment in AI-assisted game development - a fully functional multiplayer 2D adventure game built entirely through conversational AI within the Kiro IDE. This project demonstrates what's possible when human creativity meets AI capabilities: no manual coding, just natural language prompts, specifications, and iterative refinement.</p>
+            <h2 data-i18n="about_title">🎮 THE ADVENTURE BEGINS 🎮</h2>
+            <p data-i18n="about_intro">Woodlanders is an ambitious experiment in AI-assisted game development - a fully functional multiplayer 2D adventure game built entirely through conversational AI within the Kiro IDE. This project demonstrates what's possible when human creativity meets AI capabilities: no manual coding, just natural language prompts, specifications, and iterative refinement.</p>
             
-            <h3>🚀 The Vision: Zero-Code Game Development</h3>
-            <p>The goal was simple yet audacious: build a complete, enjoyable multiplayer game in Java using only AI prompts and requests. No direct code writing. No manual debugging. Just describing what we wanted, and letting Kiro AI bring it to life.</p>
+            <h3 data-i18n="about_vision_title">🚀 The Vision: Zero-Code Game Development</h3>
+            <p data-i18n="about_vision_text">The goal was simple yet audacious: build a complete, enjoyable multiplayer game in Java using only AI prompts and requests. No direct code writing. No manual debugging. Just describing what we wanted, and letting Kiro AI bring it to life.</p>
             
-            <h3>📊 Project Status & Progress</h3>
-            <p><strong>Current Build Version:</strong> 0.0.18 | <strong>Status:</strong> Active Development</p>
-            <p>Woodlanders has evolved from concept to a feature-rich multiplayer game with 20+ completed systems. The project uses two complementary development approaches:</p>
+            <h3 data-i18n="about_status_title">📊 Project Status & Progress</h3>
+            <p><strong data-i18n="about_status_version">Current Build Version:</strong> 0.0.19 | <strong data-i18n="about_status_label">Status:</strong> <span data-i18n="about_status_active">Active Development</span></p>
+            <p data-i18n="about_status_desc">Woodlanders has evolved from concept to a feature-rich multiplayer game with 20+ completed systems. The project uses two complementary development approaches:</p>
             <ul style="text-align: left; max-width: 800px; margin: 1rem auto; list-style: none;">
-                <li>🌊 <strong>Kiro AI Vibe:</strong> Rapid prototyping and iterative feature additions through natural conversation</li>
-                <li>📋 <strong>Kiro Spec:</strong> Structured feature engineering for complex systems with detailed planning and implementation</li>
+                <li><strong data-i18n="about_vibe">🌊 Kiro AI Vibe:</strong> <span data-i18n="about_vibe_desc">Rapid prototyping and iterative feature additions through natural conversation</span></li>
+                <li><strong data-i18n="about_spec">📋 Kiro Spec:</strong> <span data-i18n="about_spec_desc">Structured feature engineering for complex systems with detailed planning and implementation</span></li>
             </ul>
             
-            <h3>🎯 Development Frequency & Roadmap</h3>
-            <p>Active development with regular feature additions and improvements. Recent additions include dynamic weather systems, planting mechanics, resource respawning, and comprehensive multiplayer synchronization. The project maintains a balance between new features and stability improvements.</p>
+            <h3 data-i18n="about_roadmap_title">🎯 Development Frequency & Roadmap</h3>
+            <p data-i18n="about_roadmap_desc">Active development with regular feature additions and improvements. Recent additions include dynamic weather systems, planting mechanics, resource respawning, and comprehensive multiplayer synchronization. The project maintains a balance between new features and stability improvements.</p>
             
-            <h3>🛠️ Built With Modern Tech</h3>
+            <h3 data-i18n="about_tech_title">🛠️ Built With Modern Tech</h3>
             <p><strong>Java 21</strong> | <strong>libGDX 1.12.1</strong> | <strong>Custom TCP Networking</strong> | <strong>Procedural Generation</strong></p>
-            <p>The codebase demonstrates professional game development patterns including server-authoritative architecture, entity-component systems, deferred operations for thread safety, and deterministic world generation.</p>
+            <p data-i18n="about_tech_desc">The codebase demonstrates professional game development patterns including server-authoritative architecture, entity-component systems, deferred operations for thread safety, and deterministic world generation.</p>
             
-            <h3>🎓 Educational Value</h3>
-            <p>Beyond being a playable game, Woodlanders serves as a comprehensive reference for:</p>
+            <h3 data-i18n="about_edu_title">🎓 Educational Value</h3>
+            <p data-i18n="about_edu_desc">Beyond being a playable game, Woodlanders serves as a comprehensive reference for:</p>
             <ul style="text-align: left; max-width: 800px; margin: 1rem auto; list-style: none;">
-                <li>✅ Multiplayer networking architecture and synchronization patterns</li>
-                <li>✅ libGDX 2D game development best practices</li>
-                <li>✅ AI-assisted software development workflows</li>
-                <li>✅ Professional Java code organization and design patterns</li>
-                <li>✅ Cross-platform game development (Windows, macOS, Linux)</li>
+                <li data-i18n="about_edu_1">✅ Multiplayer networking architecture and synchronization patterns</li>
+                <li data-i18n="about_edu_2">✅ libGDX 2D game development best practices</li>
+                <li data-i18n="about_edu_3">✅ AI-assisted software development workflows</li>
+                <li data-i18n="about_edu_4">✅ Professional Java code organization and design patterns</li>
+                <li data-i18n="about_edu_5">✅ Cross-platform game development (Windows, macOS, Linux)</li>
             </ul>
             
-            <h3>🤝 Community & Support</h3>
-            <p>Open source and actively maintained. Report bugs, suggest features, or contribute on GitHub. Support the project through sponsorships or donations.</p>
+            <h3 data-i18n="about_support_title">🤝 Community & Support</h3>
+            <p data-i18n="about_support_desc">Open source and actively maintained. Report bugs, suggest features, or contribute on GitHub. Support the project through sponsorships or donations.</p>
 
                         <div class="community-links">
                 <a href="https://github.com/gcclinux/Woodlanders/issues" class="btn" target="_blank">🐛 GitHub Issues</a>
@@ -71,7 +78,7 @@
         </section>
 
         <section id="features">
-            <h2>✨ FEATURED GAMEPLAY ✨</h2>
+            <h2 data-i18n="features_title">✨ FEATURED GAMEPLAY ✨</h2>
             <div class="gameplay-carousel">
                 <button class="carousel-nav prev" aria-label="Previous">‹</button>
                 <div class="carousel-container">
@@ -81,8 +88,8 @@
                                 <img src="images/mp-location-compas.png" alt="Woodlanders multiplayer gameplay with location compass" class="gameplay-image">
                             </div>
                             <div class="gameplay-info">
-                                <h3>🌐 Real-time Multiplayer</h3>
-                                <p>Play with friends in a synchronized world. Keep track of other players with the location compass and monitor connection with the ping display.</p>
+                                <h3 data-i18n="carousel_mp_title">🌐 Real-time Multiplayer</h3>
+                                <p data-i18n="carousel_mp_text">Play with friends in a synchronized world. Keep track of other players with the location compass and monitor connection with the ping display.</p>
                             </div>
                         </div>
                     </div>
@@ -92,8 +99,19 @@
                                 <img src="images/rain-planting-.png" alt="Planting bamboo in the rain in Woodlanders" class="gameplay-image">
                             </div>
                             <div class="gameplay-info">
-                                <h3>🌧️ Dynamic World</h3>
-                                <p>Experience dynamic weather like rain, and shape the environment by planting new resources like bamboo.</p>
+                                <h3 data-i18n="carousel_world_title">🌧️ Dynamic World</h3>
+                                <p data-i18n="carousel_world_text">Experience dynamic weather like rain, and shape the environment by planting new resources like bamboo.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="carousel-slide">
+                        <div class="gameplay-content">
+                            <div class="gameplay-image-wrapper">
+                                <img src="images/mp-rain-puddles.png" alt="Rain puddles forming during weather events in Woodlanders" class="gameplay-image">
+                            </div>
+                            <div class="gameplay-info">
+                                <h3 data-i18n="carousel_puddles_title">💧 Atmospheric Weather Effects</h3>
+                                <p data-i18n="carousel_puddles_text">Watch as rain creates dynamic puddles across the landscape, adding visual depth and immersion to weather events. These atmospheric details bring the world to life with authentic environmental feedback.</p>
                             </div>
                         </div>
                     </div>
@@ -103,8 +121,8 @@
                                 <img src="images/hurt-healthbar-attack.png" alt="Player attacking another player in Woodlanders" class="gameplay-image">
                             </div>
                             <div class="gameplay-info">
-                                <h3>⚔️ Combat & Resources</h3>
-                                <p>Engage in combat with other players and interact with the environment. Health bars on players and trees provide clear feedback on damage and harvesting.</p>
+                                <h3 data-i18n="carousel_combat_title">⚔️ Combat & Resources</h3>
+                                <p data-i18n="carousel_combat_text">Engage in combat with other players and interact with the environment. Health bars on players and trees provide clear feedback on damage and harvesting.</p>
                             </div>
                         </div>
                     </div>
@@ -159,82 +177,82 @@
         </section>
 
         <section id="feature-highlights">
-            <h2>🎯 COMPLETE FEATURE SET 🎯</h2>
+            <h2 data-i18n="feature_set_title">🎯 COMPLETE FEATURE SET 🎯</h2>
             <div class="feature-showcase">
                 <div class="feature-tabs-vertical">
-                    <button class="feature-tab-btn active" data-feature="world">🌍 World</button>
-                    <button class="feature-tab-btn" data-feature="character">🏃 Character</button>
-                    <button class="feature-tab-btn" data-feature="resources">🌳 Resources</button>
-                    <button class="feature-tab-btn" data-feature="inventory">🎒 Inventory</button>
-                    <button class="feature-tab-btn" data-feature="multiplayer">👥 Multiplayer</button>
-                    <button class="feature-tab-btn" data-feature="ui">🎨 Interface</button>
+                    <button class="feature-tab-btn active" data-feature="world" data-i18n="tab_world">🌍 World</button>
+                    <button class="feature-tab-btn" data-feature="character" data-i18n="tab_character">🏃 Character</button>
+                    <button class="feature-tab-btn" data-feature="resources" data-i18n="tab_resources">🌳 Resources</button>
+                    <button class="feature-tab-btn" data-feature="inventory" data-i18n="tab_inventory">🎒 Inventory</button>
+                    <button class="feature-tab-btn" data-feature="multiplayer" data-i18n="tab_multiplayer">👥 Multiplayer</button>
+                    <button class="feature-tab-btn" data-feature="ui" data-i18n="tab_ui">🎨 Interface</button>
                 </div>
                 <div class="feature-display">
                     <div class="feature-panel active" id="world">
-                        <h3>🌍 World & Environment</h3>
+                        <h3 data-i18n="feat_world_title">🌍 World & Environment</h3>
                         <div class="feature-list">
-                            <div class="feature-badge">✨ Infinite Procedurally Generated World</div>
-                            <div class="feature-badge">🏜️ Multiple Biomes</div>
-                            <div class="feature-badge">🌧️ Dynamic Weather System</div>
-                            <div class="feature-badge">🧭 Compass Navigation</div>
-                            <div class="feature-badge">💾 World Save/Load System</div>
+                            <div class="feature-badge" data-i18n="feat_world_1">✨ Infinite Procedurally Generated World</div>
+                            <div class="feature-badge" data-i18n="feat_world_2">🏜️ Multiple Biomes</div>
+                            <div class="feature-badge" data-i18n="feat_world_3">🌧️ Dynamic Weather System</div>
+                            <div class="feature-badge" data-i18n="feat_world_4">🧭 Compass Navigation</div>
+                            <div class="feature-badge" data-i18n="feat_world_5">💾 World Save/Load System</div>
                         </div>
                     </div>
                     <div class="feature-panel" id="character">
-                        <h3>🏃 Character & Movement</h3>
+                        <h3 data-i18n="feat_char_title">🏃 Character & Movement</h3>
                         <div class="feature-list">
-                            <div class="feature-badge">🏃 Animated Player Character</div>
-                            <div class="feature-badge">❤️ Health & Hunger System</div>
-                            <div class="feature-badge">🎯 Precise Collision Detection</div>
-                            <div class="feature-badge">💀 Death & Respawn Mechanics</div>
-                            <div class="feature-badge">🎨 Directional Sprites</div>
+                            <div class="feature-badge" data-i18n="feat_char_1">🏃 Animated Player Character</div>
+                            <div class="feature-badge" data-i18n="feat_char_2">❤️ Health & Hunger System</div>
+                            <div class="feature-badge" data-i18n="feat_char_3">🎯 Precise Collision Detection</div>
+                            <div class="feature-badge" data-i18n="feat_char_4">💀 Death & Respawn Mechanics</div>
+                            <div class="feature-badge" data-i18n="feat_char_5">🎨 Directional Sprites</div>
                         </div>
                     </div>
                     <div class="feature-panel" id="resources">
-                        <h3>🌳 Trees & Resources</h3>
+                        <h3 data-i18n="feat_res_title">🌳 Trees & Resources</h3>
                         <div class="feature-list">
-                            <div class="feature-badge">🌳 6 Unique Tree Types</div>
-                            <div class="feature-badge">⚔️ Combat System</div>
-                            <div class="feature-badge">🔄 Health Regeneration</div>
-                            <div class="feature-badge">🌵 Environmental Hazards</div>
-                            <div class="feature-badge">🎋 Bamboo Planting System</div>
-                            <div class="feature-badge">🎯 Tile Targeting System</div>
-                            <div class="feature-badge">⏱️ Resource Respawn (15min)</div>
+                            <div class="feature-badge" data-i18n="feat_res_1">🌳 6 Unique Tree Types</div>
+                            <div class="feature-badge" data-i18n="feat_res_2">⚔️ Combat System</div>
+                            <div class="feature-badge" data-i18n="feat_res_3">🔄 Health Regeneration</div>
+                            <div class="feature-badge" data-i18n="feat_res_4">🌵 Environmental Hazards</div>
+                            <div class="feature-badge" data-i18n="feat_res_5">🎋 Bamboo Planting System</div>
+                            <div class="feature-badge" data-i18n="feat_res_6">🎯 Tile Targeting System</div>
+                            <div class="feature-badge" data-i18n="feat_res_7">⏱️ Resource Respawn (15min)</div>
                         </div>
                     </div>
                     <div class="feature-panel" id="inventory">
-                        <h3>🎒 Inventory & Items</h3>
+                        <h3 data-i18n="feat_inv_title">🎒 Inventory & Items</h3>
                         <div class="feature-list">
-                            <div class="feature-badge">🎒 6-Slot Inventory System</div>
-                            <div class="feature-badge">🍎 Collectible Items</div>
-                            <div class="feature-badge">🍌 Manual Consumption</div>
-                            <div class="feature-badge">📦 Item Drops from Trees</div>
-                            <div class="feature-badge">🔄 Network Synchronization</div>
-                            <div class="feature-badge">🎯 Auto-Pickup System</div>
+                            <div class="feature-badge" data-i18n="feat_inv_1">🎒 6-Slot Inventory System</div>
+                            <div class="feature-badge" data-i18n="feat_inv_2">🍎 Collectible Items</div>
+                            <div class="feature-badge" data-i18n="feat_inv_3">🍌 Manual Consumption</div>
+                            <div class="feature-badge" data-i18n="feat_inv_4">📦 Item Drops from Trees</div>
+                            <div class="feature-badge" data-i18n="feat_inv_5">🔄 Network Synchronization</div>
+                            <div class="feature-badge" data-i18n="feat_inv_6">🎯 Auto-Pickup System</div>
                         </div>
                     </div>
                     <div class="feature-panel" id="multiplayer">
-                        <h3>👥 Multiplayer</h3>
+                        <h3 data-i18n="feat_mp_title">👥 Multiplayer</h3>
                         <div class="feature-list">
-                            <div class="feature-badge">🌐 Dedicated Server</div>
-                            <div class="feature-badge">👥 Real-time Synchronization</div>
-                            <div class="feature-badge">📡 Connection Quality Indicator</div>
-                            <div class="feature-badge">💾 Separate SP/MP Positions</div>
-                            <div class="feature-badge">🔌 Graceful Disconnect/Reconnect</div>
-                            <div class="feature-badge">🔒 Server-Authoritative</div>
-                            <div class="feature-badge">📨 22+ Message Types</div>
+                            <div class="feature-badge" data-i18n="feat_mp_1">🌐 Dedicated Server</div>
+                            <div class="feature-badge" data-i18n="feat_mp_2">👥 Real-time Synchronization</div>
+                            <div class="feature-badge" data-i18n="feat_mp_3">📡 Connection Quality Indicator</div>
+                            <div class="feature-badge" data-i18n="feat_mp_4">💾 Separate SP/MP Positions</div>
+                            <div class="feature-badge" data-i18n="feat_mp_5">🔌 Graceful Disconnect/Reconnect</div>
+                            <div class="feature-badge" data-i18n="feat_mp_6">🔒 Server-Authoritative</div>
+                            <div class="feature-badge" data-i18n="feat_mp_7">📨 22+ Message Types</div>
                         </div>
                     </div>
                     <div class="feature-panel" id="ui">
-                        <h3>🎨 User Interface</h3>
+                        <h3 data-i18n="feat_ui_title">🎨 User Interface</h3>
                         <div class="feature-list">
-                            <div class="feature-badge">📋 In-Game Menu System</div>
-                            <div class="feature-badge">👤 Player Name Customization</div>
-                            <div class="feature-badge">🖥️ Comprehensive HUD</div>
-                            <div class="feature-badge">💾 World Management</div>
-                            <div class="feature-badge">🎨 Custom Retro Fonts</div>
-                            <div class="feature-badge">🌍 5 Language Support</div>
-                            <div class="feature-badge">⌨️ In-Game Controls Guide</div>
+                            <div class="feature-badge" data-i18n="feat_ui_1">📋 In-Game Menu System</div>
+                            <div class="feature-badge" data-i18n="feat_ui_2">👤 Player Name Customization</div>
+                            <div class="feature-badge" data-i18n="feat_ui_3">🖥️ Comprehensive HUD</div>
+                            <div class="feature-badge" data-i18n="feat_ui_4">💾 World Management</div>
+                            <div class="feature-badge" data-i18n="feat_ui_5">🎨 Custom Retro Fonts</div>
+                            <div class="feature-badge" data-i18n="feat_ui_6">🌍 5 Language Support</div>
+                            <div class="feature-badge" data-i18n="feat_ui_7">⌨️ In-Game Controls Guide</div>
                         </div>
                     </div>
                 </div>
@@ -242,96 +260,96 @@
         </section>
 
         <section id="controls">
-            <h2>⌨️ MASTER THE CONTROLS ⌨️</h2>
+            <h2 data-i18n="controls_title">⌨️ MASTER THE CONTROLS ⌨️</h2>
             <div class="controls-tabs">
                 <div class="tab-buttons">
-                    <button class="tab-btn active" data-tab="movement">🎮 Movement</button>
-                    <button class="tab-btn" data-tab="actions">⚡ Actions</button>
-                    <button class="tab-btn" data-tab="targeting">🎯 Targeting</button>
-                    <button class="tab-btn" data-tab="inventory-tab">🎒 Inventory</button>
-                    <button class="tab-btn" data-tab="interface">🖥️ Interface</button>
+                    <button class="tab-btn active" data-tab="movement" data-i18n="tab_movement">🎮 Movement</button>
+                    <button class="tab-btn" data-tab="actions" data-i18n="tab_actions">⚡ Actions</button>
+                    <button class="tab-btn" data-tab="targeting" data-i18n="tab_targeting">🎯 Targeting</button>
+                    <button class="tab-btn" data-tab="inventory-tab" data-i18n="tab_inventory">🎒 Inventory</button>
+                    <button class="tab-btn" data-tab="interface" data-i18n="tab_interface">🖥️ Interface</button>
                 </div>
                 <div class="tab-content-wrapper">
                     <div class="tab-content active" id="movement">
-                        <h3>🎮 Movement Controls</h3>
+                        <h3 data-i18n="ctrl_movement_title">🎮 Movement Controls</h3>
                         <div class="control-item">
                             <span class="key-display">↑ ↓ ← →</span>
-                            <p>Move your character in any direction</p>
+                            <p data-i18n="ctrl_movement_desc">Move your character in any direction</p>
                         </div>
                         <div class="control-note">
-                            <p>💡 Your character automatically animates based on movement direction</p>
+                            <p data-i18n="ctrl_movement_note">💡 Your character automatically animates based on movement direction</p>
                         </div>
                     </div>
                     <div class="tab-content" id="actions">
-                        <h3>⚡ Action Controls</h3>
+                        <h3 data-i18n="ctrl_actions_title">⚡ Action Controls</h3>
                         <div class="control-item">
                             <span class="key-display">SPACE</span>
-                            <p><strong>No item selected:</strong> Attack nearby trees</p>
-                            <p><strong>Item selected:</strong> Plant item at target location</p>
+                            <p><strong data-i18n="ctrl_actions_no_item">No item selected:</strong> <span data-i18n="ctrl_actions_no_item_desc">Attack nearby trees</span></p>
+                            <p><strong data-i18n="ctrl_actions_item">Item selected:</strong> <span data-i18n="ctrl_actions_item_desc">Plant item at target location</span></p>
                         </div>
                         <div class="control-note">
-                            <p>💡 Items are automatically collected when you walk near them (within 32 pixels)</p>
+                            <p data-i18n="ctrl_actions_note">💡 Items are automatically collected when you walk near them (within 32 pixels)</p>
                         </div>
                     </div>
                     <div class="tab-content" id="targeting">
-                        <h3>🎯 Targeting System</h3>
-                        <p class="tab-intro">When you select a placeable item, a white targeting indicator appears:</p>
+                        <h3 data-i18n="ctrl_targeting_title">🎯 Targeting System</h3>
+                        <p class="tab-intro" data-i18n="ctrl_targeting_intro">When you select a placeable item, a white targeting indicator appears:</p>
                         <div class="control-item">
                             <span class="key-display">W A S D</span>
-                            <p>Move target indicator (Up, Left, Down, Right)</p>
+                            <p data-i18n="ctrl_targeting_move">Move target indicator (Up, Left, Down, Right)</p>
                         </div>
                         <div class="control-item">
                             <span class="key-display">SPACE / P</span>
-                            <p>Plant item at current target location</p>
+                            <p data-i18n="ctrl_targeting_plant">Plant item at current target location</p>
                         </div>
                         <div class="control-item">
                             <span class="key-display">ESC</span>
-                            <p>Cancel targeting mode</p>
+                            <p data-i18n="ctrl_targeting_cancel">Cancel targeting mode</p>
                         </div>
                         <div class="control-note">
-                            <p>💡 Press the item key again to deselect and hide the indicator</p>
+                            <p data-i18n="ctrl_targeting_note">💡 Press the item key again to deselect and hide the indicator</p>
                         </div>
                     </div>
                     <div class="tab-content" id="inventory-tab">
-                        <h3>🎒 Inventory Management</h3>
+                        <h3 data-i18n="ctrl_inventory_title">🎒 Inventory Management</h3>
                         <div class="control-item">
                             <span class="key-display">I</span>
-                            <p>Activate inventory mode</p>
+                            <p data-i18n="ctrl_inventory_activate">Activate inventory mode</p>
                         </div>
                         <div class="control-item">
                             <span class="key-display">↑ ↓ ← →</span>
-                            <p>Navigate between items in inventory</p>
+                            <p data-i18n="ctrl_inventory_navigate">Navigate between items in inventory</p>
                         </div>
                         <div class="control-item">
                             <span class="key-display">SPACE</span>
-                            <p>Use selected item or consume food</p>
+                            <p data-i18n="ctrl_inventory_use">Use selected item or consume food</p>
                         </div>
                         <div class="control-item">
                             <span class="key-display">I</span>
-                            <p>Deselect inventory and return to player movement</p>
+                            <p data-i18n="ctrl_inventory_deselect">Deselect inventory and return to player movement</p>
                         </div>
                         <div class="control-note">
-                            <p>💡 Selected items display a yellow highlight box</p>
-                            <p>💡 Consuming all items automatically returns to player control</p>
+                            <p data-i18n="ctrl_inventory_note1">💡 Selected items display a yellow highlight box</p>
+                            <p data-i18n="ctrl_inventory_note2">💡 Consuming all items automatically returns to player control</p>
                         </div>
                     </div>
                     <div class="tab-content" id="interface">
-                        <h3>🖥️ Interface & Menus</h3>
+                        <h3 data-i18n="ctrl_interface_title">🖥️ Interface & Menus</h3>
                         <div class="control-item">
                             <span class="key-display">ESC</span>
-                            <p>Open/close game menu</p>
+                            <p data-i18n="ctrl_interface_menu">Open/close game menu</p>
                         </div>
                         <div class="control-item">
                             <span class="key-display">↑ ↓</span>
-                            <p>Navigate menu options</p>
+                            <p data-i18n="ctrl_interface_navigate">Navigate menu options</p>
                         </div>
                         <div class="control-item">
                             <span class="key-display">ENTER</span>
-                            <p>Select menu option</p>
+                            <p data-i18n="ctrl_interface_select">Select menu option</p>
                         </div>
                         <div class="control-item">
                             <span class="key-display">X</span>
-                            <p>Delete selected save file</p>
+                            <p data-i18n="ctrl_interface_delete">Delete selected save file</p>
                         </div>
                     </div>
                 </div>
@@ -339,8 +357,8 @@
         </section>
 
         <section id="community">
-            <h2>🤝 JOIN THE COMMUNITY 🤝</h2>
-            <p>Report issues, join discussions, and support the project.</p>
+            <h2 data-i18n="community_title">🤝 JOIN THE COMMUNITY 🤝</h2>
+            <p data-i18n="community_text">Report issues, join discussions, and support the project.</p>
             <div class="community-links">
                 <a href="https://github.com/gcclinux/Woodlanders/issues" class="btn" target="_blank">🐛 GitHub Issues</a>
                 <a href="https://github.com/gcclinux/Woodlanders/discussions" class="btn" target="_blank">💬 GitHub Discussions</a>
@@ -351,9 +369,10 @@
     </main>
 
     <footer>
-        <p>&copy; 2025 Woodlanders. Built with AI. Powered by Passion. 🎮</p>
+        <p data-i18n="footer_text">&copy; 2025 Woodlanders. Built with AI. Powered by Passion. 🎮</p>
     </footer>
 
+    <script src="translations.js"></script>
     <script src="main.js"></script>
 </body>
 </html>

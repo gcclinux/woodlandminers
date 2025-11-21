@@ -78,6 +78,28 @@ nav a:hover::after {
     width: 100%;
 }
 
+.lang-selector {
+    background: rgba(0, 0, 0, 0.3);
+    color: var(--text-color);
+    border: 2px solid var(--accent-color);
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.lang-selector:hover {
+    background: rgba(255, 215, 0, 0.2);
+    transform: scale(1.05);
+}
+
+.lang-selector option {
+    background: var(--primary-color);
+    color: var(--text-color);
+}
+
 main {
     padding-top: 80px;
 }

@@ -1,4 +1,34 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // Language detection and switching
+    const langSelector = document.getElementById('langSelector');
+    const supportedLangs = ['en', 'pl', 'de', 'nl', 'pt'];
+    
+    function detectLanguage() {
+        const stored = localStorage.getItem('woodlanders_lang');
+        if (stored && supportedLangs.includes(stored)) return stored;
+        
+        const browserLang = navigator.language.split('-')[0];
+        return supportedLangs.includes(browserLang) ? browserLang : 'en';
+    }
+    
+    function setLanguage(lang) {
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (translations[lang] && translations[lang][key]) {
+                el.textContent = translations[lang][key];
+            }
+        });
+        localStorage.setItem('woodlanders_lang', lang);
+        langSelector.value = lang;
+    }
+    
+    const currentLang = detectLanguage();
+    setLanguage(currentLang);
+    
+    langSelector.addEventListener('change', (e) => {
+        setLanguage(e.target.value);
+    });
+
     // Smooth scroll for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {

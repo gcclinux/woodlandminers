@@ -231,9 +231,9 @@ public class InventoryRenderer {
             batch.begin(); // Resume batch rendering
         }
         
-        // Calculate centered position for 32x32 icon in 40x40 slot
+        // Calculate centered position for 32x32 icon in 40x40 slot (lowered by 5px)
         float iconX = x + (SLOT_SIZE - ICON_SIZE) / 2;
-        float iconY = y + (SLOT_SIZE - ICON_SIZE) / 2;
+        float iconY = y + (SLOT_SIZE - ICON_SIZE) / 2 - 5;
         
         // Draw item icon at 32x32 size
         batch.draw(icon, iconX, iconY, ICON_SIZE, ICON_SIZE);

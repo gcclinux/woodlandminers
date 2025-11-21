@@ -15,6 +15,7 @@ import java.util.List;
 public class RainSystem {
     private RainZoneManager zoneManager;
     private RainRenderer renderer;
+    private PuddleManager puddleManager;
     private boolean enabled;
     
     /**
@@ -25,6 +26,7 @@ public class RainSystem {
     public RainSystem(ShapeRenderer shapeRenderer) {
         this.zoneManager = new RainZoneManager();
         this.renderer = new RainRenderer(shapeRenderer);
+        this.puddleManager = new PuddleManager(shapeRenderer);
         this.enabled = true;
     }
     
@@ -35,6 +37,7 @@ public class RainSystem {
      */
     public void initialize() {
         renderer.initialize();
+        puddleManager.initialize();
     }
     
     /**
@@ -51,20 +54,35 @@ public class RainSystem {
         if (!enabled) {
             // When disabled, update with 0 intensity to fade out existing particles
             renderer.update(deltaTime, camera, 0.0f);
+            puddleManager.update(deltaTime, false, 0.0f, camera);
             return;
         }
         
         // Calculate rain intensity at player's position
         float intensity = zoneManager.getRainIntensityAt(playerX, playerY);
+        boolean isRaining = intensity > 0.0f;
         
         // Update renderer with calculated intensity
         renderer.update(deltaTime, camera, intensity);
+        
+        // Update puddle manager with rain state
+        puddleManager.update(deltaTime, isRaining, intensity, camera);
     }
     
     /**
-     * Renders the rain particles to the screen.
+     * Renders the rain particles and puddles to the screen.
      * This should be called after batch.end() but before UI rendering
      * to ensure proper layering (rain above world, below UI).
+     * 
+     * Rendering order (bottom to top):
+     * 1. Ground/terrain (rendered in batch)
+     * 2. Water puddles (rendered here first)
+     * 3. Rain particles (rendered here second)
+     * 4. Player and objects (rendered in batch)
+     * 5. UI elements (rendered after this method)
+     * 
+     * This ensures puddles appear above ground but below the player,
+     * creating a realistic layering effect.
      * 
      * @param camera The camera used for projection
      */
@@ -73,6 +91,10 @@ public class RainSystem {
             return;
         }
         
+        // Render puddles first (above ground, below rain particles and player)
+        puddleManager.render(camera);
+        
+        // Render rain particles on top of puddles
         renderer.render(camera);
     }
     
@@ -82,6 +104,7 @@ public class RainSystem {
      */
     public void dispose() {
         renderer.dispose();
+        puddleManager.dispose();
     }
     
     /**
@@ -122,6 +145,17 @@ public class RainSystem {
      */
     public void syncRainZones(List<RainZone> zones) {
         zoneManager.setRainZones(zones);
+    }
+    
+    /**
+     * Sets tree positions for puddle avoidance.
+     * Puddles will not spawn within MIN_TREE_DISTANCE (400px) of any tree.
+     * This should be called before update() each frame to ensure puddles avoid trees.
+     * 
+     * @param trees List of tree positions to avoid
+     */
+    public void setTreePositions(List<PuddleRenderer.TreePosition> trees) {
+        puddleManager.setTreePositions(trees);
     }
     
     /**

@@ -504,6 +504,31 @@ public class MyGdxGame extends ApplicationAdapter {
         // Update dynamic rain manager (handles random rain events)
         dynamicRainManager.update(deltaTime, playerCenterX, playerCenterY);
         
+        // Collect all tree positions for puddle avoidance (400px minimum distance)
+        java.util.List<wagemaker.uk.weather.PuddleRenderer.TreePosition> allTrees = new java.util.ArrayList<>();
+        for (SmallTree tree : trees.values()) {
+            allTrees.add(new wagemaker.uk.weather.PuddleRenderer.TreePosition(tree.getX(), tree.getY()));
+        }
+        for (AppleTree tree : appleTrees.values()) {
+            allTrees.add(new wagemaker.uk.weather.PuddleRenderer.TreePosition(tree.getX(), tree.getY()));
+        }
+        for (CoconutTree tree : coconutTrees.values()) {
+            allTrees.add(new wagemaker.uk.weather.PuddleRenderer.TreePosition(tree.getX(), tree.getY()));
+        }
+        for (BambooTree tree : bambooTrees.values()) {
+            allTrees.add(new wagemaker.uk.weather.PuddleRenderer.TreePosition(tree.getX(), tree.getY()));
+        }
+        for (BananaTree tree : bananaTrees.values()) {
+            allTrees.add(new wagemaker.uk.weather.PuddleRenderer.TreePosition(tree.getX(), tree.getY()));
+        }
+        for (PlantedTree tree : plantedTrees.values()) {
+            allTrees.add(new wagemaker.uk.weather.PuddleRenderer.TreePosition(tree.getX(), tree.getY()));
+        }
+        for (PlantedBamboo bamboo : plantedBamboos.values()) {
+            allTrees.add(new wagemaker.uk.weather.PuddleRenderer.TreePosition(bamboo.getX(), bamboo.getY()));
+        }
+        rainSystem.setTreePositions(allTrees);
+        
         // Update rain system rendering
         rainSystem.update(deltaTime, playerCenterX, playerCenterY, camera);
         

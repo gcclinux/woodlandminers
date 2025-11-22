@@ -504,7 +504,7 @@ public class MyGdxGame extends ApplicationAdapter {
         // Update dynamic rain manager (handles random rain events)
         dynamicRainManager.update(deltaTime, playerCenterX, playerCenterY);
         
-        // Collect all tree positions for puddle avoidance (400px minimum distance)
+        // Collect all tree positions for puddle avoidance (120px minimum distance)
         java.util.List<wagemaker.uk.weather.PuddleRenderer.TreePosition> allTrees = new java.util.ArrayList<>();
         for (SmallTree tree : trees.values()) {
             allTrees.add(new wagemaker.uk.weather.PuddleRenderer.TreePosition(tree.getX(), tree.getY()));
@@ -660,6 +660,12 @@ public class MyGdxGame extends ApplicationAdapter {
         batch.begin();
         // draw infinite grass background around camera
         drawInfiniteGrass();
+        batch.end();
+        
+        // Render puddles after ground but before player/trees (background layer)
+        rainSystem.renderPuddles(camera);
+        
+        batch.begin();
         // draw target indicator (after terrain, before planted bamboos)
         // Only render for local player when targeting is active
         if (player.getTargetingSystem().isActive()) {

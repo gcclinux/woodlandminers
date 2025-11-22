@@ -58,7 +58,7 @@ public class PuddleConfig {
     public static final float MIN_PUDDLE_SPACING = 150.0f;
     
     /** Minimum distance from tree centers to puddle centers in pixels */
-    public static final float MIN_TREE_DISTANCE = 400.0f;
+    public static final float MIN_TREE_DISTANCE = 120.0f;
     
     // Performance
     /** Enable or disable the puddle system entirely */

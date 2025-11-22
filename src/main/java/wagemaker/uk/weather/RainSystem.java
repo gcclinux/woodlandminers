@@ -76,9 +76,9 @@ public class RainSystem {
      * 
      * Rendering order (bottom to top):
      * 1. Ground/terrain (rendered in batch)
-     * 2. Water puddles (rendered here first)
-     * 3. Rain particles (rendered here second)
-     * 4. Player and objects (rendered in batch)
+     * 2. Water puddles (rendered via renderPuddles before player)
+     * 3. Player and objects (rendered in batch)
+     * 4. Rain particles (rendered via render after player)
      * 5. UI elements (rendered after this method)
      * 
      * This ensures puddles appear above ground but below the player,
@@ -91,11 +91,24 @@ public class RainSystem {
             return;
         }
         
-        // Render puddles first (above ground, below rain particles and player)
-        puddleManager.render(camera);
-        
-        // Render rain particles on top of puddles
+        // Render rain particles on top of player
         renderer.render(camera);
+    }
+    
+    /**
+     * Renders only the water puddles to the screen.
+     * This should be called during the batch rendering phase, after ground
+     * but before player/trees to ensure puddles appear in the background.
+     * 
+     * @param camera The camera used for projection
+     */
+    public void renderPuddles(OrthographicCamera camera) {
+        if (!enabled) {
+            return;
+        }
+        
+        // Render puddles (above ground, below player and trees)
+        puddleManager.render(camera);
     }
     
     /**
@@ -149,7 +162,7 @@ public class RainSystem {
     
     /**
      * Sets tree positions for puddle avoidance.
-     * Puddles will not spawn within MIN_TREE_DISTANCE (400px) of any tree.
+     * Puddles will not spawn within MIN_TREE_DISTANCE (120px) of any tree.
      * This should be called before update() each frame to ensure puddles avoid trees.
      * 
      * @param trees List of tree positions to avoid

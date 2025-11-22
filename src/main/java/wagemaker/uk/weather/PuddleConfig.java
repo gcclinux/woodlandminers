@@ -15,7 +15,7 @@ public class PuddleConfig {
     
     // Density
     /** Maximum number of puddles on screen */
-    public static final int MAX_PUDDLES = 4;
+    public static final int MAX_PUDDLES = 8;
     
     /** Minimum number of puddles at low intensity */
     public static final int MIN_PUDDLES = 3;

@@ -19,7 +19,7 @@ The goal was simple yet audacious: **build a complete, enjoyable multiplayer gam
 <div align="center">
 
 ### Free World Play
-![Latest 0.0.20](../screenshots/free_world_play.png)
+![Latest 0.0.20](/screenshots/free_world_play.png)
 *The Free World gives player the opportunity to explore and be creative with plenty of resources*
 
 </div>

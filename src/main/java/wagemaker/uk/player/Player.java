@@ -508,7 +508,7 @@ public class Player {
 
     private void loadAnimations() {
         // Load the sprite sheet
-        spriteSheet = new Texture("sprites/player/man_start.png");
+        spriteSheet = new Texture("sprites/player/boy_navy_start.png");
         
         // Get sprite sheet dimensions
         // int spriteSheetHeight = spriteSheet.getHeight();

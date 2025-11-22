@@ -17,17 +17,24 @@ public class BirdFormation {
     private SpawnBoundary targetBoundary;
     private boolean active;
 
-    public BirdFormation(SpawnPoint spawnPoint, Vector2 velocity, Texture birdTexture) {
+    public BirdFormation(SpawnPoint spawnPoint, Vector2 velocity, Texture birdTexture1, Texture birdTexture2) {
         this.birds = new ArrayList<>();
         this.velocity = velocity;
         this.spawnBoundary = spawnPoint.boundary;
         this.targetBoundary = getOppositeBoundary(spawnPoint.boundary);
         this.active = true;
         
-        initializeVFormation(spawnPoint, birdTexture);
+        initializeVFormation(spawnPoint, birdTexture1, birdTexture2);
+    }
+    
+    /**
+     * Legacy constructor for single texture (backwards compatibility)
+     */
+    public BirdFormation(SpawnPoint spawnPoint, Vector2 velocity, Texture birdTexture) {
+        this(spawnPoint, velocity, birdTexture, birdTexture);
     }
 
-    private void initializeVFormation(SpawnPoint spawnPoint, Texture birdTexture) {
+    private void initializeVFormation(SpawnPoint spawnPoint, Texture birdTexture1, Texture birdTexture2) {
         // V-formation with 1 lead bird and 2 birds on each wing
         // Formation angle: 30 degrees, spacing: 40 pixels
         
@@ -35,7 +42,7 @@ public class BirdFormation {
         float leadY = spawnPoint.y;
         
         // Lead bird at the front
-        birds.add(new Bird(leadX, leadY, birdTexture));
+        birds.add(new Bird(leadX, leadY, birdTexture1, birdTexture2));
         
         // Calculate perpendicular direction for wing positioning
         Vector2 perpendicular = new Vector2(-spawnPoint.direction.y, spawnPoint.direction.x);
@@ -48,14 +55,14 @@ public class BirdFormation {
         for (int i = 1; i <= 2; i++) {
             float offsetX = perpendicular.x * spacing * i - spawnPoint.direction.x * backwardOffset * i;
             float offsetY = perpendicular.y * spacing * i - spawnPoint.direction.y * backwardOffset * i;
-            birds.add(new Bird(leadX + offsetX, leadY + offsetY, birdTexture));
+            birds.add(new Bird(leadX + offsetX, leadY + offsetY, birdTexture1, birdTexture2));
         }
         
         // Right wing (2 birds)
         for (int i = 1; i <= 2; i++) {
             float offsetX = -perpendicular.x * spacing * i - spawnPoint.direction.x * backwardOffset * i;
             float offsetY = -perpendicular.y * spacing * i - spawnPoint.direction.y * backwardOffset * i;
-            birds.add(new Bird(leadX + offsetX, leadY + offsetY, birdTexture));
+            birds.add(new Bird(leadX + offsetX, leadY + offsetY, birdTexture1, birdTexture2));
         }
     }
 
@@ -81,28 +88,33 @@ public class BirdFormation {
         }
     }
 
-    public boolean hasReachedTarget(float viewWidth, float viewHeight) {
+    public boolean hasReachedTarget(float viewWidth, float viewHeight, float cameraX, float cameraY) {
         if (birds.isEmpty()) {
             return false;
         }
         
-        // Check lead bird position against target boundary
+        // Check lead bird position against target boundary (camera-relative)
         Bird leadBird = birds.get(0);
         float x = leadBird.getX();
         float y = leadBird.getY();
         
         switch (targetBoundary) {
             case TOP:
-                return y > viewHeight;
+                return y > cameraY + viewHeight;
             case BOTTOM:
-                return y < 0;
+                return y < cameraY;
             case LEFT:
-                return x < 0;
+                return x < cameraX;
             case RIGHT:
-                return x > viewWidth;
+                return x > cameraX + viewWidth;
             default:
                 return false;
         }
+    }
+    
+    // Backward compatibility method for tests
+    public boolean hasReachedTarget(float viewWidth, float viewHeight) {
+        return hasReachedTarget(viewWidth, viewHeight, 0, 0);
     }
 
     public void dispose() {

@@ -49,6 +49,7 @@ import wagemaker.uk.trees.Cactus;
 import wagemaker.uk.trees.CoconutTree;
 import wagemaker.uk.trees.SmallTree;
 import wagemaker.uk.biome.BiomeManager;
+import wagemaker.uk.birds.BirdFormationManager;
 import wagemaker.uk.ui.Compass;
 import wagemaker.uk.ui.GameMenu;
 import wagemaker.uk.ui.HealthBarUI;
@@ -203,6 +204,7 @@ public class MyGdxGame extends ApplicationAdapter {
     RainSystem rainSystem; // Weather system for localized rain effects
     wagemaker.uk.weather.DynamicRainManager dynamicRainManager; // Dynamic rain event manager
     RespawnManager respawnManager; // Resource respawn timer system
+    BirdFormationManager birdFormationManager; // Ambient flying birds system
     
     // Multiplayer fields
     private GameMode gameMode;
@@ -395,6 +397,10 @@ public class MyGdxGame extends ApplicationAdapter {
         
         // Initialize respawn manager (starts in single-player mode)
         respawnManager = new RespawnManager(this, true);
+        
+        // Initialize bird formation manager for ambient flying birds
+        birdFormationManager = new BirdFormationManager(camera, viewport);
+        birdFormationManager.initialize();
 
     }
 
@@ -535,6 +541,11 @@ public class MyGdxGame extends ApplicationAdapter {
         // Update respawn manager (check for expired timers)
         if (respawnManager != null) {
             respawnManager.update(deltaTime);
+        }
+        
+        // Update bird formation manager (ambient flying birds)
+        if (birdFormationManager != null) {
+            birdFormationManager.update(deltaTime, playerCenterX, playerCenterY);
         }
         
         if (!gameMenu.isAnyMenuOpen()) {
@@ -707,6 +718,13 @@ public class MyGdxGame extends ApplicationAdapter {
         
         // Render rain effects after batch.end() but before UI
         rainSystem.render(camera);
+        
+        // Render birds after rain effects but before UI elements
+        if (birdFormationManager != null) {
+            batch.begin();
+            birdFormationManager.render(batch);
+            batch.end();
+        }
         
         // draw player name tag above player
         gameMenu.renderPlayerNameTag(batch);
@@ -4363,6 +4381,11 @@ public class MyGdxGame extends ApplicationAdapter {
         // Dispose rain system
         if (rainSystem != null) {
             rainSystem.dispose();
+        }
+        
+        // Dispose bird formation manager
+        if (birdFormationManager != null) {
+            birdFormationManager.dispose();
         }
         
         // Clean up multiplayer resources

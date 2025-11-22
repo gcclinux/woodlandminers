@@ -20,10 +20,11 @@ public class BirdFormationManager {
     private OrthographicCamera camera;
     private Viewport viewport;
     private SpawnBoundary lastSpawnBoundary;
-    private Texture birdTexture;
+    private Texture birdTexture1;
+    private Texture birdTexture2;
     
-    private static final float MIN_SPAWN_INTERVAL = 180f; // 3 minutes
-    private static final float MAX_SPAWN_INTERVAL = 300f; // 5 minutes
+    private static final float MIN_SPAWN_INTERVAL = 60f; // 1 minute
+    private static final float MAX_SPAWN_INTERVAL = 180f; // 3 minutes
     private static final float BIRD_SPEED = 100f; // pixels per second
 
     public BirdFormationManager(OrthographicCamera camera, Viewport viewport) {
@@ -43,7 +44,8 @@ public class BirdFormationManager {
         this.random = new Random();
         this.activeFormation = null;
         this.lastSpawnBoundary = null;
-        this.birdTexture = texture;
+        this.birdTexture1 = texture;
+        this.birdTexture2 = texture; // Use same texture for both frames in tests
         
         // Initialize spawn timer with first random interval
         nextSpawnInterval = generateRandomInterval();
@@ -51,30 +53,40 @@ public class BirdFormationManager {
     }
 
     public void initialize() {
-        // Load bird texture
+        // Load bird textures for animation
         try {
-            birdTexture = new Texture(Gdx.files.internal("assets/sprites/bird.png"));
+            birdTexture1 = new Texture(Gdx.files.internal("assets/sprites/bird.png"));
+            birdTexture2 = new Texture(Gdx.files.internal("assets/sprites/bird2.png"));
+            System.out.println("[BIRDS] Bird system initialized successfully with 2 animation frames");
         } catch (Exception e) {
-            System.err.println("Failed to load bird texture: " + e.getMessage());
-            birdTexture = null;
+            System.err.println("[BIRDS] Failed to load bird textures: " + e.getMessage());
+            birdTexture1 = null;
+            birdTexture2 = null;
+            return;
         }
         
         // Initialize spawn timer with first random interval
         nextSpawnInterval = generateRandomInterval();
         spawnTimer = nextSpawnInterval;
+        
+        System.out.println("[BIRDS] First spawn in " + String.format("%.1f", nextSpawnInterval) + " seconds (spawn interval: " + MIN_SPAWN_INTERVAL + "-" + MAX_SPAWN_INTERVAL + "s)");
     }
 
     public void update(float deltaTime, float playerX, float playerY) {
-        if (birdTexture == null) {
-            return; // Bird system disabled if texture failed to load
+        if (birdTexture1 == null || birdTexture2 == null) {
+            return; // Bird system disabled if textures failed to load
         }
         
         // Update active formation
         if (activeFormation != null) {
             activeFormation.update(deltaTime);
             
+            // Get camera position for boundary checking
+            float cameraX = camera.position.x - viewport.getWorldWidth() / 2;
+            float cameraY = camera.position.y - viewport.getWorldHeight() / 2;
+            
             // Check if formation has reached target
-            if (activeFormation.hasReachedTarget(viewport.getWorldWidth(), viewport.getWorldHeight())) {
+            if (activeFormation.hasReachedTarget(viewport.getWorldWidth(), viewport.getWorldHeight(), cameraX, cameraY)) {
                 despawnFormation();
             }
         }
@@ -90,7 +102,7 @@ public class BirdFormationManager {
     }
 
     public void render(SpriteBatch batch) {
-        if (activeFormation != null && birdTexture != null) {
+        if (activeFormation != null && birdTexture1 != null && birdTexture2 != null) {
             activeFormation.render(batch);
         }
     }
@@ -99,8 +111,11 @@ public class BirdFormationManager {
         if (activeFormation != null) {
             activeFormation.dispose();
         }
-        if (birdTexture != null) {
-            birdTexture.dispose();
+        if (birdTexture1 != null) {
+            birdTexture1.dispose();
+        }
+        if (birdTexture2 != null) {
+            birdTexture2.dispose();
         }
     }
 
@@ -108,23 +123,38 @@ public class BirdFormationManager {
         SpawnPoint spawnPoint = selectRandomSpawnPoint();
         Vector2 velocity = spawnPoint.direction.cpy().scl(BIRD_SPEED);
         
-        activeFormation = new BirdFormation(spawnPoint, velocity, birdTexture);
+        activeFormation = new BirdFormation(spawnPoint, velocity, birdTexture1, birdTexture2);
         lastSpawnBoundary = spawnPoint.boundary;
+        
+        // Log spawn event
+        float cameraX = camera.position.x;
+        float cameraY = camera.position.y;
+        System.out.println("[BIRDS] Formation spawned at " + spawnPoint.boundary + 
+                         " boundary (world: x=" + String.format("%.1f", spawnPoint.x) + 
+                         ", y=" + String.format("%.1f", spawnPoint.y) + 
+                         ") [camera at x=" + String.format("%.1f", cameraX) + 
+                         ", y=" + String.format("%.1f", cameraY) + 
+                         "] flying " + getDirectionName(spawnPoint.direction));
         
         // Reset timer for next spawn
         nextSpawnInterval = generateRandomInterval();
         spawnTimer = nextSpawnInterval;
+        
+        System.out.println("[BIRDS] Next spawn in " + String.format("%.1f", nextSpawnInterval) + " seconds");
     }
 
     private void despawnFormation() {
         if (activeFormation != null) {
             activeFormation.dispose();
             activeFormation = null;
+            System.out.println("[BIRDS] Formation despawned (reached target boundary)");
         }
         
         // Reset timer for next spawn
         nextSpawnInterval = generateRandomInterval();
         spawnTimer = nextSpawnInterval;
+        
+        System.out.println("[BIRDS] Next spawn in " + String.format("%.1f", nextSpawnInterval) + " seconds");
     }
 
     private float generateRandomInterval() {
@@ -134,6 +164,10 @@ public class BirdFormationManager {
     private SpawnPoint selectRandomSpawnPoint() {
         float viewWidth = viewport.getWorldWidth();
         float viewHeight = viewport.getWorldHeight();
+        
+        // Get camera position to spawn birds relative to current view
+        float cameraX = camera.position.x - viewWidth / 2;
+        float cameraY = camera.position.y - viewHeight / 2;
         
         // Select random boundary
         SpawnBoundary[] boundaries = SpawnBoundary.values();
@@ -153,28 +187,28 @@ public class BirdFormationManager {
         
         switch (boundary) {
             case TOP:
-                x = random.nextFloat() * viewWidth;
-                y = viewHeight;
+                x = cameraX + random.nextFloat() * viewWidth;
+                y = cameraY + viewHeight;
                 direction = new Vector2(0, -1); // Fly downward
                 break;
             case BOTTOM:
-                x = random.nextFloat() * viewWidth;
-                y = 0;
+                x = cameraX + random.nextFloat() * viewWidth;
+                y = cameraY;
                 direction = new Vector2(0, 1); // Fly upward
                 break;
             case LEFT:
-                x = 0;
-                y = random.nextFloat() * viewHeight;
+                x = cameraX;
+                y = cameraY + random.nextFloat() * viewHeight;
                 direction = new Vector2(1, 0); // Fly right
                 break;
             case RIGHT:
-                x = viewWidth;
-                y = random.nextFloat() * viewHeight;
+                x = cameraX + viewWidth;
+                y = cameraY + random.nextFloat() * viewHeight;
                 direction = new Vector2(-1, 0); // Fly left
                 break;
             default:
-                x = 0;
-                y = 0;
+                x = cameraX;
+                y = cameraY;
                 direction = new Vector2(1, 0);
         }
         
@@ -191,5 +225,13 @@ public class BirdFormationManager {
 
     public float getNextSpawnInterval() {
         return nextSpawnInterval;
+    }
+    
+    private String getDirectionName(Vector2 direction) {
+        if (direction.y > 0.5f) return "upward";
+        if (direction.y < -0.5f) return "downward";
+        if (direction.x > 0.5f) return "right";
+        if (direction.x < -0.5f) return "left";
+        return "unknown";
     }
 }

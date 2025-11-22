@@ -58,41 +58,41 @@
   - **Property 12: Horizontal boundary X-coordinate variation**
   - **Validates: Requirements 4.3**
 
-- [ ] 3. Implement V-formation positioning
+- [x] 3. Implement V-formation positioning
   - Implement initializeVFormation() to position 5 birds in V-shape
   - Calculate lead bird position at spawn point
   - Calculate wing bird positions with 40px spacing and 30-degree angle
   - Ensure consistent spacing between all birds in formation
   - _Requirements: 2.2, 2.4_
 
-- [ ] 3.1 Write property test for V-shape arrangement
+- [x] 3.1 Write property test for V-shape arrangement
   - **Property 7: V-shape arrangement**
   - **Validates: Requirements 2.2**
 
-- [ ] 3.2 Write property test for consistent bird spacing
+- [x] 3.2 Write property test for consistent bird spacing
   - **Property 9: Consistent bird spacing**
   - **Validates: Requirements 2.4**
 
-- [ ] 4. Implement flight mechanics
+- [x] 4. Implement flight mechanics
   - Calculate flight direction from spawn boundary to opposite boundary
   - Implement Bird.update() to move bird along velocity vector
   - Implement BirdFormation.update() to update all birds with same velocity
   - Implement hasReachedTarget() to detect when formation crosses opposite boundary
   - _Requirements: 1.3, 1.4, 4.4_
 
-- [ ] 4.1 Write property test for formation reaches opposite boundary
+- [x] 4.1 Write property test for formation reaches opposite boundary
   - **Property 3: Formation reaches opposite boundary**
   - **Validates: Requirements 1.3**
 
-- [ ] 4.2 Write property test for V-shape invariant during flight
+- [x] 4.2 Write property test for V-shape invariant during flight
   - **Property 8: V-shape invariant during flight**
   - **Validates: Requirements 2.3**
 
-- [ ] 4.3 Write property test for flight path toward opposite boundary
+- [x] 4.3 Write property test for flight path toward opposite boundary
   - **Property 13: Flight path toward opposite boundary**
   - **Validates: Requirements 4.4**
 
-- [ ] 5. Implement spawn timer and lifecycle management
+- [x] 5. Implement spawn timer and lifecycle management
   - Implement BirdFormationManager.update() to handle spawn timer countdown
   - Trigger spawnFormation() when timer reaches zero
   - Reset timer with new random interval after spawn
@@ -100,11 +100,11 @@
   - Reset spawn timer after despawn
   - _Requirements: 1.1, 1.4, 1.5_
 
-- [ ] 5.1 Write property test for despawn triggers timer reset
+- [x] 5.1 Write property test for despawn triggers timer reset
   - **Property 4: Despawn triggers timer reset**
   - **Validates: Requirements 1.4**
 
-- [ ] 6. Implement rendering system
+- [x] 6. Implement rendering system
   - Load bird sprite texture in BirdFormationManager.initialize()
   - Implement Bird.render() to draw bird sprite at current position
   - Implement BirdFormation.render() to render all 5 birds
@@ -112,22 +112,22 @@
   - Add null check to skip rendering when no formation is active
   - _Requirements: 3.1, 5.1_
 
-- [ ] 6.1 Write property test for no rendering when not visible
+- [x] 6.1 Write property test for no rendering when not visible
   - **Property 14: No rendering when not visible**
   - **Validates: Requirements 5.1**
 
-- [ ] 7. Implement resource management
+- [x] 7. Implement resource management
   - Implement Bird.dispose() to clean up bird resources
   - Implement BirdFormation.dispose() to dispose all 5 birds
   - Call formation.dispose() when despawning
   - Implement BirdFormationManager.dispose() to clean up shared texture
   - _Requirements: 5.4_
 
-- [ ] 7.1 Write property test for resource cleanup on despawn
+- [x] 7.1 Write property test for resource cleanup on despawn
   - **Property 15: Resource cleanup on despawn**
   - **Validates: Requirements 5.4**
 
-- [ ] 8. Integrate with MyGdxGame
+- [x] 8. Integrate with MyGdxGame
   - Add BirdFormationManager field to MyGdxGame
   - Initialize BirdFormationManager in MyGdxGame.create()
   - Call birdFormationManager.update() in MyGdxGame.render() before rendering
@@ -135,12 +135,12 @@
   - Call birdFormationManager.dispose() in MyGdxGame.dispose()
   - _Requirements: 3.1, 3.2, 3.3_
 
-- [ ] 9. Create bird sprite asset
+- [x] 9. Create bird sprite asset
   - Create or source a simple bird sprite texture (32x32 pixels recommended)
   - Place texture in assets/sprites/ directory
   - Update Bird class to load texture from correct path
   - Test texture loading and rendering
   - _Requirements: 3.1_
 
-- [ ] 10. Final checkpoint - Ensure all tests pass
+- [x] 10. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.

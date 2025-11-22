@@ -25,8 +25,8 @@ public class SpawnIntervalBoundsPropertyTest {
     
     private static HeadlessApplication application;
     private static Texture mockTexture;
-    private static final float MIN_SPAWN_INTERVAL = 180f; // 3 minutes
-    private static final float MAX_SPAWN_INTERVAL = 300f; // 5 minutes
+    private static final float MIN_SPAWN_INTERVAL = 60f; // 1 minute
+    private static final float MAX_SPAWN_INTERVAL = 180f; // 3 minutes
     
     @BeforeAll
     public static void setupGdx() {
